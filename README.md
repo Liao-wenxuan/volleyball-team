@@ -3,8 +3,12 @@
 给高校排球队用的一套本地优先工具：**人员 · 考勤 · 技能成长 · 阵型板**。
 纯前端、零依赖，双击一个 HTML 就能用，数据存在浏览器本地，可导出 JSON 备份。
 
-**在线试玩** → <https://liao-wenxuan.github.io/volleyball-team/>
-（数据只存在你自己的浏览器里，随便拖）
+两个入口，按你的习惯选：
+
+- **在线试玩** → <https://liao-wenxuan.github.io/volleyball-team/>
+- **下载单文件** → [volleyball-team.html](https://github.com/Liao-wenxuan/volleyball-team/releases/latest/download/volleyball-team.html)（双击就开，不装任何东西）
+
+数据只存在你自己的浏览器里，随便点、随便拖。
 
 ![首页](docs/shots/home.png)
 
@@ -37,11 +41,34 @@
 
 ## 快速开始
 
-**方式一（推荐）**：直接双击 `信工院排球队管理系统.html`，CSS/JS 已内联，不依赖任何环境。
+### 一、下载单文件（只是想用）
 
-**方式二（改代码）**：用浏览器打开 `index.html`，它引用同目录的 `style.css` / `app.js`。
+点上面的「下载单文件」，得到一个 `volleyball-team.html`（约 270 KB）。
+双击 → 浏览器打开 → 就能用。
 
-改完源码后重新打包成单文件：
+- 不需要装 Node、不需要联网、没有任何依赖，CSS 和 JS 全部内联在这个文件里
+- 第一次打开是空的，从首页「添加第一名队员」开始录
+- 数据存在浏览器的 localStorage：**换浏览器、清缓存、换电脑都会丢**，设置里可以导出 JSON 备份
+- 想发给队友看，直接把文件发过去就行，他打开也是干净的空白数据
+
+> 仓库里那个 `信工院排球队管理系统.html` 和下载下来的 `volleyball-team.html` 是同一个文件，
+> 只是发布附件用了英文名，避免下载时文件名变成一串百分号编码。
+
+### 二、在线访问
+
+<https://liao-wenxuan.github.io/volleyball-team/>
+
+省事，但它和单文件版**各存各的数据**——同一个浏览器里，线上版和本地文件的数据不互通。
+
+### 三、改代码
+
+```bash
+git clone https://github.com/Liao-wenxuan/volleyball-team.git
+cd volleyball-team
+```
+
+用浏览器直接打开 `index.html` 就能调试（它引用同目录的 `style.css` / `app.js`，改完刷新即可）。
+改完源码要重新打包成单文件：
 
 ```bash
 node build.mjs
