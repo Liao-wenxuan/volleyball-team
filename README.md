@@ -1,7 +1,8 @@
 # 排球阵型板 · 球队管理
 
 给高校排球队用的一套本地优先工具：**人员 · 考勤 · 技能成长 · 阵型板**。
-纯前端、零依赖，双击一个 HTML 就能用，数据存在浏览器本地，可导出 JSON 备份。
+纯前端、零依赖，双击一个 HTML 就能用，数据存在浏览器本地，可导出 JSON 备份；
+也可以选配 `server/` 里的 Node + SQLite 后端，一键切换成多端同步的云端模式。
 
 两个入口，按你的习惯选：
 
@@ -74,6 +75,31 @@ cd volleyball-team
 node build.mjs
 ```
 
+### 四、云端模式（可选，Node + SQLite）
+
+默认是纯本地模式。顶栏的「云」按钮可以切换到云端模式：登录后队员、考勤、技能、阵型
+实时同步到自建后端，电脑和平板看到的是同一份数据；不登录则一切照旧。
+
+后端在 `server/`：Node + TypeScript + Express + better-sqlite3 + JWT。
+
+```bash
+cd server
+npm install
+cp .env.example .env   # 改一下 JWT_SECRET
+npm run dev            # http://localhost:8787
+npm run seed           # 可选：演示账号 demo@xgy.com / demo123456
+```
+
+部署到 Railway（或其他 Node 托管）：
+
+1. 新建项目连这个仓库，**Root Directory 设为 `server`**，构建 `npm run build`、启动 `npm start` 会自动识别。
+2. 挂一个 Volume 到 `/data`，环境变量设 `DB_PATH=/data/app.db`（SQLite 文件落在持久盘上，重启不丢）。
+3. 环境变量设 `JWT_SECRET`（长随机串）和 `PORT`（Railway 会自动注入，无需手设）。
+4. 前端顶栏「云」→ 服务器地址填 `https://你的项目.up.railway.app`，注册账号即用。
+   GitHub Pages 上的在线版也可以直接连这个地址（CORS 已放开，鉴权走 Bearer token）。
+
+API 一览：`POST /api/auth/register|login`、`GET /api/auth/me`、`GET|POST|PATCH|DELETE /api/players`、`GET /api/weeks/:key`（按模板幂等生成本周训练）、`POST|PATCH|DELETE /api/sessions`、`PUT|DELETE /api/sessions/:id/attendance/:pid`、`POST /api/skills/batch`、`GET /api/skills/logs`、`GET|PUT /api/formation`、`PUT /api/settings/template|theme`。
+
 ## 几个实现上的取舍
 
 **1. 为什么不用框架**
@@ -101,9 +127,11 @@ node build.mjs
 ```
 index.html                    页面骨架
 style.css                     全部样式（含 9 套主题变量）
-app.js                        全部逻辑，约 2.3k 行，按模块分段
-build.mjs                     把三者内联成单文件
+app.js                        前端全部逻辑，约 2.4k 行，按模块分段
+cloud.js                      云端同步模块（登录/拉取/推送，双模式切换）
+build.mjs                     把四者内联成单文件
 信工院排球队管理系统.html        构建产物，可直接分发
+server/                       可选后端：Express + SQLite + JWT（云端模式）
 docs/战术板产品方案.md          阵型板的产品方案
 docs/shots/                   README 截图
 prototype/formation-editor.html  阵型板最早的独立原型
@@ -111,12 +139,12 @@ prototype/formation-editor.html  阵型板最早的独立原型
 
 ## 已知限制
 
-- 数据只在本机浏览器（localStorage），换设备要手动导出/导入 JSON
-- 没有账号体系与多人协作，定位就是单人维护
+- 本机模式下数据只在当前浏览器（localStorage），换设备要手动导出/导入 JSON；云端模式需自建后端
+- 一个邮箱账号对应一支球队，暂不支持多队切换与多人协作
 - 阵型板暂不支持多套阵型命名保存，只有一套当前站位 + 三套预设
 
 ## Roadmap
 
 - [ ] 阵型库：多套命名保存、按标签筛选
 - [ ] 阵型导出 PNG，直接发群里讲站位
-- [ ] 数据上云（Node + SQLite），支持多队
+- [x] 数据上云（Node + SQLite）

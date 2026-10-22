@@ -1998,3 +1998,15 @@ html[data-mode="light"] .drawer{box-shadow:-40px 0 90px -50px rgba(23,37,63,.6)}
 html[data-mode="light"] .confirm-box,
 html[data-mode="light"] .modal,
 html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
+
+/* ══════════ 云端同步 ══════════ */
+#cloudBtn{position:relative}
+#cloudBtn.cloud-on{color:var(--green)}
+#cloudBtn.cloud-on::after{content:'';position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.cloud-tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--ov3,rgba(255,255,255,.05));padding:4px;border-radius:12px}
+.cloud-tab{flex:1;padding:9px 0;border:none;border-radius:9px;background:transparent;color:var(--text-2,#aab);font-size:14px;cursor:pointer;transition:.18s}
+.cloud-tab.on{background:var(--violet);color:#fff;font-weight:600}
+.cloud-id{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.cloud-id h3{margin:0;font-size:17px}
+.cloud-id p{margin:2px 0 0;font-size:12.5px;color:var(--text-2,#aab)}
+.cloud-account .form-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}

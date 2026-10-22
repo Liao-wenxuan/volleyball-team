@@ -15,3 +15,8 @@ node_modules/
 
 # Git for Windows 用 SSH 时会在这个目录生成保留名文件 NUL（删不掉，只能忽略）
 NUL
+
+# 后端
+server/data/
+server/.env
+server/dist/

@@ -345,6 +345,14 @@
   }
 
   function resetWeek(monday) {
+    if (CloudOn()) {
+      // 云端模式：服务器按模板生成（已存在的周不会被重置，避免误丢考勤）
+      delete db.weeks[weekKey(monday)];
+      save();
+      window.XGYCloud.syncWeek(weekKey(monday), true).then(() => renderAllCurrent());
+      toast('已从云端重新加载本周训练');
+      return;
+    }
     delete db.weeks[weekKey(monday)];
     save();
     renderAttendance();
@@ -427,7 +435,23 @@
       pushLog(p.id, ch.skill, before, after, source, date);
       count += 1;
     });
-    if (count) save();
+    if (count) {
+      save();
+      if (CloudOn()) {
+        const payload = changes
+          .filter((ch) => getPlayer(ch.playerId))
+          .map((ch) => ({ playerId: ch.playerId, skill: ch.skill, after: clamp(roundHalf(Number(ch.value)), 0, 10) }));
+        if (payload.length) {
+          cloudFire(
+            window.XGYCloud.push.skillBatch(payload, source, date || dateKey(new Date())).then((resp) => {
+              if (resp && Array.isArray(resp.players)) db.players = resp.players.map(normalizePlayer);
+              save();
+            }),
+            null
+          );
+        }
+      }
+    }
     return count;
   }
 
@@ -642,6 +666,7 @@
 
   /* ══════════ 总览 ══════════ */
   function renderDashboard() {
+    cloudEnsureWeek(getMonday(new Date()));
     const monday = getMonday(new Date());
     const stats = weekStats(monday);
     const avg = teamAverage();
@@ -1054,7 +1079,7 @@
         SKILLS.forEach((s) => { const input = form.querySelector(`[name="skill_${s.key}"]`); if (input) input.value = '5.0'; });
       };
     }
-    form.onsubmit = (e) => {
+    form.onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
       const name = String(fd.get('name') || '').trim();
@@ -1066,10 +1091,16 @@
       const dup = db.players.find((x) => x.number === number && x.id !== (p && p.id));
       if (dup) { toast(`号码 ${number} 已经被 ${dup.name} 使用`, 'warn'); return; }
       if (p) {
-        p.name = name; p.number = number; p.height = height;
-        p.position = String(fd.get('position'));
-        p.grade = String(fd.get('grade'));
-        p.updatedAt = Date.now();
+        const payload = { name, number, height, position: String(fd.get('position')), grade: String(fd.get('grade')) };
+        if (CloudOn()) {
+          try {
+            const resp = await window.XGYCloud.push.playerUpdate(p.id, payload);
+            Object.assign(p, normalizePlayer(resp.player));
+          } catch (err) { toast(`保存失败：${err.message}`, 'warn'); return; }
+        } else {
+          Object.assign(p, payload);
+          p.updatedAt = Date.now();
+        }
         save(); closeModal(); renderRoster(); renderDashboard();
         if ($('#drawer').classList.contains('open')) openPlayer(p.id);
         toast('队员资料已更新');
@@ -1079,11 +1110,16 @@
           const v = Number(fd.get(`skill_${s.key}`));
           skills[s.key] = clamp(roundHalf(Number.isFinite(v) ? v : 5), 0, 10);
         });
-        const np = normalizePlayer({
-          id: uid('p'), name, number, height,
-          position: String(fd.get('position')), grade: String(fd.get('grade')),
-          skills, createdAt: Date.now(), updatedAt: Date.now()
-        });
+        const payload = { name, number, height, position: String(fd.get('position')), grade: String(fd.get('grade')), skills };
+        let np;
+        if (CloudOn()) {
+          try {
+            const resp = await window.XGYCloud.push.playerCreate(payload);
+            np = normalizePlayer(resp.player);
+          } catch (err) { toast(`保存失败：${err.message}`, 'warn'); return; }
+        } else {
+          np = normalizePlayer({ id: uid('p'), ...payload, createdAt: Date.now(), updatedAt: Date.now() });
+        }
         db.players.push(np);
         save(); closeModal(); renderRoster(); renderDashboard(); renderSidebar(); renderActivity();
         if (state.page !== 'roster') go('roster');
@@ -1138,6 +1174,10 @@
     if (!p) return;
     const ok = await confirmDialog({ title: `删除 ${p.name}？`, message: '会同时删除他的全部考勤记录和技能调整记录。这个操作无法撤销。', ok: '确认删除' });
     if (!ok) return;
+    if (CloudOn()) {
+      try { await window.XGYCloud.push.playerDelete(id); }
+      catch (err) { toast(`删除失败：${err.message}`, 'warn'); return; }
+    }
     db.players = db.players.filter((x) => x.id !== id);
     Object.keys(db.weeks).forEach((k) => (db.weeks[k] || []).forEach((s) => { if (s.attendance) delete s.attendance[id]; }));
     db.skillLogs = db.skillLogs.filter((l) => l.playerId !== id);
@@ -1152,6 +1192,7 @@
   const ATT_LABEL = { present: '出勤', late: '迟到', leave: '请假', absent: '缺席', '': '登记' };
 
   function renderAttendance() {
+    cloudEnsureWeek(state.weekMonday);
     const monday = state.weekMonday;
     const stats = weekStats(monday);
     $('#weekLabel').textContent = weekRelativeLabel(monday);
@@ -1291,6 +1332,10 @@
     if (!cell || cell.disabled) return;
     const sid = cell.dataset.session;
     const pid = cell.dataset.player;
+    if (CloudOn() && !Array.isArray(db.weeks[weekKey(state.weekMonday)])) {
+      cloudEnsureWeek(state.weekMonday);
+      return;
+    }
     const sessions = ensureWeek(state.weekMonday);
     const s = sessions.find((x) => x.id === sid);
     if (!s || s.status === 'cancelled') return;
@@ -1300,6 +1345,12 @@
     if (next) s.attendance[pid] = next; else delete s.attendance[pid];
     s.updatedAt = Date.now();
     save();
+    if (CloudOn()) {
+      const req = next
+        ? window.XGYCloud.push.attSet(sid, pid, next)
+        : window.XGYCloud.push.attClear(sid, pid);
+      cloudFire(req, () => window.XGYCloud.syncWeek(weekKey(state.weekMonday), true).then(renderAttendance));
+    }
     cell.className = `att-cell ${next || 'unmarked'}`;
     cell.innerHTML = `<i></i>${ATT_LABEL[next]}`;
     cell.classList.remove('pop');
@@ -1342,6 +1393,14 @@
       s.updatedAt = Date.now();
     });
     save();
+    if (CloudOn()) {
+      const reqs = [];
+      sessions.forEach((s) => {
+        if (s.status === 'cancelled') return;
+        db.players.forEach((p) => reqs.push(window.XGYCloud.push.attSet(s.id, p.id, 'present')));
+      });
+      cloudFire(Promise.all(reqs), () => window.XGYCloud.syncWeek(weekKey(state.weekMonday), true).then(renderAttendance));
+    }
     renderAttendance();
     renderDashboard();
     toast('本周已标记为全勤');
@@ -1390,7 +1449,7 @@
     </form>`;
     openModal(isNew ? '添加加练' : '编辑训练', body, { mid: true });
     const form = $('#sessionForm');
-    form.onsubmit = (e) => {
+    form.onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
       const date = String(fd.get('date'));
@@ -1400,15 +1459,36 @@
       if (date < min || date > max) { toast('日期需要在这一周内', 'warn'); return; }
       if (start >= end) { toast('结束时间需要晚于开始时间', 'warn'); return; }
       if (isNew) {
-        const sessions = ensureWeek(monday);
-        sessions.push({ ...session, date, start, end, venue });
-        sessions.sort(sessionSort);
+        if (CloudOn()) {
+          try {
+            const resp = await window.XGYCloud.push.sessionCreate({ date, start, end, venue });
+            const key = weekKey(monday);
+            const created = normalizeSession(resp.session);
+            if (created) {
+              if (!Array.isArray(db.weeks[key])) db.weeks[key] = [];
+              db.weeks[key].push(created);
+              db.weeks[key].sort(sessionSort);
+            }
+          } catch (err) { toast(`保存失败：${err.message}`, 'warn'); return; }
+        } else {
+          const sessions = ensureWeek(monday);
+          sessions.push({ ...session, date, start, end, venue });
+          sessions.sort(sessionSort);
+        }
         save(); closeModal(); state.weekMonday = getMonday(parseKey(date));
         renderAttendance(); renderDashboard();
         toast('加练已添加');
       } else {
-        session.date = date; session.start = start; session.end = end; session.venue = venue;
-        session.updatedAt = Date.now();
+        if (CloudOn()) {
+          try {
+            const resp = await window.XGYCloud.push.sessionUpdate(session.id, { date, start, end, venue });
+            const updated = normalizeSession(resp.session);
+            if (updated) Object.assign(session, updated);
+          } catch (err) { toast(`保存失败：${err.message}`, 'warn'); return; }
+        } else {
+          session.date = date; session.start = start; session.end = end; session.venue = venue;
+          session.updatedAt = Date.now();
+        }
         (db.weeks[weekKey(monday)] || []).sort(sessionSort);
         save(); closeModal(); state.weekMonday = getMonday(parseKey(date));
         renderAttendance(); renderDashboard();
@@ -1424,17 +1504,29 @@
             const ok = await confirmDialog({ title: '删除这次训练？', message: `这次训练已经有 ${marks} 条考勤记录。删除会一起丢掉这些记录，无法恢复。`, ok: '确认删除' });
             if (!ok) return;
           }
+          if (CloudOn()) {
+            try { await window.XGYCloud.push.sessionDelete(session.id); }
+            catch (err) { toast(`删除失败：${err.message}`, 'warn'); return; }
+          }
           const key = weekKey(monday);
           db.weeks[key] = (db.weeks[key] || []).filter((s) => s.id !== session.id);
           save(); closeModal(); renderAttendance(); renderDashboard();
           toast('训练已删除');
           return;
         }
-        if (action === 'rain') session.cancelReason = '下雨';
-        if (action === 'cancel') session.cancelReason = '临时调整';
-        if (action === 'rain' || action === 'cancel') session.status = 'cancelled';
-        if (action === 'restore') { session.status = 'scheduled'; session.cancelReason = ''; }
-        session.updatedAt = Date.now();
+        const nextStatus = action === 'restore' ? 'scheduled' : 'cancelled';
+        const nextReason = action === 'rain' ? '下雨' : action === 'cancel' ? '临时调整' : '';
+        if (CloudOn()) {
+          try {
+            const resp = await window.XGYCloud.push.sessionUpdate(session.id, { status: nextStatus, cancelReason: nextReason });
+            const updated = normalizeSession(resp.session);
+            if (updated) Object.assign(session, updated);
+          } catch (err) { toast(`操作失败：${err.message}`, 'warn'); return; }
+        } else {
+          session.status = nextStatus;
+          session.cancelReason = nextReason;
+          session.updatedAt = Date.now();
+        }
         save(); closeModal(); renderAttendance(); renderDashboard();
         toast(action === 'restore' ? '训练已恢复' : `已标记：${session.cancelReason}`);
       };
@@ -1660,6 +1752,7 @@
     if (!isTheme(id)) return;
     applyTheme(id);
     save();
+    if (CloudOn()) cloudFire(window.XGYCloud.push.theme(id), null);
     paintThemeCards();
     const t = THEMES.find((x) => x.id === id);
     toast(`已切换到「${t.name}」`);
@@ -1703,7 +1796,9 @@
       const next = t.map((x, i) => ({ ...x, start: String(fd.get(`start_${i}`)), end: String(fd.get(`end_${i}`)), venue: String(fd.get(`venue_${i}`) || '').trim() }));
       for (const x of next) if (x.start >= x.end) { toast(`${x.label}的结束时间需要晚于开始时间`, 'warn'); return; }
       db.settings.template = next;
-      save(); closeModal(); renderDashboard(); renderAttendance(); renderSidebar();
+      save();
+      if (CloudOn()) cloudFire(window.XGYCloud.push.template(next), null);
+      closeModal(); renderDashboard(); renderAttendance(); renderSidebar();
       toast('训练模板已保存');
     };
   }
@@ -1906,6 +2001,7 @@
     FX_ROLES.forEach((r) => { pos[r.id] = { x: preset.pos[r.id].x, y: preset.pos[r.id].y }; });
     db.formation = { version: 1, preset: k, pos };
     save();
+    cloudPushFormation();
     renderTactics();
     toast(`已套用「${preset.label}」`);
   }
@@ -1961,6 +2057,7 @@
       db.formation.pos[role.id] = { x: fxSnap(p.x), y: fxSnap(p.y) };
       db.formation.preset = 'custom';
       save();
+      cloudPushFormation();
       renderTactics();
     };
 
@@ -1979,6 +2076,7 @@
       db.formation.pos[role.id] = { x: fxClamp(p.x + d[0] * FX_SNAP), y: fxClamp(p.y + d[1] * FX_SNAP) };
       db.formation.preset = 'custom';
       save();
+      cloudPushFormation();
       renderTactics();
       fxShowCoord(db.formation.pos[role.id]);
       setTimeout(() => { const c = $('#fxCoord'); if (c) c.classList.remove('on'); }, 900);
@@ -2280,6 +2378,63 @@
     });
   }
 
+  /* ══════════ 云端桥接（双模式：不登录则全部走本地，不触发这里） ══════════ */
+  const CloudOn = () => !!(window.XGYCloud && window.XGYCloud.enabled());
+
+  /** 云端模式下确保某周训练已从服务器拉过；拉到后重渲染当前页 */
+  function cloudEnsureWeek(monday) {
+    if (!CloudOn()) return;
+    const key = weekKey(monday);
+    window.XGYCloud.syncWeek(key).then((ok) => { if (ok) renderAllCurrent(); });
+  }
+
+  function applyServerState(payload) {
+    db.players = (payload.players || []).map(normalizePlayer).filter((p) => p.name);
+    db.skillLogs = (payload.skillLogs || []).map(normalizeLog).filter(Boolean);
+    if (Array.isArray(payload.template)) {
+      db.settings.template = payload.template.map((t, i) => ({
+        id: t.id || uid('t'),
+        day: Number.isFinite(Number(t.day)) ? Number(t.day) : [2, 5, 0][i] || 2,
+        label: t.label || WEEK_CN[Number(t.day)] || '',
+        start: t.start || '16:30',
+        end: t.end || '18:30',
+        venue: String(t.venue || '')
+      }));
+    }
+    if (payload.theme && isTheme(payload.theme)) {
+      db.settings.theme = payload.theme;
+      applyTheme(payload.theme);
+    }
+    if (payload.formation && payload.formation.pos) {
+      db.formation = normalizeFormation({ version: 1, preset: payload.formation.preset, pos: payload.formation.pos });
+    }
+    save();
+  }
+
+  function applyWeek(key, sessions) {
+    db.weeks[key] = (sessions || []).map(normalizeSession).filter(Boolean).sort(sessionSort);
+    save();
+  }
+
+  /** 高频写后台推送；失败时回拉对应数据，以服务器为准 */
+  function cloudFire(promise, resync) {
+    window.XGYCloud.fireAndSync(promise, resync || (() => cloudResyncAll()));
+  }
+
+  function cloudResyncAll() {
+    window.XGYCloud.pullCore().then(() => renderAllCurrent()).catch(() => {});
+  }
+
+  /** 阵型高频拖动：防抖 600ms 后推送 */
+  let fxPushTimer = null;
+  function cloudPushFormation() {
+    if (!CloudOn()) return;
+    clearTimeout(fxPushTimer);
+    fxPushTimer = setTimeout(() => {
+      cloudFire(window.XGYCloud.push.formation(db.formation), null);
+    }, 600);
+  }
+
   /* ══════════ 启动 ══════════ */
   function init() {
     state.weekMonday = getMonday(new Date());
@@ -2292,6 +2447,20 @@
     bind();
     refreshReveals();
     setTimeout(refreshReveals, 400);
+    if (window.XGYCloud) {
+      window.XGYCloud.attach({
+        toast,
+        openModal,
+        closeModal,
+        getDB: () => db,
+        save,
+        renderAll: renderAllCurrent,
+        applyServerState,
+        applyWeek,
+        currentMondayKey: () => weekKey(state.weekMonday)
+      });
+      cloudEnsureWeek(state.weekMonday);
+    }
   }
 
   init();
