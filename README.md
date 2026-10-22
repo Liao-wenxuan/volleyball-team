@@ -3,6 +3,9 @@
 给高校排球队用的一套本地优先工具：**人员 · 考勤 · 技能成长 · 阵型板**。
 纯前端、零依赖，双击一个 HTML 就能用，数据存在浏览器本地，可导出 JSON 备份。
 
+**在线试玩** → <https://liao-wenxuan.github.io/volleyball-team/>
+（数据只存在你自己的浏览器里，随便拖）
+
 ![首页](docs/shots/home.png)
 
 ## 为什么做这个
