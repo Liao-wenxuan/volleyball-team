@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>排球阵型板 · 原型</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{
+    --bg:#070a14;--panel:rgba(255,255,255,.04);--line:rgba(255,255,255,.1);
+    --text:#eef1f8;--muted:#8b93a7;
+    --sand-1:#c98a4b;--sand-2:#9d6230;
+    --font:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  html,body{height:100%}
+  body{
+    background:radial-gradient(1100px 700px at 50% -10%,#16203a 0%,#0a0e1b 45%,var(--bg) 100%);
+    color:var(--text);font-family:var(--font);overflow:hidden;
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  header{
+    display:flex;align-items:center;gap:14px;padding:14px 20px;flex:0 0 auto;
+  }
+  .brand{display:flex;align-items:center;gap:10px}
+  .dot{width:8px;height:8px;border-radius:50%;background:#37e39b;box-shadow:0 0 10px #37e39b}
+  h1{font-size:15px;font-weight:600;letter-spacing:.02em}
+  .sub{font-size:12px;color:var(--muted);margin-left:2px}
+  .spacer{flex:1}
+  .btn{
+    font-family:inherit;font-size:13px;color:var(--text);background:var(--panel);
+    border:1px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer;
+    transition:background .18s,border-color .18s,transform .12s;
+  }
+  .btn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2)}
+  .btn:active{transform:scale(.97)}
+  .btn.primary{background:rgba(70,224,255,.14);border-color:rgba(70,224,255,.4);color:#a9f0ff}
+
+  main{flex:1 1 auto;display:flex;align-items:center;justify-content:center;padding:0 20px 8px;min-height:0;min-width:0;overflow:hidden}
+  .stage{position:relative;flex:0 0 auto;width:0;height:0}
+  .stage::before{
+    content:"";position:absolute;inset:-16% -10% -6%;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(255,170,90,.16),transparent 72%);
+    filter:blur(18px);pointer-events:none;
+  }
+
+  .court{
+    position:absolute;inset:0;border-radius:6px;overflow:hidden;
+    background:linear-gradient(178deg,var(--sand-1),var(--sand-2));
+    box-shadow:0 30px 70px rgba(0,0,0,.62),inset 0 0 90px rgba(0,0,0,.28);
+    border:2px solid rgba(255,255,255,.9);
+    touch-action:none;user-select:none;
+    perspective:1000px;
+  }
+  .court::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      repeating-linear-gradient(to right,rgba(255,255,255,.07) 0 1px,transparent 1px calc(100% / 9)),
+      repeating-linear-gradient(to bottom,rgba(255,255,255,.07) 0 1px,transparent 1px calc(100% / 9));
+  }
+  .attack-line{
+    position:absolute;left:0;right:0;top:calc(100% / 3);height:2px;
+    background:rgba(255,255,255,.92);pointer-events:none;
+  }
+  .attack-label{
+    position:absolute;left:10px;top:calc(100% / 3 - 22px);
+    font-size:11px;color:rgba(255,255,255,.72);letter-spacing:.06em;pointer-events:none;
+  }
+  .net{
+    position:absolute;left:-2px;right:-2px;top:0;height:14px;pointer-events:none;
+    background:
+      repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 1px,transparent 1px 7px),
+      repeating-linear-gradient(0deg,rgba(255,255,255,.55) 0 1px,transparent 1px 7px),
+      rgba(12,18,32,.55);
+    border-bottom:1px solid rgba(255,255,255,.85);
+  }
+  .net-shaft{position:absolute;top:0;width:5px;height:14px;background:#dfe6f2;border-radius:2px}
+  .net-shaft.l{left:-4px}.net-shaft.r{right:-4px}
+  .net-label{
+    position:absolute;right:10px;top:20px;font-size:11px;letter-spacing:.14em;
+    color:rgba(255,255,255,.7);pointer-events:none;
+  }
+
+  .token{
+    position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;
+    display:grid;place-items:center;
+    background:radial-gradient(circle at 34% 28%,color-mix(in srgb,var(--role) 70%,#fff),var(--role) 62%,color-mix(in srgb,var(--role) 62%,#000));
+    border:2px solid rgba(255,255,255,.92);
+    box-shadow:0 10px 22px rgba(0,0,0,.45),0 0 0 0 color-mix(in srgb,var(--role) 55%,transparent);
+    color:#0b0f1a;font-size:12px;font-weight:700;letter-spacing:.02em;
+    cursor:grab;touch-action:none;
+    transition:left .14s cubic-bezier(.22,1,.36,1),top .14s cubic-bezier(.22,1,.36,1),box-shadow .2s,transform .12s;
+    will-change:left,top;
+    z-index:2;
+  }
+  .token span{pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.45)}
+  .token.dragging{
+    cursor:grabbing;transform:scale(1.14);transition:box-shadow .2s,transform .12s;
+    box-shadow:0 22px 40px rgba(0,0,0,.6),0 0 0 8px color-mix(in srgb,var(--role) 26%,transparent);
+    z-index:5;
+  }
+  .token.ghost{opacity:.28}
+  .token::after{
+    content:"";position:absolute;inset:-9px;border-radius:50%;
+    border:1px dashed color-mix(in srgb,var(--role) 60%,transparent);opacity:0;transition:opacity .18s;
+  }
+  .token.dragging::after{opacity:.85}
+
+  .coord{
+    position:absolute;transform:translate(-50%,-160%);padding:5px 10px;border-radius:999px;
+    background:rgba(8,12,22,.78);border:1px solid rgba(255,255,255,.16);
+    font-size:11px;letter-spacing:.03em;color:#dfe6f2;white-space:nowrap;
+    pointer-events:none;opacity:0;transition:opacity .16s;z-index:6;backdrop-filter:blur(6px);
+  }
+  .coord.on{opacity:1}
+
+  footer{flex:0 0 auto;padding:10px 20px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .presets{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{
+    font-family:inherit;font-size:12.5px;color:var(--text);background:var(--panel);
+    border:1px solid var(--line);border-radius:999px;padding:7px 15px;cursor:pointer;
+    transition:background .18s,border-color .18s,transform .12s;
+  }
+  .pill:hover{background:rgba(255,255,255,.08)}
+  .pill:active{transform:scale(.97)}
+  .pill.on{background:rgba(255,255,255,.92);color:#0b0f1a;border-color:transparent;font-weight:600}
+  .hint{font-size:11.5px;color:var(--muted);margin-left:auto}
+  .toast{
+    position:fixed;left:50%;bottom:74px;transform:translate(-50%,10px);
+    background:rgba(20,26,42,.94);border:1px solid rgba(255,255,255,.14);
+    color:#e8edf8;font-size:12.5px;padding:8px 16px;border-radius:999px;
+    opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;z-index:20;
+  }
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  @media (max-width:760px){
+    header{padding:12px 14px}
+    main{padding:0 12px 6px}
+    footer{padding:8px 14px 14px}
+    .hint{width:100%;margin:2px 0 0}
+    .token{width:48px;height:48px;margin:-24px 0 0 -24px;font-size:11px}
+    .sub{display:none}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="dot"></span><h1>防守站位</h1></div>
+    <span class="sub">拖动队员摆位 · 松手自动吸附 0.25m</span>
+    <div class="spacer"></div>
+    <button class="btn" id="reset">恢复默认</button>
+    <button class="btn primary" id="saved">已自动保存</button>
+  </header>
+
+  <main>
+    <div class="stage">
+      <div class="court" id="court">
+        <div class="net"></div>
+        <div class="net-shaft l"></div>
+        <div class="net-shaft r"></div>
+        <div class="net-label">网</div>
+        <div class="attack-line"></div>
+        <div class="attack-label">3m 线</div>
+      </div>
+      <div class="coord" id="coord"></div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="presets" id="presets"></div>
+    <span class="hint">长按拖动更稳 · 双击队员归位 · 数据存本机</span>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const KEY = 'vb_formation_v1';
+  const ROLES = [
+    { id: 'oh1', name: '主攻1', color: '#ff8a5c' },
+    { id: 'oh2', name: '主攻2', color: '#ff5c8a' },
+    { id: 'mb',  name: '副攻',  color: '#8f82ff' },
+    { id: 'opp', name: '接应',  color: '#ffc24b' },
+    { id: 's',   name: '二传',  color: '#46e0ff' },
+    { id: 'lib', name: '自由人', color: '#37e39b' }
+  ];
+
+  const PRESETS = {
+    base: {
+      label: '默认站位',
+      pos: {
+        s:   { x: 6.30, y: 1.10 },
+        mb:  { x: 4.50, y: 0.85 },
+        opp: { x: 2.60, y: 1.35 },
+        oh1: { x: 1.80, y: 5.60 },
+        lib: { x: 4.50, y: 7.00 },
+        oh2: { x: 7.00, y: 5.90 }
+      }
+    },
+    deep: {
+      label: '退守',
+      pos: {
+        s:   { x: 6.80, y: 3.60 },
+        mb:  { x: 4.50, y: 3.35 },
+        opp: { x: 2.20, y: 3.80 },
+        oh1: { x: 1.40, y: 7.40 },
+        lib: { x: 4.50, y: 8.20 },
+        oh2: { x: 7.40, y: 7.40 }
+      }
+    },
+    block: {
+      label: '网前拦防',
+      pos: {
+        s:   { x: 6.20, y: 0.60 },
+        mb:  { x: 4.50, y: 0.40 },
+        opp: { x: 2.80, y: 0.55 },
+        oh1: { x: 2.00, y: 3.40 },
+        lib: { x: 4.50, y: 3.60 },
+        oh2: { x: 7.00, y: 3.40 }
+      }
+    }
+  };
+
+  const COURT = 9;
+  const SNAP = 0.25;
+  const MIN = 0.30;
+  const MAX = COURT - 0.30;
+
+  const court = document.getElementById('court');
+  const coordEl = document.getElementById('coord');
+  const toastEl = document.getElementById('toast');
+  const presetsEl = document.getElementById('presets');
+
+  let state = load();
+  let activePreset = 'base';
+  const els = {};
+  const prev = {};
+  let drag = null;
+  let toastTimer = 0;
+
+  function load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (raw && raw.pos) return raw;
+    } catch (e) {}
+    return { pos: clone(PRESETS.base.pos), preset: 'base' };
+  }
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  function save() {
+    state.preset = activePreset;
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function buildTokens() {
+    ROLES.forEach((r) => {
+      const el = document.createElement('div');
+      el.className = 'token';
+      el.dataset.role = r.id;
+      el.style.setProperty('--role', r.color);
+      el.innerHTML = '<span>' + r.name + '</span>';
+      court.appendChild(el);
+      els[r.id] = el;
+      bindDrag(el, r.id);
+    });
+  }
+
+  function buildPresets() {
+    Object.keys(PRESETS).forEach((k) => {
+      const b = document.createElement('button');
+      b.className = 'pill';
+      b.dataset.preset = k;
+      b.textContent = PRESETS[k].label;
+      b.onclick = () => applyPreset(k);
+      presetsEl.appendChild(b);
+    });
+  }
+
+  function applyPreset(k) {
+    activePreset = k;
+    state.pos = clone(PRESETS[k].pos);
+    save();
+    render(true);
+    paintPresets();
+    toast('已套用「' + PRESETS[k].label + '」');
+  }
+
+  function paintPresets() {
+    [...presetsEl.children].forEach((b) => {
+      b.classList.toggle('on', b.dataset.preset === activePreset);
+    });
+  }
+
+  function place(id, p) {
+    const el = els[id];
+    if (!el) return;
+    el.style.left = (p.x / COURT * 100) + '%';
+    el.style.top = (p.y / COURT * 100) + '%';
+  }
+
+  function render(all) {
+    ROLES.forEach((r) => place(r.id, state.pos[r.id]));
+    paintPresets();
+  }
+
+  function bindDrag(el, id) {
+    el.addEventListener('pointerdown', (e) => {
+      if (drag) return;
+      e.preventDefault();
+      el.setPointerCapture(e.pointerId);
+      const m = toMeters(e);
+      drag = {
+        id, pointerId: e.pointerId, el,
+        dx: m.x - state.pos[id].x,
+        dy: m.y - state.pos[id].y,
+        moved: false
+      };
+      prev[id] = { x: state.pos[id].x, y: state.pos[id].y };
+      el.classList.add('dragging');
+      coordEl.classList.add('on');
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      if (!drag || drag.pointerId !== e.pointerId) return;
+      e.preventDefault();
+      const m = toMeters(e);
+      const x = clamp(m.x - drag.dx);
+      const y = clamp(m.y - drag.dy);
+      drag.moved = true;
+      state.pos[id] = { x, y };
+      el.style.left = (x / COURT * 100) + '%';
+      el.style.top = (y / COURT * 100) + '%';
+      coordEl.style.left = (x / COURT * 100) + '%';
+      coordEl.style.top = (y / COURT * 100) + '%';
+      coordEl.textContent = 'x ' + x.toFixed(2) + 'm · 距网 ' + y.toFixed(2) + 'm';
+    });
+
+    const end = (e) => {
+      if (!drag || drag.pointerId !== e.pointerId) return;
+      const id2 = drag.id;
+      const moved = drag.moved;
+      drag = null;
+      els[id2].classList.remove('dragging');
+      coordEl.classList.remove('on');
+      if (!moved) return;
+      const p = state.pos[id2];
+      state.pos[id2] = {
+        x: clamp(Math.round(p.x / SNAP) * SNAP),
+        y: clamp(Math.round(p.y / SNAP) * SNAP)
+      };
+      place(id2, state.pos[id2]);
+      activePreset = '';
+      paintPresets();
+      save();
+      toast('位置已保存');
+    };
+
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('lostpointercapture', (e) => { if (drag) end(e); });
+
+    el.addEventListener('dblclick', () => {
+      state.pos[id] = clone(PRESETS.base.pos[id]);
+      place(id, state.pos[id]);
+      save();
+      toast('已归位');
+    });
+  }
+
+  function toMeters(e) {
+    const r = court.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) / r.width * COURT,
+      y: (e.clientY - r.top) / r.height * COURT
+    };
+  }
+
+  function clamp(v) { return Math.min(MAX, Math.max(MIN, v)); }
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('on'), 1600);
+  }
+
+  document.getElementById('reset').onclick = () => applyPreset('base');
+
+  document.getElementById('saved').onclick = () => {
+    save();
+    toast('已保存到本机');
+  };
+
+  buildTokens();
+  buildPresets();
+  activePreset = state.preset && PRESETS[state.preset] ? state.preset : 'base';
+  render();
+
+  function fitStage() {
+    const wrap = court.parentElement.parentElement;
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    const s = Math.max(160, Math.min(w, h));
+    const stage = court.parentElement;
+    stage.style.width = s + 'px';
+    stage.style.height = s + 'px';
+  }
+
+  fitStage();
+  window.addEventListener('resize', fitStage);
+  window.addEventListener('orientationchange', () => setTimeout(fitStage, 120));
+})();
+</script>
+</body>
+</html>

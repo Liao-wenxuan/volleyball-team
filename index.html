@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>信工院排球队 · 球队管理</title>
+<meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="scroll-progress" aria-hidden="true"><span id="scrollBar"></span></div>
+<div class="bg-orbs" aria-hidden="true">
+  <span class="orb orb-1"></span>
+  <span class="orb orb-2"></span>
+  <span class="orb orb-3"></span>
+</div>
+<div class="grain" aria-hidden="true"></div>
+
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="#" data-goto="dashboard" aria-label="信工院排球队首页">
+    <span class="brand-mark">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <defs><radialGradient id="markG" cx="32%" cy="26%" r="78%"><stop offset="0" stop-color="#fff4dc"/><stop offset=".5" stop-color="#ffcb74"/><stop offset="1" stop-color="#e28a2f"/></radialGradient></defs>
+        <circle cx="24" cy="24" r="19" fill="url(#markG)"/>
+        <g fill="none" stroke="#5b3512" stroke-opacity=".55" stroke-width="1.6" stroke-linecap="round">
+          <path d="M19 5.6c-3.4 5-3.4 9.6 0 14.4s3.4 9.4 0 14.4"/>
+          <path d="M25 5.6c-3.4 5-3.4 9.6 0 14.4s3.4 9.4 0 14.4"/>
+          <path d="M30 5.6c-3.4 5-3.4 9.6 0 14.4s3.4 9.4 0 14.4"/>
+        </g>
+      </svg>
+    </span>
+    <span class="brand-txt"><strong>信工院排球队</strong><em>VOLLEYBALL · LOCAL</em></span>
+  </a>
+
+  <nav class="nav" aria-label="主导航">
+    <button class="nav-item active" data-page="dashboard">
+      <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></span>
+      <span>球队总览</span>
+    </button>
+    <button class="nav-item" data-page="roster">
+      <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+      <span>人员管理</span><i class="nav-count" id="navPlayerCount">0</i>
+    </button>
+    <button class="nav-item" data-page="attendance">
+      <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 15.5 2 2 4-4"/></svg></span>
+      <span>考勤管理</span>
+    </button>
+    <button class="nav-item" data-page="tactics">
+      <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M12 4v16"/></svg></span>
+      <span>阵型板</span>
+    </button>
+    <button class="nav-item" data-page="growth">
+      <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg></span>
+      <span>成长计划</span>
+    </button>
+  </nav>
+
+  <div class="season-card">
+    <div class="season-ring">
+      <svg viewBox="0 0 84 84">
+        <circle class="ring-bg" cx="42" cy="42" r="34"/>
+        <circle class="ring-fg" id="seasonRing" cx="42" cy="42" r="34" stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+      </svg>
+      <span id="seasonRate">—</span>
+    </div>
+    <div class="season-txt">
+      <strong>本周出勤</strong>
+      <p id="seasonSub">还没有队员</p>
+      <span class="season-bar"><i id="seasonBar" style="width:0%"></i></span>
+    </div>
+  </div>
+
+  <button class="user-chip" id="userChip">
+    <span class="u-avatar" style="--a:var(--violet);--b:var(--cyan)">管</span>
+    <span class="u-info"><strong>管理员</strong><em>本地账号</em></span>
+    <svg class="u-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+  </button>
+  <p class="sidebar-note">数据保存在本机浏览器</p>
+</aside>
+<div class="scrim" id="scrim"></div>
+
+<main class="main">
+  <header class="topbar">
+    <button class="icon-btn menu-btn" id="menuBtn" data-tip="菜单" aria-label="打开菜单"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <div class="crumb"><span id="pageKicker">TEAM OPS / OVERVIEW</span><h1 id="pageTitle">球队总览</h1></div>
+    <div class="top-actions">
+      <button class="search-trigger" id="searchTrigger">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span>搜索队员、页面…</span><kbd>Ctrl K</kbd>
+      </button>
+      <button class="icon-btn" id="themeBtn" data-tip="主题色" aria-label="切换主题色">
+        <svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="3.2"/><circle cx="17" cy="7" r="3.2"/><circle cx="12" cy="16.5" r="3.2"/></svg>
+      </button>
+      <div class="pop-wrap">
+        <button class="icon-btn" id="activityBtn" data-tip="最近动态" aria-label="最近动态">
+          <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </button>
+        <div class="popover notif-pop" id="activityPop">
+          <div class="pop-head"><strong>最近动态</strong><span class="pop-hint">本机操作记录</span></div>
+          <div class="notif-list" id="activityList"></div>
+        </div>
+      </div>
+      <div class="pop-wrap">
+        <button class="avatar-btn" id="avatarBtn" aria-label="账号菜单">
+          <span class="a-ring"></span>
+          <span class="u-avatar lg" style="--a:var(--violet);--b:var(--cyan)">管</span>
+        </button>
+        <div class="popover user-pop" id="userPop">
+          <div class="up-head">
+            <span class="u-avatar xl" style="--a:var(--violet);--b:var(--cyan)">管</span>
+            <div><strong>管理员</strong><em>本地账号 · 一个人维护全队数据</em></div>
+          </div>
+          <hr>
+          <div class="up-links">
+            <button id="menuTemplate"><span class="up-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span>训练模板</span><i>›</i></button>
+            <button id="menuTheme"><span class="up-ico"><svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><circle cx="12" cy="16.5" r="3"/></svg></span><span>主题色</span><i>›</i></button>
+            <button id="menuExport"><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></span><span>导出备份</span><i>›</i></button>
+            <button id="menuImport"><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M12 21V9M7 14l5-5 5 5"/><path d="M4 3h16"/></svg></span><span>导入备份</span><i>›</i></button>
+            <button class="danger" id="menuClear"><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/></svg></span><span>清空所有数据</span><i>›</i></button>
+          </div>
+          <hr>
+          <button class="up-logout" id="menuAbout">关于这个系统</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="content" id="content">
+
+    <!-- ══════════ 总览 ══════════ -->
+    <section class="page active" id="page-dashboard" aria-label="球队总览">
+      <div class="hero reveal">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="pulse-dot"></span><span id="heroWeek">本周</span></div>
+          <h2>把每一次起跳，<br><em>变成看得见的进步。</em></h2>
+          <p id="heroSub">还没有队员。先把队伍建起来。</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary magnetic" id="heroPrimary">添加第一名队员</button>
+            <button class="btn btn-ghost" id="heroSecondary">查看训练模板</button>
+          </div>
+          <div class="hero-meta">
+            <div><b id="heroPlayers">0</b><span>在队队员</span></div>
+            <div><b id="heroRate">—</b><span>本周出勤率</span></div>
+            <div><b id="heroAvg">—</b><span>全队平均技能</span></div>
+          </div>
+        </div>
+        <div class="hero-visual" aria-label="球队战术板">
+          <div class="hv-glow"></div>
+          <div class="court-wrap">
+            <div class="court-board">
+              <svg viewBox="0 0 340 344" class="court" role="img" aria-label="球队战术站位">
+                <defs>
+                  <linearGradient id="courtFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#151a33"/><stop offset=".55" stop-color="#0d1224"/><stop offset="1" stop-color="#090d19"/></linearGradient>
+                  <radialGradient id="courtGlow" cx="50%" cy="72%" r="62%"><stop offset="0" style="stop-color:var(--violet)" stop-opacity=".24"/><stop offset=".65" style="stop-color:var(--cyan)" stop-opacity=".05"/><stop offset="1" style="stop-color:var(--violet)" stop-opacity="0"/></radialGradient>
+                  <pattern id="netMesh" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M0 0H7M0 0V7" stroke="#cbd6ff" stroke-opacity=".22" stroke-width=".8"/></pattern>
+                  <filter id="ballGlow" x="-200%" y="-200%" width="400%" height="400%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                  <linearGradient id="netGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:var(--cyan)" stop-opacity=".2"/><stop offset=".5" style="stop-color:var(--cyan)" stop-opacity=".75"/><stop offset="1" style="stop-color:var(--cyan)" stop-opacity=".2"/></linearGradient>
+                </defs>
+                <rect x="56" y="14" width="228" height="316" rx="4" fill="#070a14" opacity=".55"/>
+                <rect x="62" y="20" width="216" height="304" rx="3" fill="url(#courtFloor)" stroke="rgba(255,255,255,.18)"/>
+                <rect x="66" y="24" width="208" height="296" rx="2" fill="url(#courtGlow)"/>
+                <text class="court-side" x="49" y="128" transform="rotate(-90 49 128)">OPPONENT</text>
+                <text class="court-side home" x="49" y="304" transform="rotate(-90 49 304)">HOME · XGY</text>
+                <text class="court-mark" x="170" y="270">信工</text>
+                <g class="court-lines">
+                  <rect x="66" y="24" width="208" height="296" rx="2" fill="none" stroke="rgba(255,255,255,.26)" stroke-width="1.2"/>
+                  <line x1="66" y1="228" x2="274" y2="228" stroke="rgba(255,187,85,.5)" stroke-width="1.2"/>
+                  <line x1="66" y1="288" x2="274" y2="288" stroke="rgba(255,255,255,.08)" stroke-width="1" stroke-dasharray="3 5"/>
+                  <text class="court-line-label" x="72" y="224">3m</text>
+                </g>
+                <g class="court-oppo">
+                  <circle cx="108" cy="146" r="7"/><circle cx="170" cy="146" r="7"/><circle cx="232" cy="146" r="7"/>
+                  <circle cx="88" cy="76" r="7"/><circle cx="170" cy="76" r="7"/><circle cx="252" cy="76" r="7"/>
+                </g>
+                <g class="court-net">
+                  <rect x="54" y="160" width="232" height="14" fill="url(#netMesh)"/>
+                  <line x1="52" y1="160" x2="288" y2="160" stroke="url(#netGrad)" stroke-width="2.4"/>
+                  <line x1="52" y1="174" x2="288" y2="174" stroke="rgba(70,224,255,.32)" stroke-width="1"/>
+                  <line x1="54" y1="148" x2="54" y2="186" stroke="rgba(255,255,255,.4)" stroke-width="1.6"/>
+                  <line x1="286" y1="148" x2="286" y2="186" stroke="rgba(255,255,255,.4)" stroke-width="1.6"/>
+                  <circle cx="54" cy="148" r="2.2" style="fill:var(--cyan)"/><circle cx="286" cy="148" r="2.2" style="fill:var(--cyan)"/>
+                </g>
+                <path class="court-path" d="M252 278 C232 290,200 292,172 282 C150 274,126 242,108 202 C88 152,118 108,152 64"/>
+                <g id="courtPlayers"></g>
+                <g class="court-ball-group" filter="url(#ballGlow)">
+                  <circle class="court-ball-trail" r="3" opacity=".35"><animateMotion dur="5.6s" begin="-0.18s" repeatCount="indefinite" path="M252 278 C232 290,200 292,172 282 C150 274,126 242,108 202 C88 152,118 108,152 64"/></circle>
+                  <circle class="court-ball-trail" r="2" opacity=".18"><animateMotion dur="5.6s" begin="-0.36s" repeatCount="indefinite" path="M252 278 C232 290,200 292,172 282 C150 274,126 242,108 202 C88 152,118 108,152 64"/></circle>
+                  <circle class="court-ball" r="4.4"><animateMotion dur="5.6s" repeatCount="indefinite" path="M252 278 C232 290,200 292,172 282 C150 274,126 242,108 202 C88 152,118 108,152 64"/></circle>
+                </g>
+              </svg>
+            </div>
+          </div>
+          <div class="float-chip chip-a"><span class="fc-ico">📅</span><div><b id="chipTrain">0</b><em>本周训练</em></div></div>
+          <div class="float-chip chip-b"><span class="fc-ico">✅</span><div><b id="chipRate">—</b><em>本周出勤</em></div></div>
+          <div class="float-chip chip-c"><span class="fc-ico">📈</span><div><b id="chipAvg">—</b><em>平均技能</em></div></div>
+          <div class="court-caption" id="courtCaption"><i class="pulse-dot small"></i>点击场上位置查看队员</div>
+        </div>
+      </div>
+
+      <section class="panel onboarding reveal" id="onboarding" hidden>
+        <div class="onboard-head">
+          <div><h3>把球队从零建起来</h3><p>四步完成。所有数据都由你添加，系统不预置任何队员。</p></div>
+          <span class="tag-pill violet" id="onboardPct">1 / 4</span>
+        </div>
+        <span class="onboard-bar"><i id="onboardBar"></i></span>
+        <div class="onboard-steps" id="onboardSteps">
+          <button class="onboard-step done" data-step="template"><span class="os-num">✓</span><span><b>训练模板</b><em>周二 / 周五 / 周日</em></span></button>
+          <button class="onboard-step" data-step="player"><span class="os-num">2</span><span><b>添加队员</b><em>姓名、号码、位置</em></span></button>
+          <button class="onboard-step" data-step="attendance"><span class="os-num">3</span><span><b>登记考勤</b><em>按次记录出勤</em></span></button>
+          <button class="onboard-step" data-step="growth"><span class="os-num">4</span><span><b>调整技能</b><em>6 项 · 0–10 分</em></span></button>
+        </div>
+      </section>
+
+      <div class="kpi-grid">
+        <article class="kpi card-spot reveal">
+          <div class="kpi-top"><span class="kpi-ico violet"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="tag-pill" id="kpiPlayerTag">在队</span></div>
+          <div class="kpi-val"><b id="kpiPlayers">0</b><em>人</em></div>
+          <p>在队队员</p>
+          <div class="kpi-sub" id="kpiPlayerSub">先添加第一名队员</div>
+        </article>
+        <article class="kpi card-spot reveal">
+          <div class="kpi-top"><span class="kpi-ico green"><svg viewBox="0 0 24 24"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="m9 11 3 3L22 4"/></svg></span><span class="tag-pill" id="kpiRateTag">本周</span></div>
+          <div class="kpi-val"><b id="kpiRate">—</b><em id="kpiRateUnit"></em></div>
+          <p>本周出勤率</p>
+          <div class="kpi-sub" id="kpiRateSub">还没有考勤记录</div>
+        </article>
+        <article class="kpi card-spot reveal">
+          <div class="kpi-top"><span class="kpi-ico cyan"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="tag-pill" id="kpiSessionTag">模板</span></div>
+          <div class="kpi-val"><b id="kpiSessions">0</b><em>次</em></div>
+          <p>本周训练</p>
+          <div class="kpi-sub" id="kpiSessionSub">周二、周五、周日</div>
+        </article>
+        <article class="kpi card-spot reveal">
+          <div class="kpi-top"><span class="kpi-ico amber"><svg viewBox="0 0 24 24"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg></span><span class="tag-pill" id="kpiAvgTag">0–10</span></div>
+          <div class="kpi-val"><b id="kpiAvg">—</b><em>分</em></div>
+          <p>全队平均技能</p>
+          <div class="kpi-sub" id="kpiAvgSub">还没有队员</div>
+        </article>
+      </div>
+
+      <div class="dash-row dash-row-a">
+        <section class="panel cover-panel reveal">
+          <header class="panel-head">
+            <div><h3>本周训练</h3><p>按固定模板生成 · 单次改动只影响本周</p></div>
+            <div class="panel-head-actions">
+              <button class="btn-mini" id="attAddBtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> 加练</button>
+              <button class="text-link" data-goto="attendance">去登记
+                <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </button>
+            </div>
+          </header>
+          <div id="dashSessions">
+            <div class="coverflow" id="dashCoverflow">
+              <button class="cf-arrow prev" data-cf="prev" aria-label="上一次"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+              <div class="cf-stage"><div class="cf-track" id="dashCfTrack"></div></div>
+              <button class="cf-arrow next" data-cf="next" aria-label="下一次"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+              <div class="cf-dots" id="dashCfDots"></div>
+            </div>
+          </div>
+          <div class="session-empty" id="dashSessionsEmpty" hidden></div>
+        </section>
+
+        <section class="panel att-snapshot reveal">
+          <header class="panel-head">
+            <div><h3>本周出勤</h3><p id="dashMarkedNote">已登记 0 项</p></div>
+            <span class="tag-pill green" id="dashRateTag" hidden>达标</span>
+          </header>
+          <div class="ring-hero">
+            <svg class="ring-chart" viewBox="0 0 180 180" id="dashRing">
+              <circle class="ring-track" cx="90" cy="90" r="72"/>
+              <circle class="ring-value" cx="90" cy="90" r="72" stroke-dasharray="452.4" stroke-dashoffset="452.4"/>
+            </svg>
+            <div class="ring-center"><b id="dashRate">—</b><span>%</span><em>出勤率</em></div>
+            <span class="ring-orbit"></span>
+          </div>
+          <div class="ring-legend">
+            <div><i class="dot green"></i><span>出勤</span><b id="dashLegendPresent">0</b></div>
+            <div><i class="dot amber"></i><span>迟到</span><b id="dashLegendLate">0</b></div>
+            <div><i class="dot violet"></i><span>请假</span><b id="dashLegendLeave">0</b></div>
+            <div><i class="dot red"></i><span>缺席</span><b id="dashLegendAbsent">0</b></div>
+          </div>
+          <button class="btn btn-soft full" data-goto="attendance">去登记考勤</button>
+        </section>
+      </div>
+
+      <div class="dash-row dash-row-b">
+        <section class="panel stack-panel reveal">
+          <header class="panel-head">
+            <div><h3>最近技能调整</h3><p>点击卡片查看队员</p></div>
+            <button class="btn-mini" id="stackToggle"><span>展开</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+          </header>
+          <div id="stackWrap"><div class="stack" id="stack"></div></div>
+          <div class="stack-empty" id="stackEmpty" hidden></div>
+        </section>
+
+        <section class="panel radar-panel reveal">
+          <header class="panel-head"><div><h3>全队技能雷达</h3><p>6 项均值 · 0–10 分制</p></div><span class="tag-pill violet" id="radarTag" hidden>—</span></header>
+          <div class="radar-box" id="teamRadar"></div>
+          <div class="radar-legend"><span><i class="dot violet"></i>全队均值</span></div>
+        </section>
+
+        <section class="panel heat-panel reveal">
+          <header class="panel-head"><div><h3>出勤热力</h3><p>近 14 周 · 每次训练</p></div><span class="tag-pill amber" id="heatTag">—</span></header>
+          <div class="heat2" id="heatmap"></div>
+          <div class="heat-legend"><span>0%</span><i></i><i></i><i></i><i></i><i></i><span>100%</span></div>
+          <div class="heat-stats">
+            <div><b id="heatWeekRate">—</b><span>本周出勤</span></div>
+            <div><b id="heatWeeks">0</b><span>有记录周数</span></div>
+            <div><b id="heatSessions">0</b><span>累计训练</span></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ══════════ 人员管理 ══════════ -->
+    <section class="page" id="page-roster" aria-label="人员管理">
+      <div class="page-head reveal">
+        <div>
+          <div class="eyebrow">ROSTER / PLAYERS</div>
+          <h2>球队人员管理</h2>
+          <p id="rosterSub">还没有队员。从添加第一名队员开始。</p>
+        </div>
+        <div class="page-head-actions">
+          <button class="btn btn-primary magnetic" id="addPlayerBtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>新增队员</button>
+        </div>
+      </div>
+
+      <div class="roster-stats reveal">
+        <div class="rs-item"><b id="rsCount">0</b><span>在队队员</span></div>
+        <div class="rs-item"><b id="rsHeight">—</b><span>平均身高 cm</span></div>
+        <div class="rs-item"><b id="rsAvg">—</b><span>平均技能</span></div>
+        <div class="rs-item"><b id="rsCoverage">0 / 5</b><span>位置覆盖</span></div>
+      </div>
+
+      <div class="roster-toolbar reveal">
+        <div class="filter-chips" id="roleFilters">
+          <button class="chip active" data-role="全部">全部 <i>0</i></button>
+          <button class="chip" data-role="主攻">主攻 <i>0</i></button>
+          <button class="chip" data-role="副攻">副攻 <i>0</i></button>
+          <button class="chip" data-role="二传">二传 <i>0</i></button>
+          <button class="chip" data-role="接应">接应 <i>0</i></button>
+          <button class="chip" data-role="自由人">自由人 <i>0</i></button>
+        </div>
+        <div class="toolbar-right">
+          <label class="input-wrap">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input id="rosterSearch" type="search" placeholder="搜索姓名或号码" autocomplete="off">
+          </label>
+        </div>
+      </div>
+
+      <div class="roster-grid" id="rosterGrid"></div>
+      <div id="rosterEmpty"></div>
+    </section>
+
+    <!-- ══════════ 考勤管理 ══════════ -->
+    <section class="page" id="page-attendance" aria-label="考勤管理">
+      <div class="page-head reveal">
+        <div>
+          <div class="eyebrow">ATTENDANCE / WEEK</div>
+          <h2>考勤管理</h2>
+          <p>按次登记。未登记的格子不计入出勤率。</p>
+        </div>
+        <div class="page-head-actions">
+          <div class="week-switch">
+            <button id="weekPrev" aria-label="上一周"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+            <div><span id="weekLabel">本周</span><em id="weekRange">—</em></div>
+            <button id="weekNext" aria-label="下一周"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+          </div>
+          <button class="btn btn-ghost" id="weekToday">回到本周</button>
+          <button class="btn btn-primary" id="attAddBtnPage"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>加练</button>
+        </div>
+      </div>
+
+      <div id="attNoPlayers" hidden></div>
+
+      <div id="attBody">
+        <div class="att-summary">
+          <div class="as-card reveal"><span class="as-ico green"><svg viewBox="0 0 24 24"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="m9 11 3 3L22 4"/></svg></span><div><b id="sumRate">—</b><span>整体出勤率</span></div></div>
+          <div class="as-card reveal"><span class="as-ico violet"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><div><b id="sumPerfect">0</b><span>全勤队员</span></div></div>
+          <div class="as-card reveal"><span class="as-ico amber"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><b id="sumLate">0</b><span>迟到人次</span></div></div>
+          <div class="as-card reveal"><span class="as-ico red"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span><div><b id="sumAbsent">0</b><span>缺席人次</span></div></div>
+        </div>
+
+        <div class="att-layout">
+          <section class="panel att-panel reveal">
+            <header class="panel-head">
+              <div><h3>本周考勤表</h3><p id="attNote">还没有训练安排</p></div>
+              <div class="att-head-actions">
+                <div class="att-legend">
+                  <span><i class="dot green"></i>出勤</span>
+                  <span><i class="dot amber"></i>迟到</span>
+                  <span><i class="dot violet"></i>请假</span>
+                  <span><i class="dot red"></i>缺席</span>
+                </div>
+                <button class="btn-mini" id="allPresent"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> 一键全勤</button>
+              </div>
+            </header>
+            <div class="att-scroll"><div class="att-grid" id="attGrid"></div></div>
+            <div id="attEmpty"></div>
+            <div class="att-tip"><span>💡</span> 点击格子循环切换：未登记 → 出勤 → 迟到 → 请假 → 缺席。点击列头可改时间、地点或因雨取消。</div>
+          </section>
+
+          <aside class="att-side">
+            <section class="panel reveal">
+              <header class="panel-head"><div><h3>出勤构成</h3><p>只统计已登记项</p></div></header>
+              <div class="donut-box">
+                <svg class="donut" viewBox="0 0 160 160" id="attDonut">
+                  <circle class="d-track" cx="80" cy="80" r="62"/>
+                  <circle class="d-seg" data-k="present" cx="80" cy="80" r="62" stroke-dasharray="0 389.6" stroke-dashoffset="0"/>
+                  <circle class="d-seg" data-k="late" cx="80" cy="80" r="62" stroke-dasharray="0 389.6" stroke-dashoffset="0"/>
+                  <circle class="d-seg" data-k="leave" cx="80" cy="80" r="62" stroke-dasharray="0 389.6" stroke-dashoffset="0"/>
+                  <circle class="d-seg" data-k="absent" cx="80" cy="80" r="62" stroke-dasharray="0 389.6" stroke-dashoffset="0"/>
+                </svg>
+                <div class="donut-center"><b id="donutRate">—</b><span>%</span><em>出勤</em></div>
+              </div>
+              <div class="donut-legend" id="donutLegend"></div>
+            </section>
+            <section class="panel reveal">
+              <header class="panel-head"><div><h3>本周训练</h3><p>点击改时间 / 取消</p></div></header>
+              <div class="session-mini-list" id="sessionList"></div>
+            </section>
+            <section class="panel reveal">
+              <header class="panel-head"><div><h3>异常名单</h3><p>迟到 / 请假 / 缺席</p></div></header>
+              <div class="exception-list" id="exceptionList"></div>
+            </section>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ 阵型板 ══════════ -->
+    <section class="page" id="page-tactics" aria-label="阵型板">
+      <div class="page-head reveal">
+        <div>
+          <div class="eyebrow">FORMATION / COURT</div>
+          <h2>防守站位</h2>
+          <p>把角色拖到你要的位置，松手按 0.25m 吸附并自动保存。绑位置不绑人，换人不换战术。</p>
+        </div>
+        <div class="page-head-actions">
+          <button class="btn btn-ghost" id="fxFull">
+            <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>全屏
+          </button>
+          <button class="btn btn-ghost" id="fxReset">
+            <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>恢复默认
+          </button>
+        </div>
+      </div>
+
+      <div class="fx-layout reveal">
+        <div class="panel fx-board">
+          <div class="fx-stage">
+            <div class="fx-court" id="fxCourt">
+              <div class="fx-net"></div>
+              <div class="fx-net-shaft l"></div>
+              <div class="fx-net-shaft r"></div>
+              <div class="fx-net-label">网</div>
+              <div class="fx-attack"></div>
+              <div class="fx-attack-label">3m 线</div>
+            </div>
+            <div class="fx-coord" id="fxCoord"></div>
+          </div>
+        </div>
+
+        <aside class="fx-side">
+          <div class="panel">
+            <div class="panel-head">
+              <div><h3>预设阵型</h3><p>套用之后还能继续拖</p></div>
+            </div>
+            <div class="fx-presets" id="fxPresets"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div><h3>角色位</h3><p>单位米，y 从网起算</p></div>
+              <span class="tag-pill violet" id="fxState">默认站位</span>
+            </div>
+            <ul class="fx-roles" id="fxRoles"></ul>
+          </div>
+        </aside>
+      </div>
+
+      <div class="fx-fsbar" id="fxFsBar" role="toolbar" aria-label="全屏工具条">
+        <span class="fx-fsname" id="fxFsName">默认站位</span>
+        <span class="fx-fsdiv"></span>
+        <button type="button" class="fx-fsbtn" data-fs-preset="base">默认</button>
+        <button type="button" class="fx-fsbtn" data-fs-preset="deep">退守</button>
+        <button type="button" class="fx-fsbtn" data-fs-preset="block">拦防</button>
+        <span class="fx-fsdiv"></span>
+        <button type="button" class="fx-fsbtn exit" id="fxExit">
+          <svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4"/><path d="M15 3h4a2 2 0 0 1 2 2v4"/><path d="M9 21H5a2 2 0 0 1-2-2v-4"/><path d="M15 21h4a2 2 0 0 0 2-2v-4"/></svg>退出
+        </button>
+      </div>
+
+      <button type="button" class="fx-fsexit" id="fxExitTop" aria-label="退出全屏" data-tip="退出全屏">
+        <svg viewBox="0 0 24 24"><path d="M9 3v4a2 2 0 0 1-2 2H3"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/><path d="M9 21v-4a2 2 0 0 0-2-2H3"/><path d="M15 21v-4a2 2 0 0 1 2-2h4"/></svg>
+      </button>
+    </section>
+
+    <!-- ══════════ 成长计划 ══════════ -->
+    <section class="page" id="page-growth" aria-label="成长计划">
+      <div class="page-head reveal">
+        <div>
+          <div class="eyebrow">SKILLS / GROWTH</div>
+          <h2>成长计划</h2>
+          <p>6 项技能，0–10 分。每次训练或比赛后手动加减，所有变化留痕。</p>
+        </div>
+        <div class="page-head-actions">
+          <button class="btn btn-ghost" id="manualBtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>手动调整</button>
+          <button class="btn btn-primary magnetic" id="batchBtn"><svg viewBox="0 0 24 24"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>训练后调整</button>
+        </div>
+      </div>
+
+      <div class="roster-stats growth-stats reveal">
+        <div class="rs-item"><b id="gsAvg">—</b><span>全队平均技能</span></div>
+        <div class="rs-item"><b id="gsLogs">0</b><span>本周调整次数</span></div>
+        <div class="rs-item"><b id="gsTop">—</b><span>最高综合</span></div>
+        <div class="rs-item"><b id="gsCount">0</b><span>已录入队员</span></div>
+      </div>
+
+      <section class="panel matrix-panel reveal">
+        <header class="panel-head">
+          <div><h3>全队技能矩阵</h3><p>点任意格子直接调整该队员的单项技能</p></div>
+          <span class="tag-pill violet" id="matrixTag" hidden>按综合排序</span>
+        </header>
+        <div class="matrix-scroll"><div id="skillMatrix"></div></div>
+        <div id="matrixEmpty"></div>
+      </section>
+
+      <section class="panel recent-panel reveal">
+        <header class="panel-head"><div><h3>最近调整</h3><p>最近的技能变化记录</p></div></header>
+        <div class="recent-logs" id="recentLogs"></div>
+        <div id="recentEmpty"></div>
+      </section>
+    </section>
+  </div>
+
+  <footer class="footer">
+    <div class="wave" aria-hidden="true">
+      <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+        <path d="M0,64 C180,120 320,10 520,48 C720,86 820,20 1010,52 C1180,80 1300,30 1440,62 L1440,120 L0,120 Z" fill="rgba(123,108,255,.10)"/>
+        <path d="M0,80 C200,30 360,116 560,80 C760,44 880,108 1080,76 C1240,50 1360,100 1440,82 L1440,120 L0,120 Z" fill="rgba(70,224,255,.07)"/>
+      </svg>
+    </div>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="brand-mark small">
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <circle cx="24" cy="24" r="19" fill="url(#markG)"/>
+            <g fill="none" stroke="#5b3512" stroke-opacity=".55" stroke-width="1.6" stroke-linecap="round">
+              <path d="M19 5.6c-3.4 5-3.4 9.6 0 14.4s3.4 9.4 0 14.4"/>
+              <path d="M25 5.6c-3.4 5-3.4 9.6 0 14.4s3.4 9.4 0 14.4"/>
+              <path d="M30 5.6c-3.4 5-3.4 9.6 0 14.4s3.4 9.4 0 14.4"/>
+            </g>
+          </svg>
+        </span>
+        <div><strong>信工院排球队</strong><p>数据保存在本机浏览器 · 建议每周导出一次备份</p></div>
+      </div>
+      <div class="social-row" id="footerActions">
+        <button class="social-btn" style="--brand:#37e39b" data-action="export" data-tip="导出 JSON 备份"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></span><span class="sb-txt">导出备份</span></button>
+        <button class="social-btn" style="--brand:var(--violet)" data-action="template" data-tip="训练模板"><span class="sb-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="sb-txt">训练模板</span></button>
+        <button class="social-btn" style="--brand:var(--cyan)" data-action="add-player" data-tip="添加队员"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="sb-txt">添加队员</span></button>
+        <button class="social-btn" style="--brand:#ffbb55" data-action="help" data-tip="使用说明"><span class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7v.5"/><path d="M12 17h.01"/></svg></span><span class="sb-txt">使用说明</span></button>
+      </div>
+      <div class="footer-meta">© 2026 信工院排球队 · 本地优先 · 数据可随时导出</div>
+    </div>
+  </footer>
+</main>
+
+<div class="drawer-scrim" id="drawerScrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <header class="drawer-head"><span class="dh-label">PLAYER PROFILE</span><button class="icon-btn" id="drawerClose" data-tip="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<div class="modal-scrim" id="modalScrim">
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <header class="modal-head"><h3 id="modalTitle">标题</h3><button class="icon-btn" id="modalClose" data-tip="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="modal-scrim" id="confirmScrim">
+  <div class="confirm-box" role="alertdialog" aria-modal="true">
+    <span class="confirm-icon" id="confirmIcon">!</span>
+    <h3 id="confirmTitle">确认删除</h3>
+    <p id="confirmMsg"></p>
+    <div class="confirm-actions">
+      <button class="btn btn-ghost" id="confirmCancel">取消</button>
+      <button class="btn btn-danger" id="confirmOk">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<div class="palette-scrim" id="paletteScrim">
+  <div class="palette">
+    <div class="palette-input">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="paletteInput" placeholder="搜索队员、页面或操作…" autocomplete="off">
+      <kbd>ESC</kbd>
+    </div>
+    <div class="palette-list" id="paletteList"></div>
+    <div class="palette-foot"><span><kbd>↑</kbd><kbd>↓</kbd> 选择</span><span><kbd>↵</kbd> 打开</span><span>共 <b id="paletteCount">0</b> 项</span></div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toasts" aria-live="polite"></div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script src="app.js"></script>
+</body>
+</html>
