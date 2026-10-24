@@ -1004,7 +1004,7 @@
     grid.hidden = list.length === 0;
     const empty = $('#rosterEmpty');
     if (list.length) empty.innerHTML = '';
-    else if (!db.players.length) empty.innerHTML = emptyState('🏐', '还没有队员', '从第一名队员开始。填写姓名、号码、位置、年级和身高，再给 6 项技能一个初始分。', '<button class="btn btn-primary" data-action="add-player">添加第一名队员</button>');
+    else if (!db.players.length) empty.innerHTML = emptyState('🏐', '还没有队员', '有现成名单的话用「批量导入」，粘贴一段表格就全进来了；也可以一个个填。', '<button class="btn btn-primary" data-action="bulk-import">批量导入名单</button><button class="btn btn-ghost" data-action="add-player">添加第一名队员</button>');
     else empty.innerHTML = emptyState('🔍', '没有匹配的队员', '换个关键词或位置筛选试试。', '<button class="btn btn-ghost" data-action="clear-filter">清除筛选</button>');
 
     attachTilt(grid);
@@ -1127,6 +1127,221 @@
         setTimeout(() => openPlayer(np.id), 260);
       }
     };
+  }
+
+  /* ══════════ 批量导入名单 ══════════ */
+  const IMPORT_FIELDS = [
+    { key: 'name', label: '姓名', aliases: ['姓名', '名字', '队员', 'name'] },
+    { key: 'number', label: '号码', aliases: ['号码', '球衣号', '号', 'number'] },
+    { key: 'position', label: '位置', aliases: ['位置', '场上位置', '司职', 'position'] },
+    { key: 'grade', label: '年级', aliases: ['年级', '年级/班级', 'grade'] },
+    { key: 'height', label: '身高', aliases: ['身高', '身高(cm)', '身高cm', 'height'] }
+  ];
+
+  function splitRow(line) {
+    let cells = line.split('\t');
+    if (cells.length < 2) cells = line.split(/[,，]/);
+    if (cells.length < 2) cells = line.split(/[|｜]/);
+    if (cells.length < 2) cells = line.split(/\s{2,}/);
+    if (cells.length < 2) cells = line.trim().split(/\s+/);
+    return cells.map((c) => String(c).trim()).filter((c, i, a) => !(c === '' && i === a.length - 1));
+  }
+
+  function normalizeImportPosition(raw) {
+    const s = String(raw || '');
+    if (s.includes('接应')) return '接应';
+    if (s.includes('二传')) return '二传';
+    if (s.includes('副攻')) return '副攻';
+    if (s.includes('主攻')) return '主攻';
+    if (s.includes('自由') || /^(l|lib)$/i.test(s)) return '自由人';
+    return '';
+  }
+
+  function normalizeImportGrade(raw) {
+    const s = String(raw || '').trim();
+    if (!s) return '';
+    const hit = GRADES.find((g) => s.includes(g));
+    if (hit) return hit;
+    const m = s.match(/([一二三四1-4])年级?/);
+    if (m) {
+      const map = { 一: '大一', 二: '大二', 三: '大三', 四: '大四', 1: '大一', 2: '大二', 3: '大三', 4: '大四' };
+      return map[m[1]] || '';
+    }
+    const y = s.match(/研([一二三1-3])/);
+    if (y) {
+      const map = { 一: '研一', 二: '研二', 三: '研三', 1: '研一', 2: '研二', 3: '研三' };
+      return map[y[1]] || '';
+    }
+    return s.slice(0, 8);
+  }
+
+  function normalizeImportNumber(raw) {
+    const s = String(raw || '').replace(/[号#]/g, '').replace(/^no\.?/i, '').trim();
+    if (!s) return NaN;
+    const n = Number(s);
+    return Number.isFinite(n) ? Math.round(n) : NaN;
+  }
+
+  function normalizeImportHeight(raw) {
+    const s = String(raw || '').toLowerCase().replace(/cm|厘米|公分/g, '').trim();
+    if (!s) return NaN;
+    let n = Number(s);
+    if (!Number.isFinite(n)) return NaN;
+    if (n > 0 && n < 3) n = n * 100; // 1.88 这种写法
+    return Math.round(n);
+  }
+
+  /** 把粘贴进来的一段文本解析成待导入行，含每行的问题标注 */
+  function parseRosterText(text) {
+    const lines = String(text || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) return { rows: [], header: false };
+
+    // 表头识别：单字别名（如「号」）必须完全相等，避免把「5号」这种数据行当表头
+    const matchField = (cell) => IMPORT_FIELDS.find((f) => f.aliases.some((a) => cell === a || (a.length >= 2 && cell.includes(a))));
+    const first = splitRow(lines[0]).map((c) => c.toLowerCase());
+    const firstHits = first.map(matchField).filter(Boolean);
+    const header = new Set(firstHits.map((f) => f.key)).size >= 2;
+    const cols = {};
+    if (header) {
+      first.forEach((c, i) => {
+        const f = matchField(c);
+        if (f && cols[f.key] === undefined) cols[f.key] = i;
+      });
+    } else {
+      IMPORT_FIELDS.forEach((f, i) => { cols[f.key] = i; });
+    }
+
+    const used = new Set(db.players.map((p) => p.number));
+    const rows = [];
+    lines.slice(header ? 1 : 0).forEach((rawLine) => {
+      // 接龙里的序号：「1. 张三 …」「2、张三 …」，整行层面先剥掉
+      const line = rawLine.replace(/^\s*\d{1,2}\s*[.、)．:：]\s*/, '');
+      let cells = splitRow(line);
+      // 剥不干净时（如「1.」独立成列）再按列丢一次
+      if (cells.length >= 4 && /^\d{1,2}\s*[.、)．:：]$/.test(cells[0])) cells = cells.slice(1);
+      const pick = (k) => (cols[k] === undefined ? '' : (cells[cols[k]] || ''));
+      const raw = {
+        name: String(pick('name') || '').trim().slice(0, 10),
+        number: normalizeImportNumber(pick('number')),
+        position: normalizeImportPosition(pick('position')),
+        grade: normalizeImportGrade(pick('grade')),
+        height: normalizeImportHeight(pick('height'))
+      };
+      const issues = [];
+      if (!raw.name) issues.push({ level: 'err', text: '缺姓名' });
+      if (!Number.isFinite(raw.number) || raw.number < 0 || raw.number > 99) issues.push({ level: 'err', text: '号码无效' });
+      else if (used.has(raw.number)) issues.push({ level: 'err', text: `号码 ${raw.number} 重复` });
+      if (!Number.isFinite(raw.height) || raw.height < 140 || raw.height > 230) issues.push({ level: 'err', text: '身高异常' });
+      if (!raw.position) { raw.position = '主攻'; issues.push({ level: 'warn', text: '位置未知，按主攻' }); }
+      if (!raw.grade) { raw.grade = '大一'; issues.push({ level: 'warn', text: '年级未知，按大一' }); }
+      if (Number.isFinite(raw.number)) used.add(raw.number);
+      rows.push({ raw, issues, on: issues.every((i) => i.level !== 'err') });
+    });
+    return { rows, header };
+  }
+
+  function openBulkImport() {
+    const sample = '姓名\t号码\t位置\t年级\t身高\n张辰\t1\t主攻\t大三\t188\n李睿\t7\t二传\t大二\t182';
+    const body = `<div class="import-wrap">
+      <div class="import-help">
+        从 Excel / 腾讯文档 / 金山表格整块复制，直接粘贴进来就行；也认逗号、空格分隔的接龙文本（如 <code>1. 张辰 1号 主攻 大三 188</code>）。
+        带表头会自动识别列，没表头按 <b>姓名 号码 位置 年级 身高</b> 顺序读。
+      </div>
+      <textarea id="importText" class="import-input" rows="7" spellcheck="false" placeholder="姓名	号码	位置	年级	身高
+张辰	1	主攻	大三	188
+李睿	7	二传	大二	182"></textarea>
+      <div class="import-actions-row">
+        <button type="button" class="btn-mini" id="importSample">填入示例</button>
+        <button type="button" class="btn-mini" id="importClear">清空</button>
+        <span class="import-hint" id="importHint"></span>
+      </div>
+      <div id="importPreview" class="import-preview"></div>
+      <div class="form-foot"><button type="button" class="btn btn-ghost" data-close-modal>取消</button><button type="button" class="btn btn-primary" id="importGo" disabled>导入</button></div>
+    </div>`;
+    openModal('批量导入队员', body, { wide: true });
+
+    const ta = $('#importText');
+    const preview = $('#importPreview');
+    const go = $('#importGo');
+    const hint = $('#importHint');
+    let parsed = { rows: [], header: false };
+
+    function repaint() {
+      parsed = parseRosterText(ta.value);
+      const ok = parsed.rows.filter((r) => r.on).length;
+      const bad = parsed.rows.length - ok;
+      hint.textContent = parsed.rows.length
+        ? `识别到 ${parsed.rows.length} 行 · 可导入 ${ok} 行${bad ? ` · ${bad} 行有问题` : ''}`
+        : '';
+      go.disabled = ok === 0;
+      if (!parsed.rows.length) { preview.innerHTML = ''; return; }
+      preview.innerHTML = `<div class="ip-head">
+          <span>共 ${parsed.rows.length} 行${parsed.header ? '（已识别表头）' : ''}</span>
+          <button type="button" class="btn-mini" id="importToggle">反选可导入行</button>
+        </div>
+        <div class="ip-table">
+        ${parsed.rows.map((r, i) => `<div class="ip-row${r.on ? '' : ' off'}">
+            <label class="ip-check"><input type="checkbox" data-i="${i}" ${r.on ? 'checked' : ''} ${r.issues.some((x) => x.level === 'err') ? 'disabled' : ''}></label>
+            <span class="ip-num">${Number.isFinite(r.raw.number) ? pad2(r.raw.number) : '—'}</span>
+            <span class="ip-name">${esc(r.raw.name || '（无名）')}</span>
+            <span class="ip-pos">${esc(r.raw.position)}</span>
+            <span class="ip-grade">${esc(r.raw.grade)}</span>
+            <span class="ip-h">${Number.isFinite(r.raw.height) ? r.raw.height + 'cm' : '—'}</span>
+            <span class="ip-issue">${r.issues.map((x) => `<i class="ip-tag ${x.level}">${esc(x.text)}</i>`).join('')}</span>
+          </div>`).join('')}
+        </div>`;
+      const toggle = $('#importToggle');
+      if (toggle) toggle.onclick = () => {
+        parsed.rows.forEach((r) => { if (r.issues.every((x) => x.level !== 'err')) r.on = !r.on; });
+        preview.querySelectorAll('.ip-check input').forEach((cb) => {
+          const r = parsed.rows[Number(cb.dataset.i)];
+          cb.checked = r.on;
+          cb.closest('.ip-row').classList.toggle('off', !r.on);
+        });
+        go.disabled = parsed.rows.filter((r) => r.on).length === 0;
+      };
+      preview.querySelectorAll('.ip-check input').forEach((cb) => {
+        cb.onchange = () => {
+          const r = parsed.rows[Number(cb.dataset.i)];
+          r.on = cb.checked;
+          cb.closest('.ip-row').classList.toggle('off', !r.on);
+          go.disabled = parsed.rows.filter((x) => x.on).length === 0;
+        };
+      });
+    }
+
+    ta.addEventListener('input', repaint);
+    ta.addEventListener('paste', () => setTimeout(repaint, 0));
+    $('#importSample').onclick = () => { ta.value = sample; repaint(); ta.focus(); };
+    $('#importClear').onclick = () => { ta.value = ''; repaint(); ta.focus(); };
+
+    go.onclick = async () => {
+      const picked = parsed.rows.filter((r) => r.on);
+      if (!picked.length) return;
+      const cloud = CloudOn();
+      go.disabled = true;
+      let done = 0;
+      let failed = 0;
+      for (const r of picked) {
+        const payload = {
+          name: r.raw.name, number: r.raw.number, position: r.raw.position,
+          grade: r.raw.grade, height: r.raw.height,
+          skills: SKILLS.reduce((o, s) => { o[s.key] = 5; return o; }, {})
+        };
+        try {
+          const np = cloud
+            ? normalizePlayer((await window.XGYCloud.push.playerCreate(payload)).player)
+            : normalizePlayer({ id: uid('p'), ...payload, createdAt: Date.now(), updatedAt: Date.now() });
+          db.players.push(np);
+          done += 1;
+        } catch (err) { failed += 1; }
+      }
+      save(); closeModal(); renderRoster(); renderDashboard(); renderSidebar(); renderActivity();
+      if (state.page !== 'roster') go('roster');
+      toast(failed ? `导入 ${done} 人，${failed} 人失败` : `已导入 ${done} 名队员`);
+    };
+    repaint();
+    ta.focus();
   }
 
   function openPlayer(id) {
@@ -2182,6 +2397,7 @@
         const action = a.dataset.action;
         const targetMonday = state.page === 'dashboard' ? getMonday(new Date()) : state.weekMonday;
         if (action === 'add-player') openPlayerForm(null, { position: a.dataset.position });
+        else if (action === 'bulk-import') openBulkImport();
         else if (action === 'add-session') openSessionModal(null, targetMonday, { isNew: true });
         else if (action === 'reset-week') resetWeek(targetMonday);
         else if (action === 'export') exportData();
@@ -2274,6 +2490,7 @@
     });
     $('#rosterSearch').addEventListener('input', (e) => { state.rosterSearch = e.target.value; renderRoster(); });
     $('#addPlayerBtn').onclick = () => openPlayerForm();
+    $('#bulkImportBtn').onclick = () => openBulkImport();
     $('#rosterGrid').addEventListener('click', (e) => {
       const card = e.target.closest('.player-card');
       if (card) openPlayer(card.dataset.id);
