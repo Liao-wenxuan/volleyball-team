@@ -261,6 +261,15 @@
     }
     base.formation = normalizeFormation(raw.formation);
     base.settings.theme = raw.settings && isTheme(raw.settings.theme) ? raw.settings.theme : 'aurora';
+    // AI 配置（BYOK）必须原样带回，否则每次刷新 Key 都会丢
+    if (raw.settings && raw.settings.ai && typeof raw.settings.ai === 'object') {
+      const a = raw.settings.ai;
+      base.settings.ai = {
+        base: String(a.base || 'https://api.deepseek.com'),
+        model: String(a.model || 'deepseek-chat'),
+        key: String(a.key || '')
+      };
+    }
     return base;
   }
 
