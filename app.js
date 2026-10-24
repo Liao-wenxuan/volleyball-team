@@ -55,7 +55,8 @@
     roster: { title: '人员管理', kicker: 'ROSTER / PLAYERS' },
     attendance: { title: '考勤管理', kicker: 'ATTENDANCE / WEEK' },
     tactics: { title: '阵型板', kicker: 'FORMATION / COURT' },
-    growth: { title: '成长计划', kicker: 'SKILLS / GROWTH' }
+    growth: { title: '成长计划', kicker: 'SKILLS / GROWTH' },
+    ai: { title: 'AI 助手', kicker: 'AI COACH / ASSISTANT' }
   };
   const SOURCE_LABEL = { training: '训练', match: '比赛', manual: '手动' };
 
@@ -468,7 +469,6 @@
 
   function syncLock() {
     const locked = $('#drawer').classList.contains('open')
-      || $('#aiDrawer').classList.contains('open')
       || $('#modalScrim').classList.contains('show')
       || $('#paletteScrim').classList.contains('show')
       || $('#confirmScrim').classList.contains('show');
@@ -2340,6 +2340,7 @@
     if (page === 'attendance') renderAttendance();
     if (page === 'tactics') renderTactics();
     if (page === 'growth') renderGrowth();
+    if (page === 'ai') renderAiPage();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     refreshReveals();
     setTimeout(refreshReveals, 140);
@@ -2497,13 +2498,15 @@
       }
       if (e.key === 'Escape') {
         if (state.confirmResolver) { resolveConfirm(false); return; }
-        closePalette(); closeModal(); closeDrawer(); closeAiDrawer(); closePopovers(); closeSidebar();
+        closePalette(); closeModal(); closeDrawer(); closePopovers(); closeSidebar();
       }
     });
 
-    $('#navAi').onclick = () => { closeSidebar(); openAiDrawer(); };
-    $('#aiClose').onclick = closeAiDrawer;
-    $('#aiScrim').onclick = closeAiDrawer;
+    $('#aiSettingsPageBtn').onclick = () => {
+      $('#aiPageBody').innerHTML = aiSettingsHTML();
+      wireAiSettings();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     $('#drawerClose').onclick = closeDrawer;
     $('#drawerScrim').onclick = closeDrawer;
@@ -2748,41 +2751,33 @@ ${aiContext()}`;
       .replace(/\n/g, '<br>');
   }
 
-  function openAiDrawer() {
-    $('#aiDrawer').classList.add('open');
-    $('#aiDrawer').setAttribute('aria-hidden', 'false');
-    $('#aiScrim').classList.add('show');
-    syncLock();
-    renderAiHome();
-  }
-  function closeAiDrawer() {
-    if (state.ai && state.ai.abort) state.ai.abort.abort();
-    $('#aiDrawer').classList.remove('open');
-    $('#aiDrawer').setAttribute('aria-hidden', 'true');
-    $('#aiScrim').classList.remove('show');
-    syncLock();
-  }
-
-  function renderAiHome() {
+  function renderAiPage() {
     const cfg = aiCfg();
     if (!state.ai) state.ai = { messages: [], busy: false, abort: null };
-    const body = $('#aiBody');
+    const body = $('#aiPageBody');
+    if (!body) return;
+    $('#aiSub').textContent = cfg.key
+      ? '带着全队的真实数据回答：小结、阵容、点评，随口问也行。'
+      : '先填一个 API Key（只存本机），一分钟就能用。';
     if (!cfg.key) { body.innerHTML = aiSettingsHTML(); wireAiSettings(); return; }
     body.innerHTML = `
-      <div class="ai-quick">${AI_TASKS.map((t) => `<button type="button" class="ai-task" data-task="${t.id}"><span>${t.icon}</span>${t.label}</button>`).join('')}
-        <button type="button" class="ai-task ghost" id="aiSettingsBtn"><span>🔑</span>接口设置</button></div>
-      <div class="ai-log" id="aiLog">${state.ai.messages.map((m) => aiMsgHTML(m.role, aiRender(m.content))).join('') || `<div class="ai-empty">问点什么都行，比如：<br>· 周五谁经常迟到？<br>· 下次训练重点练什么？<br>· 帮我写条雨天取消通知</div>`}</div>
-      <form class="ai-input" id="aiForm">
-        <textarea id="aiText" rows="1" placeholder="输入问题，Enter 发送"></textarea>
-        <button type="submit" class="ai-send" id="aiSend" data-tip="发送">${state.ai.busy ? '■' : '↑'}</button>
-      </form>`;
+      <div class="ai-panel reveal">
+        <div id="aiTop">
+          <div class="ai-quick">${AI_TASKS.map((t) => `<button type="button" class="ai-task" data-task="${t.id}"><span>${t.icon}</span>${t.label}</button>`).join('')}</div>
+        </div>
+        <div class="ai-log" id="aiLog">${state.ai.messages.map((m) => aiMsgHTML(m.role, aiRender(m.content))).join('') || `<div class="ai-empty">问点什么都行，比如：<br>· 周五谁经常迟到？<br>· 下次训练重点练什么？<br>· 帮我写条雨天取消通知</div>`}</div>
+        <form class="ai-input" id="aiForm">
+          <textarea id="aiText" rows="1" placeholder="输入问题，Enter 发送，Shift+Enter 换行"></textarea>
+          <button type="submit" class="ai-send" id="aiSend" data-tip="发送">${state.ai.busy ? '■' : '↑'}</button>
+        </form>
+      </div>`;
     wireAiChat();
   }
 
   function aiSettingsHTML() {
     const cfg = aiCfg();
     const presetIdx = AI_PRESETS.findIndex((p) => p.base && p.base === cfg.base);
-    return `<div class="ai-settings">
+    return `<div class="ai-panel reveal"><div class="ai-settings">
       <div class="form-note" style="margin:2px 0 14px">自带钥匙（BYOK）：API Key 只存在你这台设备的浏览器里，请求由浏览器直连你选的服务商，不经过任何中间服务器。</div>
       <div class="field"><label>服务商</label><select id="aiPreset">${AI_PRESETS.map((p, i) => `<option value="${i}" ${i === (presetIdx < 0 ? AI_PRESETS.length - 1 : presetIdx) ? 'selected' : ''}>${p.label}</option>`).join('')}</select></div>
       <div class="field"><label>接口地址（Base URL）</label><input id="aiBase" value="${esc(cfg.base)}" placeholder="https://api.deepseek.com"></div>
@@ -2790,7 +2785,7 @@ ${aiContext()}`;
       <div class="field"><label>API Key</label><input id="aiKey" type="password" value="${esc(cfg.key)}" placeholder="sk-..." autocomplete="off"></div>
       <div class="form-note">DeepSeek 的 Key 在 platform.deepseek.com 充几块钱就够用一学期。</div>
       <div class="form-foot"><button type="button" class="btn btn-primary" id="aiSave">保存并开始</button></div>
-    </div>`;
+    </div></div>`;
   }
 
   function wireAiSettings() {
@@ -2808,19 +2803,18 @@ ${aiContext()}`;
       save();
       state.ai = { messages: [], busy: false, abort: null };
       toast('AI 助手已就绪');
-      renderAiHome();
+      renderAiPage();
     };
   }
 
   function wireAiChat() {
-    $$('#aiBody .ai-task[data-task]').forEach((btn) => {
+    $$('#aiPageBody .ai-task[data-task]').forEach((btn) => {
       btn.onclick = () => {
         const t = AI_TASKS.find((x) => x.id === btn.dataset.task);
         if (t.id === 'praise') { renderAiPraisePicker(); return; }
         aiRun(t.prompt, t.label);
       };
     });
-    $('#aiSettingsBtn').onclick = () => { $('#aiBody').innerHTML = aiSettingsHTML(); wireAiSettings(); };
     const form = $('#aiForm');
     const ta = $('#aiText');
     ta.addEventListener('keydown', (e) => {
@@ -2839,8 +2833,9 @@ ${aiContext()}`;
   }
 
   function renderAiPraisePicker() {
-    const body = $('#aiBody');
-    body.insertAdjacentHTML('beforeend', `<div class="ai-picker" id="aiPicker"><b>点评谁？</b><div>${db.players.map((p) => `<button type="button" data-id="${p.id}">${esc(p.name)}</button>`).join('') || '<span class="ip-tag warn">先添加队员</span>'}<button type="button" class="x" data-x="1">取消</button></div></div>`);
+    const top = $('#aiTop');
+    if (!top || $('#aiPicker')) return;
+    top.insertAdjacentHTML('beforeend', `<div class="ai-picker" id="aiPicker"><b>点评谁？</b><div>${db.players.map((p) => `<button type="button" data-id="${p.id}">${esc(p.name)}</button>`).join('') || '<span class="ip-tag warn">先添加队员</span>'}<button type="button" class="x" data-x="1">取消</button></div></div>`);
     const picker = $('#aiPicker');
     picker.querySelectorAll('button[data-id]').forEach((b) => {
       b.onclick = () => {
@@ -2855,11 +2850,13 @@ ${aiContext()}`;
 
   async function aiRun(prompt, label) {
     const cfg = aiCfg();
-    if (!cfg.key) { renderAiSettings(); return; }
+    if (!cfg.key) { $('#aiPageBody').innerHTML = aiSettingsHTML(); wireAiSettings(); return; }
     if (state.ai.busy) return;
     state.ai.messages.push({ role: 'user', content: label ? `【${label}】${prompt}` : prompt });
     state.ai.busy = true;
-    const log = $('#aiLog');
+    // 页面可能被切走，每次都现查节点，避免引用已销毁的 DOM
+    const $log = () => $('#aiLog');
+    const log = $log();
     if (log) {
       log.querySelector('.ai-empty') && (log.innerHTML = '');
       log.insertAdjacentHTML('beforeend', aiMsgHTML('user', aiRender(state.ai.messages[state.ai.messages.length - 1].content)));
@@ -2909,7 +2906,8 @@ ${aiContext()}`;
         }
         const node = $('#aiStreaming .ai-bubble');
         if (node && full) node.innerHTML = aiRender(full);
-        if (log) log.scrollTop = log.scrollHeight;
+        const lg = $log();
+        if (lg) lg.scrollTop = lg.scrollHeight;
       }
       state.ai.messages.push({ role: 'assistant', content: full || '（空回复）' });
     } catch (err) {
@@ -2929,14 +2927,11 @@ ${aiContext()}`;
         wrap.innerHTML = aiMsgHTML('assistant', aiRender(state.ai.messages[state.ai.messages.length - 1].content));
         streamNode.replaceWith(wrap.firstElementChild);
       }
-      if (send) { send.textContent = '↑'; send.dataset.tip = '发送'; }
-      if (log) log.scrollTop = log.scrollHeight;
+      const sd = $('#aiSend');
+      if (sd) { sd.textContent = '↑'; sd.dataset.tip = '发送'; }
+      const lg = $log();
+      if (lg) lg.scrollTop = lg.scrollHeight;
     }
-  }
-
-  function renderAiSettings() {
-    $('#aiBody').innerHTML = aiSettingsHTML();
-    wireAiSettings();
   }
 
   /* ══════════ 启动 ══════════ */

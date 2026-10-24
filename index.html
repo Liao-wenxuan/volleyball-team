@@ -55,7 +55,7 @@
       <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg></span>
       <span>成长计划</span>
     </button>
-    <button class="nav-item" id="navAi">
+    <button class="nav-item" data-page="ai">
       <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg></span>
       <span>AI 助手</span>
     </button>
@@ -543,6 +543,20 @@
         <div id="recentEmpty"></div>
       </section>
     </section>
+
+    <section class="page" id="page-ai" aria-label="AI 助手">
+      <div class="page-head reveal">
+        <div>
+          <div class="eyebrow">AI COACH / ASSISTANT</div>
+          <h2>AI 助手</h2>
+          <p id="aiSub">带着全队的真实数据回答：小结、阵容、点评，随口问也行。</p>
+        </div>
+        <div class="page-head-actions">
+          <button class="btn btn-ghost magnetic" id="aiSettingsPageBtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>接口设置</button>
+        </div>
+      </div>
+      <div id="aiPageBody"></div>
+    </section>
   </div>
 
   <footer class="footer">
@@ -581,12 +595,6 @@
 <aside class="drawer" id="drawer" aria-hidden="true">
   <header class="drawer-head"><span class="dh-label">PLAYER PROFILE</span><button class="icon-btn" id="drawerClose" data-tip="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header>
   <div class="drawer-body" id="drawerBody"></div>
-</aside>
-
-<div class="drawer-scrim" id="aiScrim"></div>
-<aside class="drawer" id="aiDrawer" aria-hidden="true">
-  <header class="drawer-head"><span class="dh-label">AI COACH</span><button class="icon-btn" id="aiClose" data-tip="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header>
-  <div class="drawer-body ai-body" id="aiBody"></div>
 </aside>
 
 <div class="modal-scrim" id="modalScrim">

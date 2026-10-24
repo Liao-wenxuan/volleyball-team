@@ -2064,3 +2064,7 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 .ai-picker button:hover{border-color:rgba(var(--violet-rgb),.55)}
 .ai-picker button.x{color:var(--text-2)}
 .ai-settings .field{margin-bottom:12px}
+.ai-panel{max-width:880px;display:flex;flex-direction:column;gap:14px}
+.ai-panel .ai-log{min-height:300px;max-height:calc(100vh - 400px);border:1px solid var(--ov110);border-radius:16px;background:var(--ov045);padding:16px 18px}
+.ai-panel .ai-input{padding-top:0}
+.ai-panel .ai-settings{max-width:560px;background:var(--ov045);border:1px solid var(--ov110);border-radius:16px;padding:18px}
