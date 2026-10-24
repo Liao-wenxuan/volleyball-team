@@ -197,13 +197,13 @@ svg{display:block}
   width:44px;height:44px;flex:none;border-radius:14px;display:grid;place-items:center;
   background:linear-gradient(155deg,var(--ov130),var(--ov030));
   border:1px solid var(--ov160);
-  box-shadow:0 10px 30px -12px rgba(255,178,74,.7),inset 0 1px 0 var(--ov250);
+  box-shadow:0 10px 30px -12px rgba(173,196,230,.5),inset 0 1px 0 var(--ov250);
   transition:.4s var(--ease);
 }
 .brand:hover .brand-mark{transform:rotate(-8deg) scale(1.06)}
-.brand-mark svg{width:29px;height:29px}
+.brand-mark svg,.brand-mark .brand-img{width:29px;height:29px}
 .brand-mark.small{width:38px;height:38px;border-radius:12px}
-.brand-mark.small svg{width:24px;height:24px}
+.brand-mark.small svg,.brand-mark.small .brand-img{width:24px;height:24px}
 .brand-txt{display:flex;flex-direction:column;gap:3px;min-width:0}
 .brand-txt strong{font-size:15.5px;font-weight:700;letter-spacing:.01em}
 .brand-txt em{font-style:normal;font-size:9.5px;letter-spacing:.18em;color:var(--muted);font-weight:600}
