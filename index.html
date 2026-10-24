@@ -476,8 +476,15 @@
           <div class="panel">
             <div class="panel-head">
               <div><h3>预设阵型</h3><p>套用之后还能继续拖</p></div>
+              <button type="button" class="btn-mini" id="fxSaveBtn">存当前</button>
             </div>
             <div class="fx-presets" id="fxPresets"></div>
+            <div class="fx-save-row" id="fxSaveRow">
+              <input id="fxSaveName" maxlength="12" placeholder="阵型名，如 接发球站位">
+              <button type="button" class="btn-mini primary" id="fxSaveOk">保存</button>
+              <button type="button" class="btn-mini" id="fxSaveCancel">取消</button>
+            </div>
+            <div class="fx-saves" id="fxSaves"></div>
           </div>
 
           <div class="panel">

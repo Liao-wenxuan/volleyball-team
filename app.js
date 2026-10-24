@@ -164,7 +164,7 @@
 
   /* ══════════ 数据 ══════════ */
   function blankDB() {
-    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation() };
+    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [] };
   }
 
   function normalizeSkills(raw) {
@@ -270,6 +270,12 @@
         key: String(a.key || '')
       };
     }
+    // 自定义阵型库（命名保存）
+    base.formations = (Array.isArray(raw.formations) ? raw.formations : []).slice(0, 30).map((f) => {
+      if (!f || typeof f !== 'object') return null;
+      const pos = normalizeFormation({ version: 1, preset: 'custom', pos: f.pos }).pos;
+      return { id: f.id || uid('f'), name: String(f.name || '未命名').slice(0, 16), pos, at: Number(f.at) || Date.now() };
+    }).filter(Boolean);
     return base;
   }
 
@@ -2142,6 +2148,31 @@
       if (btn) applyFxPreset(btn.dataset.preset);
     });
 
+    $('#fxSaveBtn').addEventListener('click', () => toggleFxSaveRow());
+    $('#fxSaveCancel').addEventListener('click', () => toggleFxSaveRow(false));
+    const saveName = $('#fxSaveName');
+    saveName.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const name = saveName.value.trim();
+        if (!name) { toast('先给阵型起个名字', 'warn'); return; }
+        saveFxCurrent(name);
+        toggleFxSaveRow(false);
+      }
+    });
+    $('#fxSaveOk').addEventListener('click', () => {
+      const name = saveName.value.trim();
+      if (!name) { toast('先给阵型起个名字', 'warn'); return; }
+      saveFxCurrent(name);
+      toggleFxSaveRow(false);
+    });
+    $('#fxSaves').addEventListener('click', (e) => {
+      const apply = e.target.closest('[data-apply]');
+      if (apply) { applyFxSaved(apply.dataset.apply); return; }
+      const del = e.target.closest('[data-del]');
+      if (del) deleteFxSaved(del.dataset.del);
+    });
+
     $('#fxReset').addEventListener('click', () => applyFxPreset('base'));
     $('#fxFull').addEventListener('click', toggleFxFull);
     $('#fxExit').addEventListener('click', exitFxFull);
@@ -2180,6 +2211,7 @@
       el.style.top = (p.y / FX_SIZE * 100) + '%';
     });
     paintFxPresets();
+    paintFxSaves();
     paintFxRoles();
   }
 
@@ -2255,6 +2287,68 @@
     cloudPushFormation();
     renderTactics();
     toast(`已套用「${preset.label}」`);
+  }
+
+  /* ── 自定义阵型库：把当前站位存成命名阵型 ── */
+  function sameFxPos(a, b) {
+    return FX_ROLES.every((r) => Math.abs(a[r.id].x - b[r.id].x) < 0.01 && Math.abs(a[r.id].y - b[r.id].y) < 0.01);
+  }
+
+  function saveFxCurrent(name) {
+    if (!Array.isArray(db.formations)) db.formations = [];
+    if (db.formations.length >= 30) { toast('自定义阵型最多存 30 套，先删掉几个', 'warn'); return; }
+    const dup = db.formations.find((f) => f.name === name);
+    if (dup) { toast(`已经有叫「${name}」的阵型了`, 'warn'); return; }
+    const pos = {};
+    FX_ROLES.forEach((r) => { pos[r.id] = { x: db.formation.pos[r.id].x, y: db.formation.pos[r.id].y }; });
+    db.formations.push({ id: uid('f'), name, pos, at: Date.now() });
+    save();
+    paintFxSaves();
+    toast(`已保存「${name}」，在下方列表随时套用`);
+  }
+
+  function applyFxSaved(id) {
+    const f = (db.formations || []).find((x) => x.id === id);
+    if (!f) return;
+    const pos = {};
+    FX_ROLES.forEach((r) => { pos[r.id] = { x: f.pos[r.id].x, y: f.pos[r.id].y }; });
+    db.formation = { version: 1, preset: 'custom', pos };
+    save();
+    cloudPushFormation();
+    renderTactics();
+    toast(`已套用「${f.name}」`);
+  }
+
+  async function deleteFxSaved(id) {
+    const f = (db.formations || []).find((x) => x.id === id);
+    if (!f) return;
+    const ok = await confirmDialog({ title: `删除「${f.name}」？`, message: '只删这套保存的阵型，不影响当前站位。这个操作无法撤销。', ok: '确认删除' });
+    if (!ok) return;
+    db.formations = db.formations.filter((x) => x.id !== id);
+    save();
+    paintFxSaves();
+    toast('阵型已删除');
+  }
+
+  function paintFxSaves() {
+    const box = $('#fxSaves');
+    if (!box) return;
+    const list = Array.isArray(db.formations) ? db.formations : [];
+    box.innerHTML = list.map((f) => {
+      const on = db.formation.preset === 'custom' && sameFxPos(db.formation.pos, f.pos);
+      return `<div class="fx-save${on ? ' on' : ''}">
+        <button type="button" class="fx-save-name" data-apply="${f.id}" title="套用「${esc(f.name)}」">${esc(f.name)}</button>
+        <button type="button" class="fx-save-del" data-del="${f.id}" aria-label="删除 ${esc(f.name)}">×</button>
+      </div>`;
+    }).join('') || '<div class="fx-save-empty">还没有保存的阵型。摆好站位后点「存当前」。</div>';
+  }
+
+  function toggleFxSaveRow(show) {
+    const row = $('#fxSaveRow');
+    if (!row) return;
+    const open = show === undefined ? !row.classList.contains('open') : show;
+    row.classList.toggle('open', open);
+    if (open) { $('#fxSaveName').value = ''; $('#fxSaveName').focus(); }
   }
 
   function fxMeters(e) {

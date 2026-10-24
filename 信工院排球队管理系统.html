@@ -2097,6 +2097,23 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 .ai-card i{font-style:normal;font-size:11.5px;line-height:1.65;color:var(--text-2)}
 @media(max-width:680px){.ai-cards{grid-template-columns:1fr}.ai-panel{height:calc(100vh - 210px);min-height:380px}.ai-shell .ai-log{padding:14px}}
 
+/* ══════════ 自定义阵型库 ══════════ */
+.fx-save-row{display:none;gap:6px;margin-top:10px}
+.fx-save-row.open{display:flex}
+.fx-save-row input{flex:1;min-width:0;background:var(--ov030);border:1px solid var(--line);border-radius:9px;color:var(--text);font:12.5px var(--font);padding:7px 10px;outline:none;transition:.2s}
+.fx-save-row input:focus{border-color:rgba(var(--violet-rgb),.55)}
+.btn-mini.primary{background:rgba(var(--violet-rgb),.22);border-color:rgba(var(--violet-rgb),.45);color:#fff}
+.btn-mini.primary:hover{background:rgba(var(--violet-rgb),.34)}
+.fx-saves{display:grid;gap:6px;margin-top:10px}
+.fx-save{display:flex;align-items:center;gap:4px;border-radius:10px;border:1px solid var(--ov050);background:var(--ov025);transition:.2s}
+.fx-save:hover{background:var(--ov070)}
+.fx-save.on{border-color:rgba(var(--violet-2-rgb),.45);background:linear-gradient(100deg,rgba(var(--violet-rgb),.18),rgba(var(--cyan-rgb),.05))}
+.fx-save-name{flex:1;min-width:0;text-align:left;border:none;background:none;color:var(--text);font:12.5px var(--font);padding:8px 4px 8px 11px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fx-save-name::before{content:'› ';color:var(--violet-2)}
+.fx-save-del{flex:none;width:26px;height:26px;margin-right:5px;border:none;border-radius:8px;background:none;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;transition:.18s}
+.fx-save-del:hover{background:rgba(var(--red-rgb,255,90,105),.14);color:var(--red,#ff6b76)}
+.fx-save-empty{font-size:11.5px;line-height:1.8;color:var(--muted);padding:4px 2px}
+
 </style>
 </head>
 <body>
@@ -2566,8 +2583,15 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
           <div class="panel">
             <div class="panel-head">
               <div><h3>预设阵型</h3><p>套用之后还能继续拖</p></div>
+              <button type="button" class="btn-mini" id="fxSaveBtn">存当前</button>
             </div>
             <div class="fx-presets" id="fxPresets"></div>
+            <div class="fx-save-row" id="fxSaveRow">
+              <input id="fxSaveName" maxlength="12" placeholder="阵型名，如 接发球站位">
+              <button type="button" class="btn-mini primary" id="fxSaveOk">保存</button>
+              <button type="button" class="btn-mini" id="fxSaveCancel">取消</button>
+            </div>
+            <div class="fx-saves" id="fxSaves"></div>
           </div>
 
           <div class="panel">
@@ -3202,7 +3226,7 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 
   /* ══════════ 数据 ══════════ */
   function blankDB() {
-    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation() };
+    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [] };
   }
 
   function normalizeSkills(raw) {
@@ -3308,6 +3332,12 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
         key: String(a.key || '')
       };
     }
+    // 自定义阵型库（命名保存）
+    base.formations = (Array.isArray(raw.formations) ? raw.formations : []).slice(0, 30).map((f) => {
+      if (!f || typeof f !== 'object') return null;
+      const pos = normalizeFormation({ version: 1, preset: 'custom', pos: f.pos }).pos;
+      return { id: f.id || uid('f'), name: String(f.name || '未命名').slice(0, 16), pos, at: Number(f.at) || Date.now() };
+    }).filter(Boolean);
     return base;
   }
 
@@ -5180,6 +5210,31 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
       if (btn) applyFxPreset(btn.dataset.preset);
     });
 
+    $('#fxSaveBtn').addEventListener('click', () => toggleFxSaveRow());
+    $('#fxSaveCancel').addEventListener('click', () => toggleFxSaveRow(false));
+    const saveName = $('#fxSaveName');
+    saveName.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const name = saveName.value.trim();
+        if (!name) { toast('先给阵型起个名字', 'warn'); return; }
+        saveFxCurrent(name);
+        toggleFxSaveRow(false);
+      }
+    });
+    $('#fxSaveOk').addEventListener('click', () => {
+      const name = saveName.value.trim();
+      if (!name) { toast('先给阵型起个名字', 'warn'); return; }
+      saveFxCurrent(name);
+      toggleFxSaveRow(false);
+    });
+    $('#fxSaves').addEventListener('click', (e) => {
+      const apply = e.target.closest('[data-apply]');
+      if (apply) { applyFxSaved(apply.dataset.apply); return; }
+      const del = e.target.closest('[data-del]');
+      if (del) deleteFxSaved(del.dataset.del);
+    });
+
     $('#fxReset').addEventListener('click', () => applyFxPreset('base'));
     $('#fxFull').addEventListener('click', toggleFxFull);
     $('#fxExit').addEventListener('click', exitFxFull);
@@ -5218,6 +5273,7 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
       el.style.top = (p.y / FX_SIZE * 100) + '%';
     });
     paintFxPresets();
+    paintFxSaves();
     paintFxRoles();
   }
 
@@ -5293,6 +5349,68 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
     cloudPushFormation();
     renderTactics();
     toast(`已套用「${preset.label}」`);
+  }
+
+  /* ── 自定义阵型库：把当前站位存成命名阵型 ── */
+  function sameFxPos(a, b) {
+    return FX_ROLES.every((r) => Math.abs(a[r.id].x - b[r.id].x) < 0.01 && Math.abs(a[r.id].y - b[r.id].y) < 0.01);
+  }
+
+  function saveFxCurrent(name) {
+    if (!Array.isArray(db.formations)) db.formations = [];
+    if (db.formations.length >= 30) { toast('自定义阵型最多存 30 套，先删掉几个', 'warn'); return; }
+    const dup = db.formations.find((f) => f.name === name);
+    if (dup) { toast(`已经有叫「${name}」的阵型了`, 'warn'); return; }
+    const pos = {};
+    FX_ROLES.forEach((r) => { pos[r.id] = { x: db.formation.pos[r.id].x, y: db.formation.pos[r.id].y }; });
+    db.formations.push({ id: uid('f'), name, pos, at: Date.now() });
+    save();
+    paintFxSaves();
+    toast(`已保存「${name}」，在下方列表随时套用`);
+  }
+
+  function applyFxSaved(id) {
+    const f = (db.formations || []).find((x) => x.id === id);
+    if (!f) return;
+    const pos = {};
+    FX_ROLES.forEach((r) => { pos[r.id] = { x: f.pos[r.id].x, y: f.pos[r.id].y }; });
+    db.formation = { version: 1, preset: 'custom', pos };
+    save();
+    cloudPushFormation();
+    renderTactics();
+    toast(`已套用「${f.name}」`);
+  }
+
+  async function deleteFxSaved(id) {
+    const f = (db.formations || []).find((x) => x.id === id);
+    if (!f) return;
+    const ok = await confirmDialog({ title: `删除「${f.name}」？`, message: '只删这套保存的阵型，不影响当前站位。这个操作无法撤销。', ok: '确认删除' });
+    if (!ok) return;
+    db.formations = db.formations.filter((x) => x.id !== id);
+    save();
+    paintFxSaves();
+    toast('阵型已删除');
+  }
+
+  function paintFxSaves() {
+    const box = $('#fxSaves');
+    if (!box) return;
+    const list = Array.isArray(db.formations) ? db.formations : [];
+    box.innerHTML = list.map((f) => {
+      const on = db.formation.preset === 'custom' && sameFxPos(db.formation.pos, f.pos);
+      return `<div class="fx-save${on ? ' on' : ''}">
+        <button type="button" class="fx-save-name" data-apply="${f.id}" title="套用「${esc(f.name)}」">${esc(f.name)}</button>
+        <button type="button" class="fx-save-del" data-del="${f.id}" aria-label="删除 ${esc(f.name)}">×</button>
+      </div>`;
+    }).join('') || '<div class="fx-save-empty">还没有保存的阵型。摆好站位后点「存当前」。</div>';
+  }
+
+  function toggleFxSaveRow(show) {
+    const row = $('#fxSaveRow');
+    if (!row) return;
+    const open = show === undefined ? !row.classList.contains('open') : show;
+    row.classList.toggle('open', open);
+    if (open) { $('#fxSaveName').value = ''; $('#fxSaveName').focus(); }
   }
 
   function fxMeters(e) {
