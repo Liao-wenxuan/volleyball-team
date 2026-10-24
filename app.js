@@ -2734,9 +2734,9 @@
 ${aiContext()}`;
 
   const AI_TASKS = [
-    { id: 'week', icon: '📋', label: '本周小结', prompt: '根据本周训练安排和每个人的出勤数据，生成本周训练小结：谁全勤、谁迟到或缺席要点名提醒，再带一句下周鼓励。控制在 200 字以内，适合直接发群里。' },
-    { id: 'lineup', icon: '🏐', label: '阵容建议', prompt: '根据队员的身高、位置和六项技能，给出一套周六友谊赛的 6 人首发站位建议（主攻×2、副攻、接应、二传、自由人各一），说明每条选择的理由；哪个位置缺人就直说，并给替补方案。' },
-    { id: 'praise', icon: '⭐', label: '队员点评', prompt: '__PLAYER__' }
+    { id: 'week', icon: '📋', label: '本周小结', desc: '谁全勤、谁要提醒，一段话直接发群里', prompt: '根据本周训练安排和每个人的出勤数据，生成本周训练小结：谁全勤、谁迟到或缺席要点名提醒，再带一句下周鼓励。控制在 200 字以内，适合直接发群里。' },
+    { id: 'lineup', icon: '🏐', label: '阵容建议', desc: '按身高和六项技能排 6 人首发站位', prompt: '根据队员的身高、位置和六项技能，给出一套周六友谊赛的 6 人首发站位建议（主攻×2、副攻、接应、二传、自由人各一），说明每条选择的理由；哪个位置缺人就直说，并给替补方案。' },
+    { id: 'praise', icon: '⭐', label: '队员点评', desc: '选一名队员，生成鼓励式成长点评', prompt: '__PLAYER__' }
   ];
 
   function aiMsgHTML(role, text) {
@@ -2751,6 +2751,29 @@ ${aiContext()}`;
       .replace(/\n/g, '<br>');
   }
 
+  function aiQuickHTML() {
+    return AI_TASKS.map((t) => `<button type="button" class="ai-task" data-task="${t.id}"><span>${t.icon}</span>${t.label}</button>`).join('');
+  }
+
+  function bindTasks() {
+    $$('#aiPageBody .ai-task[data-task]').forEach((btn) => {
+      btn.onclick = () => {
+        const t = AI_TASKS.find((x) => x.id === btn.dataset.task);
+        if (t.id === 'praise') { renderAiPraisePicker(); return; }
+        aiRun(t.prompt, t.label);
+      };
+    });
+  }
+
+  /** 首条消息发出后把欢迎页换成精简任务条 */
+  function mountQuick() {
+    const shell = $('#aiShell');
+    if (!shell || $('#aiTop')) return $('#aiTop');
+    shell.querySelector('.ai-log').insertAdjacentHTML('afterend', `<div class="ai-quick" id="aiTop">${aiQuickHTML()}</div>`);
+    bindTasks();
+    return $('#aiTop');
+  }
+
   function renderAiPage() {
     const cfg = aiCfg();
     if (!state.ai) state.ai = { messages: [], busy: false, abort: null };
@@ -2760,17 +2783,28 @@ ${aiContext()}`;
       ? '带着全队的真实数据回答：小结、阵容、点评，随口问也行。'
       : '先填一个 API Key（只存本机），一分钟就能用。';
     if (!cfg.key) { body.innerHTML = aiSettingsHTML(); wireAiSettings(); return; }
+    const hasMsg = state.ai.messages.length > 0;
+    const hero = `
+      <div class="ai-hero">
+        <div class="ai-hero-ico">✦</div>
+        <h3>你的助理教练已就位</h3>
+        <p>它读得到全队名单、本周考勤和技能记录，<br>挑一个开始，或直接在下面提问：</p>
+        <div class="ai-cards">
+          ${AI_TASKS.map((t) => `<button type="button" class="ai-card" data-task="${t.id}"><span class="ai-card-ico">${t.icon}</span><b>${t.label}</b><i>${t.desc}</i></button>`).join('')}
+        </div>
+      </div>`;
     body.innerHTML = `
       <div class="ai-panel reveal">
-        <div id="aiTop">
-          <div class="ai-quick">${AI_TASKS.map((t) => `<button type="button" class="ai-task" data-task="${t.id}"><span>${t.icon}</span>${t.label}</button>`).join('')}</div>
+        <div class="ai-shell" id="aiShell">
+          <div class="ai-log" id="aiLog">${hasMsg ? state.ai.messages.map((m) => aiMsgHTML(m.role, aiRender(m.content))).join('') : hero}</div>
+          ${hasMsg ? `<div class="ai-quick" id="aiTop">${aiQuickHTML()}</div>` : ''}
+          <form class="ai-input" id="aiForm">
+            <textarea id="aiText" rows="1" placeholder="输入问题，Enter 发送，Shift+Enter 换行"></textarea>
+            <button type="submit" class="ai-send" id="aiSend" data-tip="发送">${state.ai.busy ? '■' : '↑'}</button>
+          </form>
         </div>
-        <div class="ai-log" id="aiLog">${state.ai.messages.map((m) => aiMsgHTML(m.role, aiRender(m.content))).join('') || `<div class="ai-empty">问点什么都行，比如：<br>· 周五谁经常迟到？<br>· 下次训练重点练什么？<br>· 帮我写条雨天取消通知</div>`}</div>
-        <form class="ai-input" id="aiForm">
-          <textarea id="aiText" rows="1" placeholder="输入问题，Enter 发送，Shift+Enter 换行"></textarea>
-          <button type="submit" class="ai-send" id="aiSend" data-tip="发送">${state.ai.busy ? '■' : '↑'}</button>
-        </form>
       </div>`;
+    bindTasks();
     wireAiChat();
   }
 
@@ -2808,13 +2842,6 @@ ${aiContext()}`;
   }
 
   function wireAiChat() {
-    $$('#aiPageBody .ai-task[data-task]').forEach((btn) => {
-      btn.onclick = () => {
-        const t = AI_TASKS.find((x) => x.id === btn.dataset.task);
-        if (t.id === 'praise') { renderAiPraisePicker(); return; }
-        aiRun(t.prompt, t.label);
-      };
-    });
     const form = $('#aiForm');
     const ta = $('#aiText');
     ta.addEventListener('keydown', (e) => {
@@ -2833,7 +2860,7 @@ ${aiContext()}`;
   }
 
   function renderAiPraisePicker() {
-    const top = $('#aiTop');
+    const top = mountQuick() || $('#aiPageBody');
     if (!top || $('#aiPicker')) return;
     top.insertAdjacentHTML('beforeend', `<div class="ai-picker" id="aiPicker"><b>点评谁？</b><div>${db.players.map((p) => `<button type="button" data-id="${p.id}">${esc(p.name)}</button>`).join('') || '<span class="ip-tag warn">先添加队员</span>'}<button type="button" class="x" data-x="1">取消</button></div></div>`);
     const picker = $('#aiPicker');
@@ -2858,7 +2885,8 @@ ${aiContext()}`;
     const $log = () => $('#aiLog');
     const log = $log();
     if (log) {
-      log.querySelector('.ai-empty') && (log.innerHTML = '');
+      log.querySelector('.ai-hero') && (log.innerHTML = '');
+      mountQuick();
       log.insertAdjacentHTML('beforeend', aiMsgHTML('user', aiRender(state.ai.messages[state.ai.messages.length - 1].content)));
       log.insertAdjacentHTML('beforeend', `<div class="ai-msg bot" id="aiStreaming"><div class="ai-bubble"><span class="ai-dot"></span></div></div>`);
       log.scrollTop = log.scrollHeight;
