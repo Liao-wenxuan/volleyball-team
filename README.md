@@ -90,13 +90,19 @@ npm run dev            # http://localhost:8787
 npm run seed           # 可选：演示账号 demo@xgy.com / demo123456
 ```
 
-部署到 Railway（或其他 Node 托管）：
+部署到 Zeabur（免信用卡，GitHub 登录即可）：
 
-1. 新建项目连这个仓库，**Root Directory 设为 `server`**，构建 `npm run build`、启动 `npm start` 会自动识别。
-2. 挂一个 Volume 到 `/data`，环境变量设 `DB_PATH=/data/app.db`（SQLite 文件落在持久盘上，重启不丢）。
-3. 环境变量设 `JWT_SECRET`（长随机串）和 `PORT`（Railway 会自动注入，无需手设）。
-4. 前端顶栏「云」→ 服务器地址填 `https://你的项目.up.railway.app`，注册账号即用。
-   GitHub Pages 上的在线版也可以直接连这个地址（CORS 已放开，鉴权走 Bearer token）。
+1. 新建项目，地区选免费的（新加坡 / 东京 / 香港）；新增服务 → 从 GitHub 部署 → 选 `Liao-wenxuan/volleyball-team`
+2. 服务的 **Root Directory 填 `server`**（仓库根没有 package.json，不填会构建失败）
+3. 环境变量：`JWT_SECRET` = 一串长随机串、`DB_PATH` = `/data/app.db`
+4. 想让数据活过重启：服务 → Storage → 挂一个卷到 `/data`（免费档可能不含，挂不上也能跑，只是重启后回到空库）
+5. 拿到 `https://xxx.zeabur.app` 后先访问 `https://xxx.zeabur.app/api/health` 确认返回 `{"ok":true...}`
+
+部署到 Railway 同理（Root Directory=`server`、Volume 挂 `/data`、设 `JWT_SECRET`），已带 `nixpacks.toml` / `railway.json`。
+前端顶栏「云」→ 服务器地址填这个 URL，注册账号即用。GitHub Pages 上的在线版也能直接连
+（CORS 已放开，鉴权走 Bearer token）。
+
+> 免费档一般会在闲置后休眠：第一次点开要等几秒冷启动，这是宿主平台的限制，不是后端的问题。
 
 API 一览：`POST /api/auth/register|login`、`GET /api/auth/me`、`GET|POST|PATCH|DELETE /api/players`、`GET /api/weeks/:key`（按模板幂等生成本周训练）、`POST|PATCH|DELETE /api/sessions`、`PUT|DELETE /api/sessions/:id/attendance/:pid`、`POST /api/skills/batch`、`GET /api/skills/logs`、`GET|PUT /api/formation`、`PUT /api/settings/template|theme`。
 
