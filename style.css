@@ -2100,8 +2100,8 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 .fx-save.on{border-color:rgba(var(--violet-2-rgb),.45);background:linear-gradient(100deg,rgba(var(--violet-rgb),.18),rgba(var(--cyan-rgb),.05))}
 .fx-save-name{flex:1;min-width:0;text-align:left;border:none;background:none;color:var(--text);font:12.5px var(--font);padding:8px 4px 8px 11px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fx-save-name::before{content:'› ';color:var(--violet-2)}
-.fx-act{flex:none;width:24px;height:24px;margin-right:3px;border:none;border-radius:8px;background:none;color:var(--muted);font-size:13px;line-height:1;cursor:pointer;transition:.18s;display:flex;align-items:center;justify-content:center}
-.fx-act:hover{background:var(--ov100);color:#fff}
+.fx-act{flex:none;width:24px;height:24px;margin-right:3px;border:1px solid var(--ov050);border-radius:8px;background:var(--ov030);color:var(--text-2,var(--muted));font-size:13px;line-height:1;cursor:pointer;transition:.18s;display:flex;align-items:center;justify-content:center}
+.fx-act:hover{border-color:rgba(var(--violet-rgb),.5);background:var(--ov100);color:#fff}
 .fx-act.danger:hover{background:rgba(255,90,105,.14);color:var(--red,#ff6b76)}
 .fx-act.ok{background:rgba(var(--violet-rgb),.25);color:#fff}
 .fx-rename-input{flex:1;min-width:0;background:var(--ov030);border:1px solid rgba(var(--violet-rgb),.55);border-radius:8px;color:var(--text);font:12.5px var(--font);padding:5px 8px;margin-left:8px;outline:none}
