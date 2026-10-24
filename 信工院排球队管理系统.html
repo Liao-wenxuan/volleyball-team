@@ -2117,6 +2117,13 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 .fx-rename-input{flex:1;min-width:0;background:var(--ov030);border:1px solid rgba(var(--violet-rgb),.55);border-radius:8px;color:var(--text);font:12.5px var(--font);padding:5px 8px;margin-left:8px;outline:none}
 .fx-save-empty{font-size:11.5px;line-height:1.8;color:var(--muted);padding:4px 2px}
 
+/* 预设卡：按钮组贴右侧 */
+.fx-preset-wrap{display:flex;align-items:stretch;gap:4px}
+.fx-preset-wrap .fx-preset{flex:1;min-width:0}
+.fx-preset-wrap .fx-preset span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fx-p-ops{display:flex;align-items:center;gap:2px;flex:none}
+.fx-fsbtn{max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 </style>
 </head>
 <body>
@@ -3229,7 +3236,7 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 
   /* ══════════ 数据 ══════════ */
   function blankDB() {
-    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [] };
+    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [], presetEdits: {} };
   }
 
   function normalizeSkills(raw) {
@@ -3341,6 +3348,18 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
       const pos = normalizeFormation({ version: 1, preset: 'custom', pos: f.pos }).pos;
       return { id: f.id || uid('f'), name: String(f.name || '未命名').slice(0, 16), pos, at: Number(f.at) || Date.now() };
     }).filter(Boolean);
+    // 出厂预设的改名/改位记录
+    if (raw.presetEdits && typeof raw.presetEdits === 'object') {
+      Object.keys(raw.presetEdits).forEach((k) => {
+        if (!FX_PRESETS[k]) return;
+        const ed = raw.presetEdits[k];
+        if (!ed || typeof ed !== 'object') return;
+        const rec = {};
+        if (ed.label != null && String(ed.label).trim()) rec.label = String(ed.label).trim().slice(0, 12);
+        if (ed.pos) rec.pos = normalizeFormation({ version: 1, preset: 'custom', pos: ed.pos }).pos;
+        if (rec.label || rec.pos) base.presetEdits[k] = rec;
+      });
+    }
     return base;
   }
 
@@ -5200,17 +5219,48 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
       bindFxKeys(el, r);
     });
 
-    $('#fxPresets').innerHTML = Object.keys(FX_PRESETS).map((k) =>
-      `<button type="button" class="fx-preset" data-preset="${k}"><span>${FX_PRESETS[k].label}</span><em>${FX_PRESETS[k].hint}</em></button>`
-    ).join('');
-
     $('#fxRoles').innerHTML = FX_ROLES.map((r) =>
       `<li class="fx-role" style="--role:${r.color}"><i class="fx-role-dot"></i><span class="fx-role-name">${r.name}</span><span class="fx-role-pos" data-pos="${r.id}">—</span></li>`
     ).join('');
 
     $('#fxPresets').addEventListener('click', (e) => {
       const btn = e.target.closest('[data-preset]');
-      if (btn) applyFxPreset(btn.dataset.preset);
+      if (btn) { applyFxPreset(btn.dataset.preset); return; }
+      const rnBtn = e.target.closest('[data-p-rename-btn]');
+      if (rnBtn) { fxRenameId = 'p:' + rnBtn.dataset.pRenameBtn; paintFxPresets(); return; }
+      const rnOk = e.target.closest('[data-p-rename-ok]');
+      if (rnOk) {
+        const inp = $('#fxPresets').querySelector(`[data-p-rename="${rnOk.dataset.pRenameOk}"]`);
+        fxRenameId = '';
+        renameFxPreset(rnOk.dataset.pRenameOk, inp ? inp.value : '');
+        return;
+      }
+      const upd = e.target.closest('[data-p-update]');
+      if (upd) { updateFxPreset(upd.dataset.pUpdate); return; }
+      const rst = e.target.closest('[data-p-reset]');
+      if (rst) resetFxPreset(rst.dataset.pReset);
+    });
+    // 预设改名：点 ✓ 先压住失焦（避免改名行先被重建导致 click 落空）
+    $('#fxPresets').addEventListener('pointerdown', (e) => {
+      if (e.target.closest('[data-p-rename-ok]')) e.preventDefault();
+    });
+    $('#fxPresets').addEventListener('keydown', (e) => {
+      const inp = e.target.closest('[data-p-rename]');
+      if (!inp) return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        fxRenameId = '';
+        renameFxPreset(inp.dataset.pRename, inp.value);
+      } else if (e.key === 'Escape') {
+        fxRenameId = '';
+        paintFxPresets();
+      }
+    });
+    $('#fxPresets').addEventListener('focusout', (e) => {
+      const inp = e.target.closest('[data-p-rename]');
+      if (!inp || fxRenameId !== 'p:' + inp.dataset.pRename) return;
+      fxRenameId = '';
+      paintFxPresets();
     });
 
     $('#fxSaveBtn').addEventListener('click', () => toggleFxSaveRow());
@@ -5314,9 +5364,33 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
   }
 
   function paintFxPresets() {
+    const box = $('#fxPresets');
+    if (box) {
+      box.innerHTML = Object.keys(FX_PRESETS).map((k) => {
+        const p = fxPreset(k);
+        const on = db.formation.preset === k;
+        const ops = `<span class="fx-p-ops">
+          <button type="button" class="fx-act" data-p-rename-btn="${k}" title="重命名" aria-label="重命名 ${esc(p.label)}">✎</button>
+          <button type="button" class="fx-act" data-p-update="${k}" title="用当前站位覆盖这套" aria-label="更新 ${esc(p.label)}">⟳</button>
+          ${p.edited ? `<button type="button" class="fx-act danger" data-p-reset="${k}" title="恢复出厂" aria-label="恢复出厂">↺</button>` : ''}
+        </span>`;
+        if (fxRenameId === 'p:' + k) {
+          return `<div class="fx-preset-wrap on">
+            <input class="fx-rename-input" data-p-rename="${k}" maxlength="12" value="${esc(p.label)}">
+            <span class="fx-p-ops"><button type="button" class="fx-act ok" data-p-rename-ok="${k}" aria-label="确认改名">✓</button></span>
+          </div>`;
+        }
+        return `<div class="fx-preset-wrap${on ? ' on' : ''}">
+          <button type="button" class="fx-preset${on ? ' on' : ''}" data-preset="${k}">
+            <span>${esc(p.label)}</span><em>${p.hint}</em>
+          </button>${ops}</div>`;
+      }).join('');
+    }
+    // 全屏工具条上的短标签同步
+    $$('#fxFsBar [data-fs-preset]').forEach((b) => { b.textContent = fxPresetLabel(b.dataset.fsPreset); });
     $$('#fxPresets [data-preset]').forEach((b) => b.classList.toggle('on', b.dataset.preset === db.formation.preset));
     $$('#fxFsBar [data-fs-preset]').forEach((b) => b.classList.toggle('on', b.dataset.fsPreset === db.formation.preset));
-    const label = FX_PRESETS[db.formation.preset] ? FX_PRESETS[db.formation.preset].label : '自定义';
+    const label = db.formation.preset === 'custom' || !FX_PRESETS[db.formation.preset] ? '自定义' : fxPresetLabel(db.formation.preset);
     const tag = $('#fxState');
     if (tag) tag.textContent = label;
     const fsName = $('#fxFsName');
@@ -5376,7 +5450,7 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
   }
 
   function applyFxPreset(k) {
-    const preset = FX_PRESETS[k];
+    const preset = fxPreset(k);
     if (!preset) return;
     const pos = {};
     FX_ROLES.forEach((r) => { pos[r.id] = { x: preset.pos[r.id].x, y: preset.pos[r.id].y }; });
@@ -5388,6 +5462,55 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
   }
 
   /* ── 自定义阵型库：把当前站位存成命名阵型 ── */
+  function fxPreset(k) {
+    const p = FX_PRESETS[k];
+    if (!p) return null;
+    const ed = db.presetEdits && db.presetEdits[k];
+    if (!ed) return { label: p.label, hint: p.hint, pos: p.pos, edited: false };
+    return { label: ed.label || p.label, hint: p.hint, pos: ed.pos || p.pos, edited: !!(ed.pos || ed.label) };
+  }
+
+  function fxPresetLabel(k) {
+    const p = fxPreset(k);
+    return p ? p.label : '自定义';
+  }
+
+  function renameFxPreset(k, name) {
+    if (!FX_PRESETS[k]) return;
+    name = String(name || '').trim().slice(0, 12);
+    if (!name) { toast('名字不能为空', 'warn'); return; }
+    if (Object.keys(FX_PRESETS).some((x) => x !== k && fxPresetLabel(x) === name)) { toast(`和其它预设重名了：${name}`, 'warn'); return; }
+    if (!db.presetEdits[k]) db.presetEdits[k] = {};
+    db.presetEdits[k].label = name;
+    save();
+    paintFxPresets();
+    toast(`已改名为「${name}」`);
+  }
+
+  function updateFxPreset(k) {
+    const p = fxPreset(k);
+    if (!p) return;
+    const pos = {};
+    FX_ROLES.forEach((r) => { pos[r.id] = { x: db.formation.pos[r.id].x, y: db.formation.pos[r.id].y }; });
+    if (sameFxPos(pos, p.pos)) { toast(`「${p.label}」已经是这个站位了`); return; }
+    if (!db.presetEdits[k]) db.presetEdits[k] = {};
+    db.presetEdits[k].pos = pos;
+    save();
+    paintFxPresets();
+    toast(`「${p.label}」已更新为当前站位`);
+  }
+
+  async function resetFxPreset(k) {
+    const p = fxPreset(k);
+    if (!p || !p.edited) return;
+    const ok = await confirmDialog({ title: `恢复「${p.label}」出厂设置？`, message: '撤销你对这套预设的改名和改位，恢复默认。当前站位不受影响。', ok: '确认恢复' });
+    if (!ok) return;
+    delete db.presetEdits[k];
+    save();
+    paintFxPresets();
+    toast('已恢复出厂预设');
+  }
+
   function sameFxPos(a, b) {
     return FX_ROLES.every((r) => Math.abs(a[r.id].x - b[r.id].x) < 0.01 && Math.abs(a[r.id].y - b[r.id].y) < 0.01);
   }
