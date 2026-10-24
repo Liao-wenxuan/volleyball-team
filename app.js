@@ -2502,11 +2502,7 @@
       }
     });
 
-    $('#aiSettingsPageBtn').onclick = () => {
-      $('#aiPageBody').innerHTML = aiSettingsHTML();
-      wireAiSettings();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
+    $('#aiSettingsPageBtn').onclick = renderAiSettings;
 
     $('#drawerClose').onclick = closeDrawer;
     $('#drawerScrim').onclick = closeDrawer;
@@ -2782,7 +2778,7 @@ ${aiContext()}`;
     $('#aiSub').textContent = cfg.key
       ? '带着全队的真实数据回答：小结、阵容、点评，随口问也行。'
       : '先填一个 API Key（只存本机），一分钟就能用。';
-    if (!cfg.key) { body.innerHTML = aiSettingsHTML(); wireAiSettings(); return; }
+    if (!cfg.key) { renderAiSettings(); return; }
     const hasMsg = state.ai.messages.length > 0;
     const hero = `
       <div class="ai-hero">
@@ -2806,6 +2802,8 @@ ${aiContext()}`;
       </div>`;
     bindTasks();
     wireAiChat();
+    // 重渲染后必须刷新入场动画，否则 .reveal 元素一直 opacity:0（面板隐形）
+    refreshReveals();
   }
 
   function aiSettingsHTML() {
@@ -2820,6 +2818,12 @@ ${aiContext()}`;
       <div class="form-note">DeepSeek 的 Key 在 platform.deepseek.com 充几块钱就够用一学期。</div>
       <div class="form-foot"><button type="button" class="btn btn-primary" id="aiSave">保存并开始</button></div>
     </div></div>`;
+  }
+
+  function renderAiSettings() {
+    $('#aiPageBody').innerHTML = aiSettingsHTML();
+    wireAiSettings();
+    refreshReveals();
   }
 
   function wireAiSettings() {
@@ -2877,7 +2881,7 @@ ${aiContext()}`;
 
   async function aiRun(prompt, label) {
     const cfg = aiCfg();
-    if (!cfg.key) { $('#aiPageBody').innerHTML = aiSettingsHTML(); wireAiSettings(); return; }
+    if (!cfg.key) { renderAiSettings(); return; }
     if (state.ai.busy) return;
     state.ai.messages.push({ role: 'user', content: label ? `【${label}】${prompt}` : prompt });
     state.ai.busy = true;
