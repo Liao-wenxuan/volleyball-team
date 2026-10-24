@@ -2501,7 +2501,7 @@
       }
     });
 
-    $('#aiBtn').onclick = openAiDrawer;
+    $('#navAi').onclick = () => { closeSidebar(); openAiDrawer(); };
     $('#aiClose').onclick = closeAiDrawer;
     $('#aiScrim').onclick = closeAiDrawer;
 
