@@ -1129,6 +1129,24 @@
     };
   }
 
+  function copyText(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (err) { /* 走兜底 */ }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+
   /* ══════════ 批量导入名单 ══════════ */
   const IMPORT_FIELDS = [
     { key: 'name', label: '姓名', aliases: ['姓名', '名字', '队员', 'name'] },
@@ -1251,6 +1269,7 @@
 张辰	1	主攻	大三	188
 李睿	7	二传	大二	182"></textarea>
       <div class="import-actions-row">
+        <button type="button" class="btn-mini" id="importTpl">复制收集模板</button>
         <button type="button" class="btn-mini" id="importSample">填入示例</button>
         <button type="button" class="btn-mini" id="importClear">清空</button>
         <span class="import-hint" id="importHint"></span>
@@ -1312,6 +1331,13 @@
 
     ta.addEventListener('input', repaint);
     ta.addEventListener('paste', () => setTimeout(repaint, 0));
+    $('#importTpl').onclick = () => {
+      const tpl = '姓名\t号码\t位置\t年级\t身高\n'
+        + '（每个人复制上一行，改成自己的，接在下面，别删第一行）\n\n'
+        + '位置填：主攻 / 副攻 / 二传 / 接应 / 自由人\n';
+      copyText(tpl) ? toast('收集模板已复制，发到群里让大家接龙')
+        : toast('复制失败，手动选中模板文字复制', 'warn');
+    };
     $('#importSample').onclick = () => { ta.value = sample; repaint(); ta.focus(); };
     $('#importClear').onclick = () => { ta.value = ''; repaint(); ta.focus(); };
 
