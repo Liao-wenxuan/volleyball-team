@@ -1752,21 +1752,6 @@ kbd{
 .fx-coord.on{opacity:1}
 
 .fx-side{display:grid;gap:16px}
-.fx-presets{display:grid;gap:8px}
-.fx-preset{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:11px 14px;border-radius:13px;border:1px solid var(--line);
-  background:var(--ov030);font-family:var(--font);font-size:13px;color:var(--text-2);
-  text-align:left;transition:.25s var(--ease);
-}
-.fx-preset:hover{background:var(--ov070);color:#fff;transform:translateX(2px)}
-.fx-preset.on{
-  border-color:rgba(var(--violet-2-rgb),.45);color:#fff;
-  background:linear-gradient(100deg,rgba(var(--violet-rgb),.24),rgba(var(--cyan-rgb),.06));
-  box-shadow:inset 0 0 0 1px rgba(var(--violet-2-rgb),.18);
-}
-.fx-preset em{font-style:normal;font-size:10px;color:var(--muted)}
-.fx-preset.on em{color:var(--violet-2)}
 
 .fx-roles{list-style:none;display:grid;gap:6px}
 .fx-role{
@@ -1976,7 +1961,6 @@ html[data-mode="light"] .match-tabs button.active,
 html[data-mode="light"] .mr-go:hover,
 html[data-mode="light"] .step-round:hover,
 html[data-mode="light"] .batch-stepper button:hover,
-html[data-mode="light"] .fx-preset:hover,
 html[data-mode="light"] .fx-fsbtn:hover,
 html[data-mode="light"] .m-cell:hover,
 html[data-mode="light"] .help-body b{color:var(--text)}
@@ -2107,9 +2091,4 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 .fx-rename-input{flex:1;min-width:0;background:var(--ov030);border:1px solid rgba(var(--violet-rgb),.55);border-radius:8px;color:var(--text);font:12.5px var(--font);padding:5px 8px;margin-left:8px;outline:none}
 .fx-save-empty{font-size:11.5px;line-height:1.8;color:var(--muted);padding:4px 2px}
 
-/* 预设卡：按钮组贴右侧 */
-.fx-preset-wrap{display:flex;align-items:stretch;gap:4px}
-.fx-preset-wrap .fx-preset{flex:1;min-width:0}
-.fx-preset-wrap .fx-preset span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fx-p-ops{display:flex;align-items:center;gap:2px;flex:none}
 .fx-fsbtn{max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
