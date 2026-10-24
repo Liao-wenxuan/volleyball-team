@@ -386,6 +386,11 @@ kbd{
 }
 [data-tip]:hover::after,[data-tip]:hover::before{opacity:1;transform:translate(-50%,0) rotate(0)}
 [data-tip]:hover::before{transform:translate(-50%,0) rotate(45deg)}
+/* 右缘按钮专用：提示框改为右对齐弹出，避免伸出屏幕 */
+[data-tip].tip-r::after{left:auto;right:-2px;transform:translate(0,7px)}
+[data-tip].tip-r::before{left:auto;right:12px;transform:translate(0,7px) rotate(45deg)}
+[data-tip].tip-r:hover::after{transform:translate(0,0)}
+[data-tip].tip-r:hover::before{transform:translate(0,0) rotate(45deg)}
 
 /* ═══════════ 通用 ═══════════ */
 .content{flex:1;padding:26px 30px 20px;max-width:1460px;width:100%;margin:0 auto}
