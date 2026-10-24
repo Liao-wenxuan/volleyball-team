@@ -148,7 +148,7 @@
 
   /* ══════════ 数据 ══════════ */
   function blankDB() {
-    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [] };
+    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [], aiChat: [] };
   }
 
   function normalizeSkills(raw) {
@@ -259,6 +259,13 @@
       if (!f || typeof f !== 'object') return null;
       const pos = normalizeFormation({ version: 1, preset: 'custom', pos: f.pos }).pos;
       return { id: f.id || uid('f'), name: String(f.name || '未命名').slice(0, 16), pos, at: Number(f.at) || Date.now() };
+    }).filter(Boolean);
+    // AI 聊天记录（只存本机，随 db 持久化；最多留 100 条，单条内容截断防膨胀）
+    base.aiChat = (Array.isArray(raw.aiChat) ? raw.aiChat : []).slice(-100).map((m) => {
+      if (!m || typeof m !== 'object') return null;
+      if (m.role !== 'user' && m.role !== 'assistant') return null;
+      if (typeof m.content !== 'string' || !m.content) return null;
+      return { role: m.role, content: m.content.slice(0, 8000) };
     }).filter(Boolean);
     return base;
   }
@@ -2089,7 +2096,7 @@
       <p><b>3. 每周自动生成训练。</b> 改时间、改地点、取消、加练都只影响那一周。下雨就用「因雨取消」，不计入出勤率。</p>
       <p><b>4. 考勤按次登记。</b> 每个格子循环切换：未登记 → 出勤 → 迟到 → 请假 → 缺席。未登记的格子不参与出勤率计算。</p>
       <p><b>5. 训练后调技能。</b> 成长页点格子单项调整，或用「训练后调整」按当次参训名单批量加减。0–10 分，步进 0.5。</p>
-      <p><b>6. 阵型板摆站位。</b> 进入阵型页，手指（或鼠标）把 6 个角色拖到防守位置，松手按 0.25m 吸附并自动保存。三套预设可一键套用，双击或方向键可微调。</p>
+      <p><b>6. 阵型板摆站位。</b> 进入阵型页，手指（或鼠标）把 6 个角色拖到防守位置，松手按 0.25m 吸附并自动保存；摆好后点「存当前」起个名字存进阵型库，点列表随时套用。双击或方向键可微调。</p>
       <p><b>7. 定期备份。</b> 设置或头像菜单里导出 JSON。换电脑前先导出。</p>
     </div>`, { mid: true });
   }
@@ -2311,6 +2318,7 @@
     FX_ROLES.forEach((r) => { pos[r.id] = { x: db.formation.pos[r.id].x, y: db.formation.pos[r.id].y }; });
     db.formations.push({ id: uid('f'), name, pos, at: Date.now() });
     save();
+    cloudPushFxLibrary();
     paintFxSaves();
     toast(`已保存「${name}」，在下方列表随时套用`);
   }
@@ -2334,6 +2342,7 @@
     if (!ok) return;
     db.formations = db.formations.filter((x) => x.id !== id);
     save();
+    cloudPushFxLibrary();
     paintFxSaves();
     toast('阵型已删除');
   }
@@ -2346,6 +2355,7 @@
     if (db.formations.some((x) => x.id !== id && x.name === name)) { toast(`已经有叫「${name}」的阵型了`, 'warn'); return; }
     f.name = name;
     save();
+    cloudPushFxLibrary();
     paintFxSaves();
     toast(`已改名为「${name}」`);
   }
@@ -2359,6 +2369,7 @@
     f.pos = pos;
     f.at = Date.now();
     save();
+    cloudPushFxLibrary();
     paintFxSaves();
     toast(`「${f.name}」已更新为当前站位`);
   }
@@ -2804,6 +2815,14 @@
     if (payload.formation && payload.formation.pos) {
       db.formation = normalizeFormation({ version: 1, preset: payload.formation.preset, pos: payload.formation.pos });
     }
+    // 云端阵型库以服务器为准（本地同名字段直接覆盖）
+    if (Array.isArray(payload.formations)) {
+      db.formations = payload.formations.slice(0, 30).map((f) => {
+        if (!f || typeof f !== 'object') return null;
+        const pos = normalizeFormation({ version: 1, preset: 'custom', pos: f.pos }).pos;
+        return { id: f.id || uid('f'), name: String(f.name || '未命名').slice(0, 16), pos, at: Number(f.at) || Date.now() };
+      }).filter(Boolean);
+    }
     save();
   }
 
@@ -2829,6 +2848,12 @@
     fxPushTimer = setTimeout(() => {
       cloudFire(window.XGYCloud.push.formation(db.formation), null);
     }, 600);
+  }
+
+  /** 阵型库增删改后整库推送（低频操作，直接推；失败回拉全量） */
+  function cloudPushFxLibrary() {
+    if (!CloudOn() || !Array.isArray(db.formations)) return;
+    cloudFire(window.XGYCloud.push.formationLibrary(db.formations), null);
   }
 
   /* ══════════ AI 助手（BYOK 直连，OpenAI 兼容接口） ══════════ */
@@ -2897,7 +2922,8 @@ ${aiContext()}`;
   }
 
   function aiQuickHTML() {
-    return AI_TASKS.map((t) => `<button type="button" class="ai-task" data-task="${t.id}"><span>${t.icon}</span>${t.label}</button>`).join('');
+    return AI_TASKS.map((t) => `<button type="button" class="ai-task" data-task="${t.id}"><span>${t.icon}</span>${t.label}</button>`).join('') +
+      `<button type="button" class="ai-task ai-clear" data-clear="1"><span>🧹</span>清空对话</button>`;
   }
 
   function bindTasks() {
@@ -2908,6 +2934,21 @@ ${aiContext()}`;
         aiRun(t.prompt, t.label);
       };
     });
+    const clr = $('#aiPageBody [data-clear]');
+    if (clr) clr.onclick = () => {
+      if (!state.ai.messages.length) return;
+      state.ai.messages = [];
+      db.aiChat = [];
+      save();
+      renderAiPage();
+      toast('对话已清空');
+    };
+  }
+
+  /** 聊天记录镜像进 db（localStorage 持久化），最多留 100 条 */
+  function aiRemember() {
+    db.aiChat = state.ai.messages.slice(-100);
+    save();
   }
 
   /** 首条消息发出后把欢迎页换成精简任务条 */
@@ -2921,7 +2962,7 @@ ${aiContext()}`;
 
   function renderAiPage() {
     const cfg = aiCfg();
-    if (!state.ai) state.ai = { messages: [], busy: false, abort: null };
+    if (!state.ai) state.ai = { messages: (db.aiChat || []).slice(), busy: false, abort: null };
     const body = $('#aiPageBody');
     if (!body) return;
     $('#aiSub').textContent = cfg.key
@@ -2987,6 +3028,7 @@ ${aiContext()}`;
       cfg.model = $('#aiModel').value.trim() || 'deepseek-chat';
       cfg.key = $('#aiKey').value.trim();
       if (!cfg.key) { toast('API Key 还没填', 'warn'); return; }
+      db.aiChat = [];
       save();
       state.ai = { messages: [], busy: false, abort: null };
       toast('AI 助手已就绪');
@@ -3036,6 +3078,7 @@ ${aiContext()}`;
     if (!cfg.key) { renderAiSettings(); return; }
     if (state.ai.busy) return;
     state.ai.messages.push({ role: 'user', content: label ? `【${label}】${prompt}` : prompt });
+    aiRemember();
     state.ai.busy = true;
     // 页面可能被切走，每次都现查节点，避免引用已销毁的 DOM
     const $log = () => $('#aiLog');
@@ -3105,6 +3148,7 @@ ${aiContext()}`;
     } finally {
       state.ai.busy = false;
       state.ai.abort = null;
+      aiRemember();
       const streamNode = $('#aiStreaming');
       if (streamNode) {
         const wrap = document.createElement('div');

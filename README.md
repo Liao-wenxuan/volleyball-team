@@ -26,10 +26,10 @@
 |---|---|
 | 球员档案 | 姓名、号码、位置、年级、身高 + 6 项技能（0–10，0.5 步进） |
 | 批量导入 | 从 Excel / 在线表 / 群接龙复制一段文本粘贴进来，自动识别列、纠正位置年级写法、拦下号码重复与身高异常，预览勾选后一键建队 |
-| AI 助手 | 自带钥匙（BYOK）直连 OpenAI 兼容接口（DeepSeek / 智谱 / Kimi…），Key 只存本机；一键生成本周小结、首发阵容建议、队员点评，流式输出可中断，上下文自动带全队真实数据 |
+| AI 助手 | 自带钥匙（BYOK）直连 OpenAI 兼容接口（DeepSeek / 智谱 / Kimi…），Key 只存本机；一键生成本周小结、首发阵容建议、队员点评，流式输出可中断，上下文自动带全队真实数据，聊天记录本机持久化 |
 | 考勤 | 按周 × 每次训练登记，四态循环：出勤 / 迟到 / 请假 / 缺席；未登记不计入出勤率 |
 | 训练编排 | 周二 / 周五 / 周日固定模板，单次可改时间地点或标记「因雨取消」 |
-| 阵型板 | 半场 9×9m，6 个角色位手指拖动，0.25m 吸附，三套预设，自动保存 |
+| 阵型板 | 半场 9×9m，6 个角色位手指拖动，0.25m 吸附，自动保存；「存当前」把站位存进阵型库（改名 / 覆盖 / 删除），云端模式整库同步 |
 | 成长 | 全队技能矩阵、单人雷达、训练后批量加减、调整记录 |
 | 主题 | 9 套（6 深 3 浅），含浅色 |
 
@@ -46,7 +46,7 @@
 
 ### 一、下载单文件（只是想用）
 
-点上面的「下载单文件」，得到一个 `volleyball-team.html`（约 270 KB）。
+点上面的「下载单文件」，得到一个 `volleyball-team.html`（约 314 KB）。
 双击 → 浏览器打开 → 就能用。
 
 - 不需要装 Node、不需要联网、没有任何依赖，CSS 和 JS 全部内联在这个文件里
@@ -98,7 +98,7 @@ npm run seed           # 可选：演示账号 demo@xgy.com / demo123456
 > `nixpacks.toml` / `railway.json`（Railway 健康检查配置），任意 Node 托管平台把
 > Root Directory 设为 `server`、挂卷到 `/data`、设 `JWT_SECRET` 即可。
 
-API 一览：`POST /api/auth/register|login`、`GET /api/auth/me`、`GET|POST|PATCH|DELETE /api/players`、`GET /api/weeks/:key`（按模板幂等生成本周训练）、`POST|PATCH|DELETE /api/sessions`、`PUT|DELETE /api/sessions/:id/attendance/:pid`、`POST /api/skills/batch`、`GET /api/skills/logs`、`GET|PUT /api/formation`、`PUT /api/settings/template|theme`。
+API 一览：`POST /api/auth/register|login`、`GET /api/auth/me`、`GET|POST|PATCH|DELETE /api/players`、`GET /api/weeks/:key`（按模板幂等生成本周训练）、`POST|PATCH|DELETE /api/sessions`、`PUT|DELETE /api/sessions/:id/attendance/:pid`、`POST /api/skills/batch`、`GET /api/skills/logs`、`GET|PUT /api/formation`、`GET|PUT /api/formation/library`（阵型库整库同步）、`PUT /api/settings/template|theme`。
 
 ## 几个实现上的取舍
 
@@ -115,11 +115,16 @@ API 一览：`POST /api/auth/register|login`、`GET /api/auth/me`、`GET|POST|PA
 不做关键帧、不做回放动画。进去、拖六个人、松手保存。
 拖动结束即写入，没有保存按钮——多一次点击就多一次打断思路的机会。
 
-**4. 主题只换品牌色，语义色不动**
+**4. 阵型库云端同步用「整库替换」而不是逐条 CRUD**
+阵型库一次操作就是增/删/改一条，客户端把整套（≤30 套）推上来，服务端一个事务里删旧写新。
+规模小到整库传输不到 20KB，换来的是：无合并冲突、无 id 对不上、接口只有一个。
+规模一大这个方案就错了，但 30 套封顶的设计让它永远用不到那一天。
+
+**5. 主题只换品牌色，语义色不动**
 9 套主题切换的是 `--violet*` / `--cyan*` 和背景，**出勤绿、缺席红、提醒琥珀恒定**。
 颜色一旦跟着主题变，"绿=出勤"这套约定就失效了，那不是换肤，是毁掉信息层。
 
-**5. 零依赖的图表**
+**6. 零依赖的图表**
 雷达图、折线、热力、环形进度全部手写 SVG，没有图表库。
 
 ## 目录
@@ -141,10 +146,10 @@ prototype/formation-editor.html  阵型板最早的独立原型
 
 - 本机模式下数据只在当前浏览器（localStorage），换设备要手动导出/导入 JSON；云端模式需自建后端
 - 一个邮箱账号对应一支球队，暂不支持多队切换与多人协作
-- 阵型板暂不支持多套阵型命名保存，只有一套当前站位 + 三套预设
+- AI 聊天记录只存本机（和 API Key 同级），不进云端同步
 
 ## Roadmap
 
-- [ ] 阵型库：多套命名保存、按标签筛选
+- [x] 阵型库：多套命名保存（改名 / 覆盖 / 删除 + 云端整库同步）
 - [ ] 阵型导出 PNG，直接发群里讲站位
 - [x] 数据上云（Node + SQLite）

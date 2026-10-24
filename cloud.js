@@ -92,16 +92,18 @@
 
   /* ── 拉取 ── */
   async function pullCore() {
-    const [players, logs, formation, me] = await Promise.all([
+    const [players, logs, formation, lib, me] = await Promise.all([
       api('/api/players'),
       api('/api/skills/logs?limit=500'),
       api('/api/formation'),
+      api('/api/formation/library'),
       api('/api/auth/me')
     ]);
     hooks.applyServerState({
       players: players.players,
       skillLogs: logs.logs,
       formation: formation.formation,
+      formations: Array.isArray(lib.formations) ? lib.formations : [],
       template: me.settings.template,
       theme: me.settings.theme
     });
@@ -245,6 +247,7 @@
       api('/api/skills/batch', { method: 'POST', body: { changes, source, date } }),
 
     formation: (f) => api('/api/formation', { method: 'PUT', body: { preset: f.preset, pos: f.pos } }),
+    formationLibrary: (list) => api('/api/formation/library', { method: 'PUT', body: { formations: list } }),
     template: (t) => api('/api/settings/template', { method: 'PUT', body: { template: t } }),
     theme: (themeId) => api('/api/settings/theme', { method: 'PUT', body: { theme: themeId } })
   };

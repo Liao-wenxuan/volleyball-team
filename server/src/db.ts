@@ -113,6 +113,16 @@ CREATE TABLE IF NOT EXISTS formations (
   pos        TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+-- 阵型库：用户自己存命名阵型，每队最多 30 套（和当前站位 formations 分开）
+CREATE TABLE IF NOT EXISTS formation_saves (
+  team_id TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  id      TEXT NOT NULL,
+  name    TEXT NOT NULL,
+  pos     TEXT NOT NULL,
+  at      INTEGER NOT NULL,
+  PRIMARY KEY (team_id, id)
+);
 `);
 
 export const SKILL_KEYS = ['serve', 'receive', 'set', 'spike', 'block', 'defense'] as const;

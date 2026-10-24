@@ -312,3 +312,40 @@ export function getFormation(teamId: string) {
     return null;
   }
 }
+
+/* ══════════ 阵型库（命名保存的阵型） ══════════ */
+
+export interface FormationSave {
+  id: string;
+  name: string;
+  pos: Record<string, { x: number; y: number }>;
+  at: number;
+}
+
+export function listFormationSaves(teamId: string): FormationSave[] {
+  const rows = db
+    .prepare('SELECT id, name, pos, at FROM formation_saves WHERE team_id = ? ORDER BY at')
+    .all(teamId) as { id: string; name: string; pos: string; at: number }[];
+  return rows
+    .map((r) => {
+      try {
+        return { id: r.id, name: r.name, pos: JSON.parse(r.pos), at: r.at };
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean) as FormationSave[];
+}
+
+/** 整库替换：客户端把整套阵型库推上来，服务端一个事务里删旧写新（简单、幂等、无合并冲突） */
+export function replaceFormationSaves(teamId: string, saves: FormationSave[]): void {
+  const del = db.prepare('DELETE FROM formation_saves WHERE team_id = ?');
+  const ins = db.prepare(
+    'INSERT INTO formation_saves (team_id, id, name, pos, at) VALUES (?, ?, ?, ?, ?)'
+  );
+  const ts = now();
+  db.transaction(() => {
+    del.run(teamId);
+    for (const s of saves) ins.run(teamId, s.id, s.name, JSON.stringify(s.pos), s.at || ts);
+  })();
+}

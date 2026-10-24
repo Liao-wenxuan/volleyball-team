@@ -2031,6 +2031,8 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 .ai-task{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;border:1px solid var(--ov110);background:var(--ov045);color:var(--text);font-size:12.5px;cursor:pointer;transition:.2s}
 .ai-task:hover{border-color:rgba(var(--violet-rgb),.55);background:rgba(var(--violet-rgb),.1)}
 .ai-task.ghost{color:var(--text-2)}
+.ai-task.ai-clear{margin-left:auto;color:var(--muted)}
+.ai-task.ai-clear:hover{border-color:rgba(255,107,138,.5);background:rgba(255,107,138,.08);color:var(--red)}
 .ai-log{flex:1;overflow-y:auto;padding:14px 2px;display:flex;flex-direction:column;gap:12px;min-height:200px}
 .ai-msg{display:flex}
 .ai-msg.me{justify-content:flex-end}
