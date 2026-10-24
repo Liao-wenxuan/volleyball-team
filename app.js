@@ -2857,7 +2857,10 @@ ${aiContext()}`;
       if (state.ai.busy) { if (state.ai.abort) state.ai.abort.abort(); return; }
       const text = ta.value.trim();
       if (!text) return;
+      ta.value = '';
+      ta.style.height = 'auto';
       aiRun(text);
+      ta.focus();
     };
     const log = $('#aiLog');
     log.scrollTop = log.scrollHeight;
