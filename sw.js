@@ -10,7 +10,7 @@
  *
  * 发新版：把 VERSION 加一，旧缓存在 activate 时自动清掉。
  * ═══════════════════════════════════════════════════════════════ */
-const VERSION = 'v1';
+const VERSION = 'v2'; // v2: 图标换排球实拍合成版
 const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',
