@@ -468,6 +468,7 @@
 
   function syncLock() {
     const locked = $('#drawer').classList.contains('open')
+      || $('#aiDrawer').classList.contains('open')
       || $('#modalScrim').classList.contains('show')
       || $('#paletteScrim').classList.contains('show')
       || $('#confirmScrim').classList.contains('show');
@@ -2496,9 +2497,13 @@
       }
       if (e.key === 'Escape') {
         if (state.confirmResolver) { resolveConfirm(false); return; }
-        closePalette(); closeModal(); closeDrawer(); closePopovers(); closeSidebar();
+        closePalette(); closeModal(); closeDrawer(); closeAiDrawer(); closePopovers(); closeSidebar();
       }
     });
+
+    $('#aiBtn').onclick = openAiDrawer;
+    $('#aiClose').onclick = closeAiDrawer;
+    $('#aiScrim').onclick = closeAiDrawer;
 
     $('#drawerClose').onclick = closeDrawer;
     $('#drawerScrim').onclick = closeDrawer;
@@ -2676,6 +2681,262 @@
     fxPushTimer = setTimeout(() => {
       cloudFire(window.XGYCloud.push.formation(db.formation), null);
     }, 600);
+  }
+
+  /* ══════════ AI 助手（BYOK 直连，OpenAI 兼容接口） ══════════ */
+  const AI_PRESETS = [
+    { label: 'DeepSeek（推荐，便宜）', base: 'https://api.deepseek.com', model: 'deepseek-chat' },
+    { label: '智谱 GLM', base: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
+    { label: 'Kimi 月之暗面', base: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
+    { label: 'OpenAI', base: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+    { label: '自定义（OpenAI 兼容）', base: '', model: '' }
+  ];
+
+  function aiCfg() {
+    if (!db.settings.ai) db.settings.ai = { base: 'https://api.deepseek.com', model: 'deepseek-chat', key: '' };
+    return db.settings.ai;
+  }
+
+  function aiUrl(base) {
+    const b = String(base || '').trim().replace(/\/+$/, '');
+    return /chat\/completions$/.test(b) ? b : `${b}/chat/completions`;
+  }
+
+  /** 组装喂给模型的全队上下文（只带必要字段，控制体积） */
+  function aiContext() {
+    const monday = state.page === 'dashboard' ? getMonday(new Date()) : state.weekMonday;
+    const stats = weekStats(monday);
+    const players = db.players.map((p) => {
+      const att = stats.perPlayer.get(p.id) || {};
+      return {
+        姓名: p.name, 号码: p.number, 位置: p.position, 年级: p.grade, 身高cm: p.height,
+        技能: SKILLS.reduce((o, s) => { o[s.label] = Number(p.skills[s.key]); return o; }, {}),
+        本周: { 出勤: att.present || 0, 迟到: att.late || 0, 请假: att.leave || 0, 缺席: att.absent || 0 }
+      };
+    });
+    const sessions = (db.weeks[weekKey(monday)] || []).map((s) => ({
+      日期: s.date, 时间: `${s.start}-${s.end}`, 状态: s.status, 说明: s.cancelReason || s.venue || ''
+    }));
+    const logs = db.skillLogs.slice(-30).map((l) => {
+      const pl = db.players.find((p) => p.id === l.playerId);
+      const sk = SKILLS.find((s) => s.key === l.skill);
+      return `${pl ? pl.name : '?'}：${sk ? sk.label : l.skill} ${l.before}→${l.after}（${l.date}）`;
+    });
+    return `# 球员（${players.length} 人）\n${JSON.stringify(players)}\n\n# 本周训练安排\n${JSON.stringify(sessions)}\n\n# 最近技能调整\n${logs.join('\n') || '（无）'}`;
+  }
+
+  const AI_SYSTEM = () => `你是一所高校院系排球队的助理教练。用户是队长。根据下面提供的真实数据回答问题、完成任务。
+要求：用简体中文；语气自然、接地气，适合直接复制发到队群；只用数据里出现的信息，不要编造；人数、姓名、数字要和数据一致；回答尽量精炼。
+
+${aiContext()}`;
+
+  const AI_TASKS = [
+    { id: 'week', icon: '📋', label: '本周小结', prompt: '根据本周训练安排和每个人的出勤数据，生成本周训练小结：谁全勤、谁迟到或缺席要点名提醒，再带一句下周鼓励。控制在 200 字以内，适合直接发群里。' },
+    { id: 'lineup', icon: '🏐', label: '阵容建议', prompt: '根据队员的身高、位置和六项技能，给出一套周六友谊赛的 6 人首发站位建议（主攻×2、副攻、接应、二传、自由人各一），说明每条选择的理由；哪个位置缺人就直说，并给替补方案。' },
+    { id: 'praise', icon: '⭐', label: '队员点评', prompt: '__PLAYER__' }
+  ];
+
+  function aiMsgHTML(role, text) {
+    return `<div class="ai-msg ${role === 'user' ? 'me' : 'bot'}"><div class="ai-bubble">${text}</div></div>`;
+  }
+
+  function aiRender(text) {
+    // 极简 markdown：转义后支持 **粗体**、`代码`、换行
+    return esc(text)
+      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\n/g, '<br>');
+  }
+
+  function openAiDrawer() {
+    $('#aiDrawer').classList.add('open');
+    $('#aiDrawer').setAttribute('aria-hidden', 'false');
+    $('#aiScrim').classList.add('show');
+    syncLock();
+    renderAiHome();
+  }
+  function closeAiDrawer() {
+    if (state.ai && state.ai.abort) state.ai.abort.abort();
+    $('#aiDrawer').classList.remove('open');
+    $('#aiDrawer').setAttribute('aria-hidden', 'true');
+    $('#aiScrim').classList.remove('show');
+    syncLock();
+  }
+
+  function renderAiHome() {
+    const cfg = aiCfg();
+    if (!state.ai) state.ai = { messages: [], busy: false, abort: null };
+    const body = $('#aiBody');
+    if (!cfg.key) { body.innerHTML = aiSettingsHTML(); wireAiSettings(); return; }
+    body.innerHTML = `
+      <div class="ai-quick">${AI_TASKS.map((t) => `<button type="button" class="ai-task" data-task="${t.id}"><span>${t.icon}</span>${t.label}</button>`).join('')}
+        <button type="button" class="ai-task ghost" id="aiSettingsBtn"><span>🔑</span>接口设置</button></div>
+      <div class="ai-log" id="aiLog">${state.ai.messages.map((m) => aiMsgHTML(m.role, aiRender(m.content))).join('') || `<div class="ai-empty">问点什么都行，比如：<br>· 周五谁经常迟到？<br>· 下次训练重点练什么？<br>· 帮我写条雨天取消通知</div>`}</div>
+      <form class="ai-input" id="aiForm">
+        <textarea id="aiText" rows="1" placeholder="输入问题，Enter 发送"></textarea>
+        <button type="submit" class="ai-send" id="aiSend" data-tip="发送">${state.ai.busy ? '■' : '↑'}</button>
+      </form>`;
+    wireAiChat();
+  }
+
+  function aiSettingsHTML() {
+    const cfg = aiCfg();
+    const presetIdx = AI_PRESETS.findIndex((p) => p.base && p.base === cfg.base);
+    return `<div class="ai-settings">
+      <div class="form-note" style="margin:2px 0 14px">自带钥匙（BYOK）：API Key 只存在你这台设备的浏览器里，请求由浏览器直连你选的服务商，不经过任何中间服务器。</div>
+      <div class="field"><label>服务商</label><select id="aiPreset">${AI_PRESETS.map((p, i) => `<option value="${i}" ${i === (presetIdx < 0 ? AI_PRESETS.length - 1 : presetIdx) ? 'selected' : ''}>${p.label}</option>`).join('')}</select></div>
+      <div class="field"><label>接口地址（Base URL）</label><input id="aiBase" value="${esc(cfg.base)}" placeholder="https://api.deepseek.com"></div>
+      <div class="field"><label>模型</label><input id="aiModel" value="${esc(cfg.model)}" placeholder="deepseek-chat"></div>
+      <div class="field"><label>API Key</label><input id="aiKey" type="password" value="${esc(cfg.key)}" placeholder="sk-..." autocomplete="off"></div>
+      <div class="form-note">DeepSeek 的 Key 在 platform.deepseek.com 充几块钱就够用一学期。</div>
+      <div class="form-foot"><button type="button" class="btn btn-primary" id="aiSave">保存并开始</button></div>
+    </div>`;
+  }
+
+  function wireAiSettings() {
+    const sel = $('#aiPreset');
+    sel.onchange = () => {
+      const p = AI_PRESETS[Number(sel.value)];
+      if (p.base) { $('#aiBase').value = p.base; $('#aiModel').value = p.model; }
+    };
+    $('#aiSave').onclick = () => {
+      const cfg = aiCfg();
+      cfg.base = $('#aiBase').value.trim() || 'https://api.deepseek.com';
+      cfg.model = $('#aiModel').value.trim() || 'deepseek-chat';
+      cfg.key = $('#aiKey').value.trim();
+      if (!cfg.key) { toast('API Key 还没填', 'warn'); return; }
+      save();
+      state.ai = { messages: [], busy: false, abort: null };
+      toast('AI 助手已就绪');
+      renderAiHome();
+    };
+  }
+
+  function wireAiChat() {
+    $$('#aiBody .ai-task[data-task]').forEach((btn) => {
+      btn.onclick = () => {
+        const t = AI_TASKS.find((x) => x.id === btn.dataset.task);
+        if (t.id === 'praise') { renderAiPraisePicker(); return; }
+        aiRun(t.prompt, t.label);
+      };
+    });
+    $('#aiSettingsBtn').onclick = () => { $('#aiBody').innerHTML = aiSettingsHTML(); wireAiSettings(); };
+    const form = $('#aiForm');
+    const ta = $('#aiText');
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+    });
+    ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`; });
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      if (state.ai.busy) { if (state.ai.abort) state.ai.abort.abort(); return; }
+      const text = ta.value.trim();
+      if (!text) return;
+      aiRun(text);
+    };
+    const log = $('#aiLog');
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function renderAiPraisePicker() {
+    const body = $('#aiBody');
+    body.insertAdjacentHTML('beforeend', `<div class="ai-picker" id="aiPicker"><b>点评谁？</b><div>${db.players.map((p) => `<button type="button" data-id="${p.id}">${esc(p.name)}</button>`).join('') || '<span class="ip-tag warn">先添加队员</span>'}<button type="button" class="x" data-x="1">取消</button></div></div>`);
+    const picker = $('#aiPicker');
+    picker.querySelectorAll('button[data-id]').forEach((b) => {
+      b.onclick = () => {
+        const p = getPlayer(b.dataset.id);
+        picker.remove();
+        if (!p) return;
+        aiRun(`给 ${p.name}（${p.position}，${p.grade}）写一段 60 字以内的鼓励式点评：先夸他最突出的一项技能和近期出勤，再点出最值得练的一项，语气像队长说话，最后加一个具体可行的小目标。`, `点评 · ${p.name}`);
+      };
+    });
+    picker.querySelector('button[data-x]').onclick = () => picker.remove();
+  }
+
+  async function aiRun(prompt, label) {
+    const cfg = aiCfg();
+    if (!cfg.key) { renderAiSettings(); return; }
+    if (state.ai.busy) return;
+    state.ai.messages.push({ role: 'user', content: label ? `【${label}】${prompt}` : prompt });
+    state.ai.busy = true;
+    const log = $('#aiLog');
+    if (log) {
+      log.querySelector('.ai-empty') && (log.innerHTML = '');
+      log.insertAdjacentHTML('beforeend', aiMsgHTML('user', aiRender(state.ai.messages[state.ai.messages.length - 1].content)));
+      log.insertAdjacentHTML('beforeend', `<div class="ai-msg bot" id="aiStreaming"><div class="ai-bubble"><span class="ai-dot"></span></div></div>`);
+      log.scrollTop = log.scrollHeight;
+    }
+    const send = $('#aiSend');
+    if (send) { send.textContent = '■'; send.dataset.tip = '停止'; }
+
+    const messages = [
+      { role: 'system', content: AI_SYSTEM() },
+      ...state.ai.messages.slice(-10).map((m) => ({ role: m.role, content: m.content }))
+    ];
+    state.ai.abort = new AbortController();
+    let full = '';
+    try {
+      const res = await fetch(aiUrl(cfg.base), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.key}` },
+        body: JSON.stringify({ model: cfg.model, messages, stream: true, temperature: 0.7 }),
+        signal: state.ai.abort.signal
+      });
+      if (!res.ok) {
+        let detail = '';
+        try { const j = await res.json(); detail = j.error && (j.error.message || j.error.code) || j.message || ''; } catch (err) { /* ignore */ }
+        throw new Error(`HTTP ${res.status}${detail ? `：${detail}` : ''}${res.status === 401 ? '（Key 不对或已过期）' : res.status === 402 ? '（余额不足）' : ''}`);
+      }
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          const s = line.trim();
+          if (!s.startsWith('data:')) continue;
+          const payload = s.slice(5).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const j = JSON.parse(payload);
+            const delta = j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content;
+            if (delta) full += delta;
+          } catch (err) { /* 忽略不完整行 */ }
+        }
+        const node = $('#aiStreaming .ai-bubble');
+        if (node && full) node.innerHTML = aiRender(full);
+        if (log) log.scrollTop = log.scrollHeight;
+      }
+      state.ai.messages.push({ role: 'assistant', content: full || '（空回复）' });
+    } catch (err) {
+      const aborted = err.name === 'AbortError';
+      if (aborted && full) {
+        state.ai.messages.push({ role: 'assistant', content: full });
+      } else {
+        const msg = aborted ? '已停止生成。' : `请求失败：${err.message}。检查接口地址 / Key / 余额；浏览器直连被拦时换 Chrome 或 Edge 试试。`;
+        state.ai.messages.push({ role: 'assistant', content: msg });
+      }
+    } finally {
+      state.ai.busy = false;
+      state.ai.abort = null;
+      const streamNode = $('#aiStreaming');
+      if (streamNode) {
+        const wrap = document.createElement('div');
+        wrap.innerHTML = aiMsgHTML('assistant', aiRender(state.ai.messages[state.ai.messages.length - 1].content));
+        streamNode.replaceWith(wrap.firstElementChild);
+      }
+      if (send) { send.textContent = '↑'; send.dataset.tip = '发送'; }
+      if (log) log.scrollTop = log.scrollHeight;
+    }
+  }
+
+  function renderAiSettings() {
+    $('#aiBody').innerHTML = aiSettingsHTML();
+    wireAiSettings();
   }
 
   /* ══════════ 启动 ══════════ */
