@@ -2170,7 +2170,40 @@
       const apply = e.target.closest('[data-apply]');
       if (apply) { applyFxSaved(apply.dataset.apply); return; }
       const del = e.target.closest('[data-del]');
-      if (del) deleteFxSaved(del.dataset.del);
+      if (del) { deleteFxSaved(del.dataset.del); return; }
+      const rnBtn = e.target.closest('[data-rename-btn]');
+      if (rnBtn) { fxRenameId = rnBtn.dataset.renameBtn; paintFxSaves(); return; }
+      const rnOk = e.target.closest('[data-rename-ok]');
+      if (rnOk) {
+        const inp = $('#fxSaves').querySelector(`[data-rename="${rnOk.dataset.renameOk}"]`);
+        fxRenameId = '';
+        renameFxSaved(rnOk.dataset.renameOk, inp ? inp.value : '');
+        return;
+      }
+      const upd = e.target.closest('[data-update]');
+      if (upd) updateFxSaved(upd.dataset.update);
+    });
+    $('#fxSaves').addEventListener('keydown', (e) => {
+      const inp = e.target.closest('[data-rename]');
+      if (!inp) return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        fxRenameId = '';
+        renameFxSaved(inp.dataset.rename, inp.value);
+      } else if (e.key === 'Escape') {
+        fxRenameId = '';
+        paintFxSaves();
+      }
+    });
+    // 点 ✓ 时先压住默认行为，避免输入框失焦导致改名行被重建、click 落空
+    $('#fxSaves').addEventListener('pointerdown', (e) => {
+      if (e.target.closest('[data-rename-ok]')) e.preventDefault();
+    });
+    $('#fxSaves').addEventListener('focusout', (e) => {
+      const inp = e.target.closest('[data-rename]');
+      if (!inp || fxRenameId !== inp.dataset.rename) return;
+      fxRenameId = '';
+      paintFxSaves();
     });
 
     $('#fxReset').addEventListener('click', () => applyFxPreset('base'));
@@ -2330,17 +2363,55 @@
     toast('阵型已删除');
   }
 
+  function renameFxSaved(id, name) {
+    const f = (db.formations || []).find((x) => x.id === id);
+    if (!f) return;
+    name = String(name || '').trim().slice(0, 12);
+    if (!name) { toast('名字不能为空', 'warn'); return; }
+    if (db.formations.some((x) => x.id !== id && x.name === name)) { toast(`已经有叫「${name}」的阵型了`, 'warn'); return; }
+    f.name = name;
+    save();
+    paintFxSaves();
+    toast(`已改名为「${name}」`);
+  }
+
+  function updateFxSaved(id) {
+    const f = (db.formations || []).find((x) => x.id === id);
+    if (!f) return;
+    const pos = {};
+    FX_ROLES.forEach((r) => { pos[r.id] = { x: db.formation.pos[r.id].x, y: db.formation.pos[r.id].y }; });
+    if (sameFxPos(pos, f.pos)) { toast(`「${f.name}」已经是这个站位了`); return; }
+    f.pos = pos;
+    f.at = Date.now();
+    save();
+    paintFxSaves();
+    toast(`「${f.name}」已更新为当前站位`);
+  }
+
+  let fxRenameId = '';
   function paintFxSaves() {
     const box = $('#fxSaves');
     if (!box) return;
     const list = Array.isArray(db.formations) ? db.formations : [];
     box.innerHTML = list.map((f) => {
       const on = db.formation.preset === 'custom' && sameFxPos(db.formation.pos, f.pos);
+      if (fxRenameId === f.id) {
+        return `<div class="fx-save on" data-id="${f.id}">
+          <input class="fx-rename-input" data-rename="${f.id}" maxlength="12" value="${esc(f.name)}">
+          <button type="button" class="fx-act ok" data-rename-ok="${f.id}" aria-label="确认改名">✓</button>
+        </div>`;
+      }
       return `<div class="fx-save${on ? ' on' : ''}">
         <button type="button" class="fx-save-name" data-apply="${f.id}" title="套用「${esc(f.name)}」">${esc(f.name)}</button>
-        <button type="button" class="fx-save-del" data-del="${f.id}" aria-label="删除 ${esc(f.name)}">×</button>
+        <button type="button" class="fx-act" data-rename-btn="${f.id}" title="重命名" aria-label="重命名">✎</button>
+        <button type="button" class="fx-act" data-update="${f.id}" title="用当前站位覆盖这套" aria-label="更新站位">⟳</button>
+        <button type="button" class="fx-act danger" data-del="${f.id}" title="删除" aria-label="删除 ${esc(f.name)}">×</button>
       </div>`;
     }).join('') || '<div class="fx-save-empty">还没有保存的阵型。摆好站位后点「存当前」。</div>';
+    if (fxRenameId) {
+      const inp = box.querySelector(`[data-rename="${fxRenameId}"]`);
+      if (inp) { inp.focus(); inp.select(); }
+    }
   }
 
   function toggleFxSaveRow(show) {
