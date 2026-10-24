@@ -2094,3 +2094,35 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 .fx-save-empty{font-size:11.5px;line-height:1.8;color:var(--muted);padding:4px 2px}
 
 .fx-fsbtn{max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ══════════ PWA 安装引导 ══════════ */
+.pwa-install{
+  position:fixed;right:16px;bottom:16px;z-index:190;
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:16px;background:rgba(10,14,26,.92);border:1px solid var(--ov120);
+  box-shadow:0 22px 46px -18px rgba(0,0,0,.9),inset 0 1px 0 var(--ov100);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  opacity:0;transform:translateY(14px);transition:.4s var(--ease);
+}
+.pwa-install.show{opacity:1;transform:none}
+.pwa-install[hidden]{display:none}
+.pwa-install img{border-radius:9px;flex:none;display:block}
+.pwa-install-txt{display:grid;line-height:1.35;margin-right:2px}
+.pwa-install-txt b{font-size:12.5px;color:var(--text)}
+.pwa-install-txt i{font-style:normal;font-size:10.5px;color:var(--muted)}
+.pwa-install-go{
+  flex:none;height:32px;padding:0 14px;border-radius:10px;border:1px solid rgba(var(--violet-2-rgb),.42);
+  background:linear-gradient(100deg,rgba(var(--violet-rgb),.34),rgba(var(--cyan-rgb),.1));
+  font-family:var(--font);font-size:12.5px;color:#fff;cursor:pointer;transition:.2s;
+}
+.pwa-install-go:hover{filter:brightness(1.15)}
+.pwa-install-x{
+  flex:none;width:26px;height:26px;border-radius:8px;border:1px solid transparent;
+  background:transparent;color:var(--muted);font-size:15px;cursor:pointer;transition:.2s;
+}
+.pwa-install-x:hover{background:var(--ov080);color:var(--text)}
+html[data-mode="light"] .pwa-install{background:rgba(255,255,255,.94);border-color:var(--ov120);box-shadow:0 22px 46px -20px rgba(30,40,80,.35)}
+@media(max-width:560px){
+  .pwa-install{left:16px;right:16px}
+  .pwa-install-txt{flex:1}
+}

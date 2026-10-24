@@ -3188,6 +3188,68 @@ ${aiContext()}`;
       });
       cloudEnsureWeek(state.weekMonday);
     }
+    initPWA();
+  }
+
+  /* ══════════ PWA：Service Worker 注册 + 安装引导 ══════════ */
+  function initPWA() {
+    // file://（单文件分发）下 SW 不可用，直接跳过；线上（https）和本地调试（http）才注册
+    if (!/^https?:$/.test(location.protocol)) return;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* 注册失败不影响使用 */ });
+    }
+
+    const DISMISS_KEY = 'xgy_pwa_install_dismiss';
+    const alreadyStandalone =
+      window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (alreadyStandalone) return;
+    if (localStorage.getItem(DISMISS_KEY)) return;
+
+    let installEvent = null;
+    const banner = document.createElement('div');
+    banner.className = 'pwa-install';
+    banner.hidden = true;
+    banner.innerHTML = `
+      <img src="assets/icon-192.png" alt="" width="34" height="34">
+      <div class="pwa-install-txt"><b>安装到桌面</b><i>离线也能打开，像原生 App 一样</i></div>
+      <button type="button" class="pwa-install-go">安装</button>
+      <button type="button" class="pwa-install-x" aria-label="不再提示">×</button>`;
+    document.body.appendChild(banner);
+    const show = () => { banner.hidden = false; requestAnimationFrame(() => banner.classList.add('show')); };
+    const dismiss = () => {
+      banner.classList.remove('show');
+      localStorage.setItem(DISMISS_KEY, '1');
+      setTimeout(() => banner.remove(), 400);
+    };
+    banner.querySelector('.pwa-install-x').addEventListener('click', dismiss);
+    banner.querySelector('.pwa-install-go').addEventListener('click', async () => {
+      if (installEvent) {
+        installEvent.prompt();
+        try {
+          const { outcome } = await installEvent.userChoice;
+          if (outcome === 'accepted') dismiss();
+        } catch (err) { /* 用户关掉了系统弹窗 */ }
+        installEvent = null;
+      } else {
+        // iOS Safari 没有 beforeinstallprompt：引导手动「添加到主屏幕」
+        dismiss();
+      }
+    });
+
+    // Android / 桌面 Chrome/Edge：原生安装流
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      installEvent = e;
+      setTimeout(show, 2500); // 进页面先玩 2.5 秒再提示，别一上来就拦
+    });
+    // iOS Safari：没有安装 API，展示「分享 → 添加到主屏幕」引导
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS && !/crios|fxios|edgiOS/i.test(navigator.userAgent)) {
+      banner.querySelector('.pwa-install-txt i').textContent = 'Safari 分享菜单 → 添加到主屏幕';
+      banner.querySelector('.pwa-install-go').textContent = '知道了';
+      setTimeout(show, 3500);
+    }
+    window.addEventListener('appinstalled', () => dismiss());
   }
 
   init();

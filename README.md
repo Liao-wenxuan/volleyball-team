@@ -151,5 +151,6 @@ prototype/formation-editor.html  阵型板最早的独立原型
 ## Roadmap
 
 - [x] 阵型库：多套命名保存（改名 / 覆盖 / 删除 + 云端整库同步）
+- [x] PWA：可安装到桌面 / 主屏，离线可用（Service Worker 缓存应用壳）
 - [ ] 阵型导出 PNG，直接发群里讲站位
 - [x] 数据上云（Node + SQLite）

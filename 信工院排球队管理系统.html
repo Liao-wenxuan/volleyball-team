@@ -7,6 +7,12 @@
 <meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%237b6cff'/%3E%3Crect%20x='12'%20y='12'%20width='40'%20height='40'%20rx='4'%20fill='none'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M12%2028h40'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M32%2012v40'%20stroke='%23fff'%20stroke-width='3'%20stroke-opacity='.55'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#05070f">
+
+
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="排球队">
 <style>
 /* ═══════════════════════════════════════════
    信工院排球队 · 球队管理系统
@@ -2104,6 +2110,38 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 .fx-save-empty{font-size:11.5px;line-height:1.8;color:var(--muted);padding:4px 2px}
 
 .fx-fsbtn{max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ══════════ PWA 安装引导 ══════════ */
+.pwa-install{
+  position:fixed;right:16px;bottom:16px;z-index:190;
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:16px;background:rgba(10,14,26,.92);border:1px solid var(--ov120);
+  box-shadow:0 22px 46px -18px rgba(0,0,0,.9),inset 0 1px 0 var(--ov100);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  opacity:0;transform:translateY(14px);transition:.4s var(--ease);
+}
+.pwa-install.show{opacity:1;transform:none}
+.pwa-install[hidden]{display:none}
+.pwa-install img{border-radius:9px;flex:none;display:block}
+.pwa-install-txt{display:grid;line-height:1.35;margin-right:2px}
+.pwa-install-txt b{font-size:12.5px;color:var(--text)}
+.pwa-install-txt i{font-style:normal;font-size:10.5px;color:var(--muted)}
+.pwa-install-go{
+  flex:none;height:32px;padding:0 14px;border-radius:10px;border:1px solid rgba(var(--violet-2-rgb),.42);
+  background:linear-gradient(100deg,rgba(var(--violet-rgb),.34),rgba(var(--cyan-rgb),.1));
+  font-family:var(--font);font-size:12.5px;color:#fff;cursor:pointer;transition:.2s;
+}
+.pwa-install-go:hover{filter:brightness(1.15)}
+.pwa-install-x{
+  flex:none;width:26px;height:26px;border-radius:8px;border:1px solid transparent;
+  background:transparent;color:var(--muted);font-size:15px;cursor:pointer;transition:.2s;
+}
+.pwa-install-x:hover{background:var(--ov080);color:var(--text)}
+html[data-mode="light"] .pwa-install{background:rgba(255,255,255,.94);border-color:var(--ov120);box-shadow:0 22px 46px -20px rgba(30,40,80,.35)}
+@media(max-width:560px){
+  .pwa-install{left:16px;right:16px}
+  .pwa-install-txt{flex:1}
+}
 
 </style>
 </head>
@@ -6239,6 +6277,68 @@ ${aiContext()}`;
       });
       cloudEnsureWeek(state.weekMonday);
     }
+    initPWA();
+  }
+
+  /* ══════════ PWA：Service Worker 注册 + 安装引导 ══════════ */
+  function initPWA() {
+    // file://（单文件分发）下 SW 不可用，直接跳过；线上（https）和本地调试（http）才注册
+    if (!/^https?:$/.test(location.protocol)) return;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* 注册失败不影响使用 */ });
+    }
+
+    const DISMISS_KEY = 'xgy_pwa_install_dismiss';
+    const alreadyStandalone =
+      window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (alreadyStandalone) return;
+    if (localStorage.getItem(DISMISS_KEY)) return;
+
+    let installEvent = null;
+    const banner = document.createElement('div');
+    banner.className = 'pwa-install';
+    banner.hidden = true;
+    banner.innerHTML = `
+      <img src="assets/icon-192.png" alt="" width="34" height="34">
+      <div class="pwa-install-txt"><b>安装到桌面</b><i>离线也能打开，像原生 App 一样</i></div>
+      <button type="button" class="pwa-install-go">安装</button>
+      <button type="button" class="pwa-install-x" aria-label="不再提示">×</button>`;
+    document.body.appendChild(banner);
+    const show = () => { banner.hidden = false; requestAnimationFrame(() => banner.classList.add('show')); };
+    const dismiss = () => {
+      banner.classList.remove('show');
+      localStorage.setItem(DISMISS_KEY, '1');
+      setTimeout(() => banner.remove(), 400);
+    };
+    banner.querySelector('.pwa-install-x').addEventListener('click', dismiss);
+    banner.querySelector('.pwa-install-go').addEventListener('click', async () => {
+      if (installEvent) {
+        installEvent.prompt();
+        try {
+          const { outcome } = await installEvent.userChoice;
+          if (outcome === 'accepted') dismiss();
+        } catch (err) { /* 用户关掉了系统弹窗 */ }
+        installEvent = null;
+      } else {
+        // iOS Safari 没有 beforeinstallprompt：引导手动「添加到主屏幕」
+        dismiss();
+      }
+    });
+
+    // Android / 桌面 Chrome/Edge：原生安装流
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      installEvent = e;
+      setTimeout(show, 2500); // 进页面先玩 2.5 秒再提示，别一上来就拦
+    });
+    // iOS Safari：没有安装 API，展示「分享 → 添加到主屏幕」引导
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS && !/crios|fxios|edgiOS/i.test(navigator.userAgent)) {
+      banner.querySelector('.pwa-install-txt i').textContent = 'Safari 分享菜单 → 添加到主屏幕';
+      banner.querySelector('.pwa-install-go').textContent = '知道了';
+      setTimeout(show, 3500);
+    }
+    window.addEventListener('appinstalled', () => dismiss());
   }
 
   init();
