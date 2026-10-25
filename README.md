@@ -11,7 +11,7 @@
 
 数据只存在你自己的浏览器里，随便点、随便拖。
 
-![首页](docs/shots/home.png)
+![球队总览](docs/shots/dashboard.png)
 
 ## 为什么做这个
 
@@ -34,11 +34,15 @@
 | 主题 | 9 套（6 深 3 浅），含浅色 |
 
 <p>
-<img src="docs/shots/formation.png" width="49%" />
+<img src="docs/shots/roster.png" width="49%" />
 <img src="docs/shots/attendance.png" width="49%" />
 </p>
 <p>
-<img src="docs/shots/player.png" width="49%" />
+<img src="docs/shots/tactics.png" width="49%" />
+<img src="docs/shots/growth.png" width="49%" />
+</p>
+<p>
+<img src="docs/shots/ai.png" width="49%" />
 <img src="docs/shots/themes.png" width="49%" />
 </p>
 

@@ -20,3 +20,7 @@ NUL
 server/data/
 server/.env
 server/dist/
+
+# 截图自动化临时产物
+.playwright-cli/
+tools/.seed-demo.json
