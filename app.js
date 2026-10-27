@@ -1956,6 +1956,9 @@
         updateCount();
       });
       $('#batchTable').addEventListener('dblclick', (e) => {
+        // 双击落在 +/− 按钮上是「快速连点调整」，不是还原——否则连点会被误判成双击，
+        // 触发还原把数值拉回原值，看起来就像「点了加号先减 0.5」
+        if (e.target.closest('.batch-stepper button')) return;
         const box = e.target.closest('.batch-stepper');
         if (!box) return;
         const key = `${box.dataset.player}:${box.dataset.skill}`;

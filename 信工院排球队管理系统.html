@@ -1619,7 +1619,7 @@ kbd{
 .batch-player .u-avatar{width:24px;height:24px;border-radius:7px;font-size:9px}
 .batch-player b{display:block;font-size:10px;font-weight:600}
 .batch-player em{display:block;font-style:normal;font-size:8px;color:var(--muted)}
-.batch-stepper{display:flex;align-items:center;justify-content:center;gap:3px}
+.batch-stepper{display:flex;align-items:center;justify-content:center;gap:3px;user-select:none;-webkit-user-select:none}
 .batch-stepper button{width:19px;height:22px;border-radius:5px;background:var(--ov050);color:var(--muted);font-size:11px;line-height:1;transition:.2s}
 .batch-stepper button:hover{background:rgba(var(--violet-rgb),.25);color:#fff}
 .batch-stepper b{min-width:26px;font-size:9.5px;font-weight:600;color:var(--text-2);font-variant-numeric:tabular-nums}
@@ -5026,6 +5026,9 @@ html[data-mode="light"] .pwa-install{background:rgba(255,255,255,.94);border-col
         updateCount();
       });
       $('#batchTable').addEventListener('dblclick', (e) => {
+        // 双击落在 +/− 按钮上是「快速连点调整」，不是还原——否则连点会被误判成双击，
+        // 触发还原把数值拉回原值，看起来就像「点了加号先减 0.5」
+        if (e.target.closest('.batch-stepper button')) return;
         const box = e.target.closest('.batch-stepper');
         if (!box) return;
         const key = `${box.dataset.player}:${box.dataset.skill}`;
