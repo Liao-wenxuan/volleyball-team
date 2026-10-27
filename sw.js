@@ -4,13 +4,15 @@
  * 策略
  * - 预缓存应用壳（页面 + 样式 + 脚本 + 图标）：装完即离线可用
  *   （业务数据本来就在 localStorage，不依赖网络）
- * - 导航请求：网络优先，失败回缓存 → 有网时总能拿到新版
- * - 静态资源：缓存优先 + 后台更新（stale-while-revalidate）
+ * - 页面导航：网络优先，失败回缓存
+ * - 静态资源：网络优先，失败回缓存
+ *   （原来是「缓存优先 + 后台更新」，结果改完代码用户第一次打开还是旧版，
+ *     曾经把已修好的 bug 又复现了一遍；改成网络优先，联网时永远是最新代码）
  * - 跨域请求（AI 直连 DeepSeek 等）一律不拦，直接放行
  *
  * 发新版：把 VERSION 加一，旧缓存在 activate 时自动清掉。
  * ═══════════════════════════════════════════════════════════════ */
-const VERSION = 'v2'; // v2: 图标换排球实拍合成版
+const VERSION = 'v3'; // v3: 静态资源改网络优先，避免改版后仍加载旧 app.js
 const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',
@@ -59,19 +61,17 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // 同源静态资源：缓存优先 + 后台更新
+  // 同源静态资源：网络优先，断网回缓存
+  // （联网时永远拿到最新代码；断网时仍有壳可开）
   e.respondWith(
-    caches.match(req).then((cached) => {
-      const net = fetch(req)
-        .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || net;
-    })
+    fetch(req)
+      .then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req).then((hit) => hit || Response.error()))
   );
 });

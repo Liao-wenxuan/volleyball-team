@@ -14,6 +14,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
+  const BUILD = '2026-10-27 · r3'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -1932,7 +1933,7 @@
           <td><div class="batch-player"><span class="u-avatar" style="--a:${positionStyle(p.position)[0]};--b:${positionStyle(p.position)[1]}">${esc(p.name[0])}</span><span><b>${esc(p.name)}</b><em>${p.position}</em></span></div></td>
           ${SKILLS.map((sk) => {
             const v = Number(p.skills[sk.key] || 0);
-            return `<td><div class="batch-stepper" data-player="${p.id}" data-skill="${sk.key}" data-value="${v.toFixed(1)}" data-original="${v.toFixed(1)}"><button type="button" data-step="-0.5">−</button><b>${v.toFixed(1)}</b><button type="button" data-step="0.5">+</button></div></td>`;
+            return `<td><div class="batch-stepper" data-player="${p.id}" data-skill="${sk.key}" data-value="${v.toFixed(1)}" data-original="${v.toFixed(1)}"><button type="button" data-step="-0.5">−</button><b title="双击数字还原这一格">${v.toFixed(1)}</b><button type="button" data-step="0.5">+</button></div></td>`;
           }).join('')}
         </tr>`).join('')}</tbody></table>`;
       pending = new Map();
@@ -1956,9 +1957,10 @@
         updateCount();
       });
       $('#batchTable').addEventListener('dblclick', (e) => {
-        // 双击落在 +/− 按钮上是「快速连点调整」，不是还原——否则连点会被误判成双击，
-        // 触发还原把数值拉回原值，看起来就像「点了加号先减 0.5」
-        if (e.target.closest('.batch-stepper button')) return;
+        // 还原只认「双击中间那个数字」。双击 +/− 按钮属于连点调整，一律不还原——
+        // 否则两次点击被浏览器判成 dblclick 时，数值会被拉回原值，
+        // 看起来就是「点了加号反而变小」（连点越快越容易中招）
+        if (!e.target.closest('.batch-stepper b')) return;
         const box = e.target.closest('.batch-stepper');
         if (!box) return;
         const key = `${box.dataset.player}:${box.dataset.skill}`;
@@ -3169,6 +3171,8 @@ ${aiContext()}`;
   function init() {
     state.weekMonday = getMonday(new Date());
     applyTheme(db.settings.theme);
+    const fm = $('.footer-meta');
+    if (fm) fm.textContent += ` · ${BUILD}`;
     $('#pageTitle').textContent = PAGES.dashboard.title;
     $('#pageKicker').textContent = PAGES.dashboard.kicker;
     renderSidebar();
