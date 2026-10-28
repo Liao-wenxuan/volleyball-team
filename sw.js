@@ -12,7 +12,9 @@
  *
  * 发新版：把 VERSION 加一，旧缓存在 activate 时自动清掉。
  * ═══════════════════════════════════════════════════════════════ */
-const VERSION = 'v5'; // v5: 新增训练签到页 + 训练卡 canvas + 分享页认领本人 // v4: 新增分享只读视图 share.js + 弹窗移动端宽度修复
+// v6: 删训练签到页；队员端改「姓名+号码」验证，加进步/弱点/AI 点评
+// v5: 训练卡 canvas；v4: 分享只读视图 share.js
+const VERSION = 'v6';
 const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',

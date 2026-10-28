@@ -2155,6 +2155,11 @@ html[data-mode="light"] .pwa-install{background:rgba(255,255,255,.94);border-col
 .share-note p{margin:0;font-size:11px;line-height:1.8;color:var(--muted)}
 .share-note b{color:var(--amber)}
 .share-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.share-ai{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;
+  border-radius:10px;border:1px dashed var(--line);background:var(--ov020)}
+.share-ai .btn{flex:none;padding:7px 12px;font-size:12px}
+.share-ai em{font-style:normal;font-size:11px;line-height:1.6;color:var(--muted)}
+.share-ai.is-tip{border-style:solid;border-color:var(--ov040)}
 
 /* ══════════════════════════════════════════════════════════════
    队员只读视图（分享页）—— 移动端优先
@@ -2242,17 +2247,51 @@ body.sv-mode > *:not(#shareView){display:none !important}
 .sv-radar-label{font-size:10px;fill:var(--sv-mut);font-family:inherit}
 .sv-note{text-align:center;margin:2px 0 16px}
 
-/* 认领名单 */
-.sv-avatar{width:34px;height:34px;border-radius:2px;flex:none;display:flex;align-items:center;justify-content:center;
-  font-size:14px;font-weight:800;color:#0d0e12;background:linear-gradient(135deg,var(--a),var(--b))}
-/* 认领名单 */
-.sv-pick{display:flex;flex-direction:column;gap:2px;padding-bottom:16px}
-.sv-pick-btn{display:flex;align-items:center;gap:12px;width:100%;padding:12px 0;border:0;border-top:1px solid var(--sv-line);
-  background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
-.sv-pick-btn:first-child{border-top:0}
-.sv-pick-btn:active{background:rgba(255,255,255,.04)}
-.sv-pick-txt b{display:block;font-size:14px;font-weight:700}
-.sv-pick-txt em{display:block;font-style:normal;font-size:10.5px;color:var(--sv-mut);margin-top:2px}
+/* 进门验证 */
+.sv-gate{padding-top:18px}
+.sv-form{display:flex;flex-direction:column;gap:14px;padding-bottom:22px}
+.sv-field{display:flex;flex-direction:column;gap:7px}
+.sv-field span{font-size:11px;color:var(--sv-mut);letter-spacing:.02em}
+.sv-field input{width:100%;padding:13px 14px;border-radius:2px;border:1px solid var(--sv-line);
+  background:rgba(255,255,255,.04);color:var(--sv-ink);font:inherit;font-size:16px;
+  -webkit-appearance:none;appearance:none}
+.sv-field input::placeholder{color:rgba(255,255,255,.28)}
+.sv-field input:focus{outline:none;border-color:var(--sv-lime);background:rgba(217,255,74,.05)}
+.sv-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:4px;
+  padding:14px 18px;border:0;border-radius:2px;background:var(--sv-lime);color:#0d0e12;
+  font:inherit;font-size:14px;font-weight:800;cursor:pointer}
+.sv-btn i{font-style:normal;font-size:16px}
+.sv-btn:active{transform:translateY(1px)}
+.sv-err{margin:0;font-size:11.5px;color:#ff8f8f}
+.sv-form.shake{animation:sv-shake .32s}
+@keyframes sv-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* 进步 */
+.sv-sub{margin:0 0 16px;font-size:12px;line-height:1.7;color:var(--sv-mut)}
+.sv-gain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;padding-bottom:20px;
+  background:var(--sv-line);border:1px solid var(--sv-line)}
+.sv-gain-cell{display:flex;flex-direction:column;gap:3px;padding:12px 10px 13px;background:#0d0e12}
+.sv-gain-cell span{font-size:10.5px;color:var(--sv-mut)}
+.sv-gain-cell b{font-size:19px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;line-height:1.2}
+.sv-gain-cell em{font-style:normal;font-size:10.5px;font-variant-numeric:tabular-nums}
+.sv-gain-cell em.up{color:var(--sv-lime)}
+.sv-gain-cell em.down{color:#ff8f8f}
+.sv-gain-cell em.flat{color:rgba(255,255,255,.3)}
+.sv-gain-cell.is-weak{background:rgba(255,255,255,.03)}
+.sv-gain-cell.is-weak span{color:rgba(255,255,255,.85)}
+
+/* 弱点 */
+.sv-weak{margin:2px 0 16px;text-align:center;font-size:11.5px;color:var(--sv-mut)}
+.sv-weak b{color:var(--sv-lime);font-weight:700}
+.sv-radar-label.is-weak{fill:var(--sv-lime);font-weight:700}
+.sv-radar-dot.is-weak{fill:#ff8f8f}
+#shareView .sv-radar-poly{fill:rgba(217,255,74,.16);stroke:var(--sv-lime);stroke-width:1.6}
+
+/* 点评卡 */
+.sv-tipcard{position:relative;margin:0 0 20px;padding:16px 16px 14px;border-left:2px solid var(--sv-lime);
+  background:linear-gradient(100deg,rgba(217,255,74,.07),rgba(255,255,255,.02));border-radius:0 2px 2px 0}
+.sv-tipcard p{margin:0 0 10px;font-size:13.5px;line-height:1.95;color:rgba(255,255,255,.9)}
+.sv-tipcard span{font-size:9px;color:rgba(255,255,255,.4)}
 
 /* 我的出勤时间线 */
 .sv-tl{padding-bottom:14px}
@@ -2279,72 +2318,6 @@ body.sv-mode > *:not(#shareView){display:none !important}
 /* 分享页：链接失效时的 hero（没有下半部分，补足底部留白） */
 .sv-hero-err{padding-bottom:34px}
 .sv-hero-err .sv-hero-mid{margin-top:18px}
-
-/* ══════════ 训练签到页（Check-in） ══════════
-   现场用：卡片够大、手势够少、状态一眼能看清 */
-.ci-bar{margin-bottom:18px}
-.ci-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
-.ci-chip{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 14px;border-radius:12px;
-  border:1px solid var(--line);background:var(--ov020);color:var(--text-2);cursor:pointer;text-align:left;font:inherit}
-.ci-chip b{font-size:12.5px;font-weight:600;color:var(--text)}
-.ci-chip em{font-style:normal;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
-.ci-chip-st{font-style:normal;font-size:10px;color:var(--muted)}
-.ci-chip-st.cancelled{color:var(--red)}
-.ci-chip.on{border-color:var(--violet);background:linear-gradient(135deg,rgba(var(--violet-rgb),.16),rgba(var(--cyan-rgb),.1))}
-.ci-chip.on b{color:var(--text)}
-.ci-chip.on .ci-chip-st{color:var(--violet-2)}
-
-.ci-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-top:14px;
-  padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--ov020)}
-.ci-head b{display:block;font-size:14px;font-weight:600}
-.ci-head em{display:block;font-style:normal;margin-top:3px;font-size:11px;color:var(--muted)}
-.ci-nums{display:flex;align-items:baseline;gap:6px;flex:none}
-.ci-nums b{font-size:22px;font-weight:700;color:var(--violet-2);font-variant-numeric:tabular-nums}
-.ci-nums span{font-size:10.5px;color:var(--muted);margin-right:10px}
-
-.ci-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px}
-.ci-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px 12px;
-  border-radius:16px;border:1px solid var(--line);background:var(--ov020);cursor:pointer;
-  transition:transform .18s var(--ease),border-color .18s,background .18s;
-  -webkit-user-select:none;user-select:none;touch-action:pan-y}
-.ci-card:active{transform:scale(.96)}
-.ci-avatar{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;
-  font-size:17px;font-weight:800;color:#0b0d16;background:linear-gradient(135deg,var(--a),var(--b));
-  box-shadow:0 6px 18px -8px var(--a)}
-.ci-name{font-size:13px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ci-pos{font-style:normal;font-size:10px;color:var(--muted)}
-.ci-badge{margin-top:2px;padding:3px 10px;border-radius:99px;font-size:10.5px;
-  background:var(--ov040);color:var(--muted);border:1px solid var(--line)}
-.ci-more{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:8px;border:0;
-  background:transparent;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;opacity:.55}
-.ci-more:hover{opacity:1;background:var(--ov040)}
-
-.ci-card.present{border-color:rgba(55,227,155,.35);background:rgba(55,227,155,.07)}
-.ci-card.present .ci-badge{background:rgba(55,227,155,.16);color:#8fdcba;border-color:rgba(55,227,155,.3)}
-.ci-card.late{border-color:rgba(255,187,85,.35);background:rgba(255,187,85,.07)}
-.ci-card.late .ci-badge{background:rgba(255,187,85,.16);color:#ffd79a;border-color:rgba(255,187,85,.3)}
-.ci-card.leave{border-color:rgba(var(--violet-rgb),.35);background:rgba(var(--violet-rgb),.08)}
-.ci-card.leave .ci-badge{background:rgba(var(--violet-rgb),.16);color:var(--violet-2);border-color:rgba(var(--violet-rgb),.3)}
-.ci-card.absent{border-color:rgba(255,107,138,.35);background:rgba(255,107,138,.07)}
-.ci-card.absent .ci-badge{background:rgba(255,107,138,.16);color:#ffb0c1;border-color:rgba(255,107,138,.3)}
-.ci-card.absent .ci-avatar{opacity:.5}
-.ci-card.present .ci-avatar{box-shadow:0 6px 18px -8px var(--a),0 0 0 3px rgba(55,227,155,.35)}
-
-.ci-legend{margin-top:14px;font-size:11px;color:var(--muted);line-height:1.8}
-
-.ci-menu{position:fixed;z-index:200;display:flex;flex-direction:column;min-width:104px;padding:5px;border-radius:12px;
-  border:1px solid var(--line);background:var(--solid);box-shadow:0 24px 50px -20px #000}
-.ci-menu button{padding:8px 12px;border:0;border-radius:8px;background:none;color:var(--text);
-  font:inherit;font-size:12.5px;text-align:left;cursor:pointer}
-.ci-menu button:hover{background:var(--ov040)}
-.ci-menu .ci-clear{color:var(--muted);border-top:1px solid var(--line);border-radius:0;margin-top:3px}
-.nav-count.zero{display:none}
-
-@media (max-width:560px){
-  .ci-grid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
-  .ci-card{padding:13px 8px 10px;border-radius:14px}
-  .ci-avatar{width:40px;height:40px;font-size:15px}
-}
 
 /* ══════════ 训练卡弹窗 ══════════ */
 .card-wrap{padding:2px}
@@ -2379,10 +2352,6 @@ body.sv-mode > *:not(#shareView){display:none !important}
     <button class="nav-item" data-page="attendance">
       <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 15.5 2 2 4-4"/></svg></span>
       <span>考勤管理</span>
-    </button>
-    <button class="nav-item" data-page="checkin">
-      <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/><path d="M20 14V6h-8"/></svg></span>
-      <span>训练签到</span><i class="nav-count" id="navCheckinCount">0</i>
     </button>
     <button class="nav-item" data-page="tactics">
       <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M12 4v16"/></svg></span>
@@ -2716,6 +2685,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
             <button id="weekNext" aria-label="下一周"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
           </div>
           <button class="btn btn-ghost" id="weekToday">回到本周</button>
+          <button class="btn btn-ghost" id="attCardBtn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 4v16"/></svg>训练卡</button>
           <button class="btn btn-primary" id="attAddBtnPage"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>加练</button>
         </div>
       </div>
@@ -2778,21 +2748,6 @@ body.sv-mode > *:not(#shareView){display:none !important}
     </section>
 
     <!-- ══════════ 阵型板 ══════════ -->
-    <section class="page" id="page-checkin" aria-label="训练签到">
-      <div class="page-head reveal">
-        <div>
-          <div class="eyebrow">CHECK-IN / FAST</div>
-          <h2>训练签到</h2>
-          <p>训练现场用：点一下出勤，左滑迟到，长按选请假/缺席。一次训练 5 秒记完。</p>
-        </div>
-        <div class="page-head-actions">
-          <button class="btn btn-ghost magnetic" id="ciAllPresent"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>全部出勤</button>
-          <button class="btn btn-primary magnetic" id="ciCardBtn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M12 4v16"/></svg>生成训练卡</button>
-        </div>
-      </div>
-      <div id="checkinBody"></div>
-    </section>
-
     <section class="page" id="page-tactics" aria-label="阵型板">
       <div class="page-head reveal">
         <div>
@@ -3575,7 +3530,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
 </script>
 <script>
 /* ═══════════════════════════════════════════════════════════════
- * share.js — 队员只读视图（队伍动态分享页）
+ * share.js — 队员端「我的训练档案」
  *
  * 纯前端、零后端：
  * - 队长侧（app.js 调用）：XGYShare.buildURL(payload) 把队伍快照
@@ -3584,10 +3539,12 @@ body.sv-mode > *:not(#shareView){display:none !important}
  *   置 __XGY_SHARE_MODE，主应用直接跳过初始化；然后解码并把
  *   只读视图渲染进 #shareView，其余界面元素全部隐藏
  *
- * 隐私口径：链接里带着全队数据（队长一个人管，没必要拆成 N 条链接），
- * 但**页面上只显示本人**——队员第一次打开要先认领「我是谁」，
- * 认领结果存在本机 localStorage（不随链接走），之后直接进自己的档案。
- * 想看别人必须点「换个人」重新认领，不会一打开就把全队摊开。
+ * 三条设计原则：
+ * 1. 进门前要验证：输入「姓名 + 球衣号码」对上了才放行，
+ *    页面上不列全队名单，也不会告诉对方「有几个人」以外的信息。
+ * 2. 只谈自己：出勤、进步、六维、点评，别人的数据一个字不出现。
+ * 3. 进步要算得出来：拿每项技能「赛季起点」对比现在的分，
+ *    不是拍脑袋夸，涨了多少分就说多少分。
  *
  * 编码格式：首字符是版本标记
  *   '1' = deflate-raw 压缩（CompressionStream，现代浏览器都支持）
@@ -3596,7 +3553,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
 (function () {
   'use strict';
 
-  const SELF_KEY = 'xgy_share_self'; // 本机记住「我是谁」，不随链接走
+  const NAME_KEY = 'xgy_share_name'; // 本机只记住上次输入的姓名，方便下次填
 
   /* ══════════ base64url + 压缩编解码 ══════════ */
   function b64url(bytes) {
@@ -3659,6 +3616,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
   ));
+  const f1 = (n) => (Number(n) || 0).toFixed(1);
 
   /* ══════════ 统计 ══════════ */
   function rateOf(att) {
@@ -3668,8 +3626,8 @@ body.sv-mode > *:not(#shareView){display:none !important}
   }
 
   /* ══════════ 六维雷达（SVG） ══════════ */
-  function radarSVG(values, size) {
-    const cx = size / 2, cy = size / 2, R = size / 2 - 34;
+  function radarSVG(values, size, weakIndex) {
+    const cx = size / 2, cy = size / 2, R = size / 2 - 36;
     const pt = (i, r) => {
       const a = (Math.PI / 3) * i - Math.PI / 2;
       return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
@@ -3689,12 +3647,13 @@ body.sv-mode > *:not(#shareView){display:none !important}
     for (let i = 0; i < 6; i++) {
       const [x, y] = pt(i, R);
       axes.push(`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" class="sv-radar-axis"/>`);
-      const [lx, ly] = pt(i, R + 18);
-      labels.push(`<text x="${lx}" y="${ly}" class="sv-radar-label" text-anchor="middle" dominant-baseline="middle">${SKILL_LABELS[i]}</text>`);
+      const [lx, ly] = pt(i, R + 19);
+      const cls = i === weakIndex ? 'sv-radar-label is-weak' : 'sv-radar-label';
+      labels.push(`<text x="${lx}" y="${ly}" class="${cls}" text-anchor="middle" dominant-baseline="middle">${SKILL_LABELS[i]}</text>`);
     }
-    const dots = poly.map((p) => {
+    const dots = poly.map((p, i) => {
       const [x, y] = p.split(',');
-      return `<circle cx="${x}" cy="${y}" r="2.5" class="sv-radar-dot"/>`;
+      return `<circle cx="${x}" cy="${y}" r="${i === weakIndex ? 4 : 2.5}" class="sv-radar-dot${i === weakIndex ? ' is-weak' : ''}"/>`;
     }).join('');
     return `<svg viewBox="0 0 ${size} ${size}" class="sv-radar" role="img" aria-label="技能雷达图">
       <polygon points="${ring(1)}" class="sv-radar-ring"/>
@@ -3720,7 +3679,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     el.innerHTML = `
       <div class="sv-bar">
         ${logo ? `<img class="sv-logo" src="${logo}" alt="" aria-hidden="true">` : ''}
-        <span class="sv-bar-txt"><strong>${esc(team)}</strong><em>TEAM FEED · SNAPSHOT</em></span>
+        <span class="sv-bar-txt"><strong>${esc(team)}</strong><em>MY TRAINING FILE</em></span>
       </div>${inner}`;
     document.body.classList.add('sv-mode');
     const prev = document.getElementById('shareView');
@@ -3729,22 +3688,31 @@ body.sv-mode > *:not(#shareView){display:none !important}
     return el;
   }
 
-  /* ══════════ 认领：你是谁 ══════════ */
-  function renderPicker(data) {
+  function heroTop(right) {
+    return `<div class="sv-hero-top mono">
+      <span><i class="sv-dot"></i>TEAM SIGNAL · LIVE</span>
+      <span>${esc(right || 'XGY · VB')}</span>
+    </div>`;
+  }
+
+  /* ══════════ 第 1 步：姓名 + 号码 ══════════ */
+  function renderGate(data) {
+    const players = data.players || [];
+    const needNo = players.some((p) => Number(p.no) > 0);
+    let remembered = '';
+    try { remembered = localStorage.getItem(NAME_KEY) || ''; } catch (e) { /* ignore */ }
+
     const el = shell(data.team || '信工院排球队', `
       <section class="sv-hero">
-        <div class="sv-hero-top mono">
-          <span><i class="sv-dot"></i>TEAM SIGNAL · LIVE</span>
-          <span>XGY · VB</span>
-        </div>
+        ${heroTop()}
         <h1 class="sv-h1">
-          <span class="sv-line">先认领</span>
+          <span class="sv-line">先确认</span>
           <span class="sv-line">你是<em>谁。</em></span>
         </h1>
         <div class="sv-hero-mid">
           <div class="sv-hero-copy">
-            <span class="mono">PICK → YOUR NAME</span>
-            <p>只显示你自己的出勤和技能，别人的数据不会摊开。选一次，下次打开直接进。</p>
+            <span class="mono">NAME + JERSEY NUMBER</span>
+            <p>填你报名时的名字和球衣号码。对上了，才看得到自己的出勤和进步。</p>
           </div>
           <div class="sv-burst" aria-hidden="true">
             <i style="--r:0deg"></i><i style="--r:45deg"></i><i style="--r:90deg"></i><i style="--r:135deg"></i><b></b>
@@ -3753,43 +3721,90 @@ body.sv-mode > *:not(#shareView){display:none !important}
         <div class="sv-scan" aria-hidden="true"></div>
         <div class="sv-halo" aria-hidden="true"></div>
       </section>
-      <section class="sv-sec">
-        <div class="sv-sec-head mono"><span>ROSTER / ${data.players.length}</span><i>+</i></div>
-        <h2>点一下你的名字。</h2>
-        <div class="sv-pick">
-          ${data.players.map((p) => {
-            const [a, b] = ROLE_STYLE[p.pos] || ['#7b6cff', '#46e0ff'];
-            return `<button type="button" class="sv-pick-btn" data-pid="${esc(p.id)}">
-              <span class="sv-avatar" style="--a:${a};--b:${b}">${esc((p.n || '?')[0])}</span>
-              <span class="sv-pick-txt"><b>${esc(p.n)}</b><em>${esc(p.pos)}${p.no ? ' · #' + esc(p.no) : ''}</em></span>
-            </button>`;
-          }).join('')}
-        </div>
+
+      <section class="sv-sec sv-gate">
+        <div class="sv-sec-head mono"><span>VERIFY / ${players.length}</span><i>·</i></div>
+        <form class="sv-form" id="svForm" autocomplete="off">
+          <label class="sv-field"><span>姓名</span>
+            <input id="svName" type="text" inputmode="text" maxlength="12" placeholder="比如 王丹婷" value="${esc(remembered)}">
+          </label>
+          <label class="sv-field"><span>球衣号码</span>
+            <input id="svNo" type="text" inputmode="numeric" maxlength="3" placeholder="${needNo ? '比如 73' : '队里还没录号码，留空即可'}">
+          </label>
+          <p class="sv-err" id="svErr" hidden>姓名和号码对不上，再试一次。记不清就问队长。</p>
+          <button type="submit" class="sv-btn">看我的档案<i>→</i></button>
+        </form>
       </section>
+
       <footer class="sv-foot">
         <p>数据快照 · ${esc(fmtSnapshot(data.at || Date.now()))}</p>
-        <p class="mono">GENERATED BY CAPTAIN · NO SIGN-UP NEEDED</p>
+        <p class="mono">NO SIGN-UP · NO APP · JUST A LINK</p>
       </footer>`);
-    document.title = `${data.team || '信工院排球队'} · 队伍动态`;
-    el.querySelectorAll('.sv-pick-btn').forEach((btn) => {
-      btn.onclick = () => {
-        try { localStorage.setItem(SELF_KEY, btn.dataset.pid); } catch (e) { /* 隐私模式下忽略 */ }
-        const me = data.players.find((p) => p.id === btn.dataset.pid);
-        if (me) renderSelf(data, me);
-      };
-    });
+    document.title = `${data.team || '信工院排球队'} · 我的训练档案`;
+
+    const form = el.querySelector('#svForm');
+    const err = el.querySelector('#svErr');
+    const nameEl = el.querySelector('#svName');
+    const noEl = el.querySelector('#svNo');
+    const norm = (s) => String(s || '').replace(/\s+/g, '');
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      const name = norm(nameEl.value);
+      const no = norm(noEl.value);
+      const me = players.find((p) => {
+        if (norm(p.n) !== name) return false;
+        if (!needNo) return true;
+        if (!Number(p.no)) return !no; // 没录号码的队员，号码留空也放行
+        return String(Number(p.no)) === no;
+      });
+      if (!me) {
+        err.hidden = false;
+        form.classList.remove('shake');
+        void form.offsetWidth; // 重排一次，让动画能重复触发
+        form.classList.add('shake');
+        noEl.focus();
+        return;
+      }
+      err.hidden = true;
+      try { localStorage.setItem(NAME_KEY, me.n); } catch (e2) { /* ignore */ }
+      renderSelf(data, me);
+    };
+    if (remembered) noEl.focus(); else nameEl.focus();
     return el;
   }
 
-  /* ══════════ 本人档案 ══════════ */
+  /* ══════════ 第 2 步：我的档案 ══════════ */
   function renderSelf(data, me) {
-    const r = rateOf(me.att);
-    const marked = (me.att.p || 0) + (me.att.l || 0) + (me.att.v || 0) + (me.att.a || 0);
-    const teamAtt = data.players.reduce((acc, p) => {
-      acc.p += p.att.p || 0; acc.l += p.att.l || 0; acc.v += p.att.v || 0; acc.a += p.att.a || 0;
+    const players = data.players || [];
+    const att = me.att || { p: 0, l: 0, v: 0, a: 0 };
+    const r = rateOf(att);
+    const marked = (att.p || 0) + (att.l || 0) + (att.v || 0) + (att.a || 0);
+
+    const sk = (me.sk || []).map((v) => Number(v) || 0);
+    const base = (me.base || me.sk || []).map((v) => Number(v) || 0);
+    const gainTotal = sk.reduce((a, v, i) => a + (v - base[i]), 0);
+
+    // 最弱的一项 = 六维里最低的，分享页拿它当「下一步练什么」
+    let weak = 0;
+    for (let i = 1; i < sk.length; i++) if (sk[i] < sk[weak]) weak = i;
+
+    const teamAtt = players.reduce((acc, p) => {
+      const a = p.att || {};
+      acc.p += a.p || 0; acc.l += a.l || 0; acc.v += a.v || 0; acc.a += a.a || 0;
       return acc;
     }, { p: 0, l: 0, v: 0, a: 0 });
     const teamRate = rateOf(teamAtt);
+
+    const gainCells = SKILL_LABELS.map((label, i) => {
+      const d = +(sk[i] - base[i]).toFixed(1);
+      const cls = d > 0.05 ? 'up' : d < -0.05 ? 'down' : 'flat';
+      const sign = d > 0 ? '+' : '';
+      return `<div class="sv-gain-cell${i === weak ? ' is-weak' : ''}">
+        <span>${label}</span>
+        <b>${f1(sk[i])}</b>
+        <em class="${cls}">${cls === 'flat' ? '—' : sign + d.toFixed(1)}</em>
+      </div>`;
+    }).join('');
 
     const timeline = (data.sessions || []).map((s) => {
       const st = (s.st || {})[me.id] || '';
@@ -3800,20 +3815,20 @@ body.sv-mode > *:not(#shareView){display:none !important}
       </div>`;
     }).join('');
 
+    const note = String(me.note || '').trim();
+    const isAi = Number(me.nc) === 1;
+
     const el = shell(data.team || '信工院排球队', `
       <section class="sv-hero">
-        <div class="sv-hero-top mono">
-          <span><i class="sv-dot"></i>MY FEED · ${esc(me.pos || '')}</span>
-          <span>${esc(me.no ? '#' + me.no : 'XGY')}</span>
-        </div>
+        ${heroTop(me.no ? '#' + me.no : (me.pos || 'XGY'))}
         <h1 class="sv-h1">
           <span class="sv-line">${esc(me.n)}</span>
           <span class="sv-line">出勤<em>${r == null ? '—' : r + '%'}</em></span>
         </h1>
         <div class="sv-hero-mid">
           <div class="sv-hero-copy">
-            <span class="mono">TRAIN → RECORD → GROW</span>
-            <p>共登记 ${marked} 次训练 · 出 ${me.att.p || 0} · 迟 ${me.att.l || 0} · 请 ${me.att.v || 0} · 缺 ${me.att.a || 0}</p>
+            <span class="mono">${esc(me.pos || '')} · ${marked} 次已登记</span>
+            <p>到场 ${att.p || 0} · 迟到 ${att.l || 0} · 请假 ${att.v || 0} · 缺席 ${att.a || 0}</p>
           </div>
           <div class="sv-burst" aria-hidden="true">
             <i style="--r:0deg"></i><i style="--r:45deg"></i><i style="--r:90deg"></i><i style="--r:135deg"></i><b></b>
@@ -3825,20 +3840,36 @@ body.sv-mode > *:not(#shareView){display:none !important}
 
       <section class="sv-stats">
         <div class="sv-stat"><b>${r == null ? '—' : r + '%'}</b><span>我的出勤</span></div>
-        <div class="sv-stat"><b>${(me.att.p || 0) + (me.att.l || 0)}</b><span>到场次数</span></div>
-        <div class="sv-stat"><b>${me.att.l || 0}</b><span>迟到</span></div>
+        <div class="sv-stat"><b>${(att.p || 0) + (att.l || 0)}</b><span>到场次数</span></div>
+        <div class="sv-stat"><b>${att.l || 0}</b><span>迟到</span></div>
         <div class="sv-stat"><b>${teamRate == null ? '—' : teamRate + '%'}</b><span>全队出勤</span></div>
       </section>
 
       <section class="sv-sec">
-        <div class="sv-sec-head mono"><span>MY SKILLS / 01</span><i>+</i></div>
-        <h2>我的六项。</h2>
-        <div class="sv-radar-wrap">${radarSVG(me.sk || [5, 5, 5, 5, 5, 5], 300)}</div>
-        <p class="sv-note mono">0–10 SCALE · ${esc(me.n)}</p>
+        <div class="sv-sec-head mono"><span>PROGRESS / 01</span><i>↑</i></div>
+        <h2>涨了 ${gainTotal > 0 ? '+' : ''}${gainTotal.toFixed(1)} 分。</h2>
+        <p class="sv-sub">这学期六项加起来的变化。每格下面是和刚入队时的差。</p>
+        <div class="sv-gain-grid">${gainCells}</div>
       </section>
 
       <section class="sv-sec">
-        <div class="sv-sec-head mono"><span>MY RECORD / 02</span><i>+</i></div>
+        <div class="sv-sec-head mono"><span>SHAPE / 02</span><i>◇</i></div>
+        <h2>你的形状。</h2>
+        <div class="sv-radar-wrap">${radarSVG(sk, 300, weak)}</div>
+        <p class="sv-weak">凹进去的那一角是 <b>${SKILL_LABELS[weak]}</b>（${f1(sk[weak])}）· 0–10 分</p>
+      </section>
+
+      <section class="sv-sec">
+        <div class="sv-sec-head mono"><span>COACH NOTE / 03</span><i>✦</i></div>
+        <h2>${isAi ? '队长想对你说。' : '下一步练什么。'}</h2>
+        <div class="sv-tipcard">
+          <p>${esc(note || '这段时间的记录还不够，先把出勤记满几次，点评就会有内容了。')}</p>
+          <span class="mono">${isAi ? 'WRITTEN BY CAPTAIN · AI ASSISTED' : 'WRITTEN BY CAPTAIN'}</span>
+        </div>
+      </section>
+
+      <section class="sv-sec">
+        <div class="sv-sec-head mono"><span>RECORD / 04</span><i>·</i></div>
         <h2>最近训练。</h2>
         <div class="sv-tl">${timeline || '<p class="sv-empty">还没有训练记录</p>'}</div>
       </section>
@@ -3846,35 +3877,28 @@ body.sv-mode > *:not(#shareView){display:none !important}
       <footer class="sv-foot">
         <p>数据快照 · ${esc(fmtSnapshot(data.at || Date.now()))}</p>
         <p class="mono">GENERATED BY CAPTAIN · NO SIGN-UP NEEDED</p>
-        <button type="button" class="sv-switch" id="svSwitch">换个人 / 看错了</button>
+        <button type="button" class="sv-switch" id="svSwitch">不是我 / 换个人</button>
       </footer>`);
     document.title = `${me.n} · 我的训练档案`;
     const sw = document.getElementById('svSwitch');
-    if (sw) sw.onclick = () => {
-      try { localStorage.removeItem(SELF_KEY); } catch (e) { /* ignore */ }
-      renderPicker(data);
-    };
+    if (sw) sw.onclick = () => renderGate(data);
     return el;
   }
 
   function render(data) {
     const players = Array.isArray(data.players) ? data.players : [];
     if (!players.length) { renderError(); return; }
-    let saved = null;
-    try { saved = localStorage.getItem(SELF_KEY); } catch (e) { /* ignore */ }
-    const me = saved && players.find((p) => p.id && p.id === saved);
-    if (me) renderSelf(data, me);
-    else renderPicker(data);
+    renderGate(data);
   }
 
   function renderError() {
     const el = shell('信工院排球队', `
       <section class="sv-hero sv-hero-err">
-        <div class="sv-hero-top mono"><span><i class="sv-dot off"></i>SIGNAL LOST</span><span>XGY · VB</span></div>
+        ${heroTop().replace('LIVE', 'LOST')}
         <h1 class="sv-h1"><span class="sv-line">链接不完整</span><span class="sv-line">或已<em>过期。</em></span></h1>
         <div class="sv-hero-mid"><div class="sv-hero-copy">
           <span class="mono">COPY → FULL → LINK</span>
-          <p>请确认链接完整（微信里点右上角在浏览器打开试试），或者让队长重新生成一次。</p>
+          <p>请确认链接完整（微信里点右上角「在浏览器打开」试试），或者让队长重新生成一次。</p>
         </div></div>
       </section>`);
     document.title = '链接无效';
@@ -3926,7 +3950,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-28 · r5'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-28 · r6'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -3967,7 +3991,6 @@ body.sv-mode > *:not(#shareView){display:none !important}
     dashboard: { title: '球队总览', kicker: 'TEAM OPS / OVERVIEW' },
     roster: { title: '人员管理', kicker: 'ROSTER / PLAYERS' },
     attendance: { title: '考勤管理', kicker: 'ATTENDANCE / WEEK' },
-    checkin: { title: '训练签到', kicker: 'CHECK-IN / FAST' },
     tactics: { title: '阵型板', kicker: 'FORMATION / COURT' },
     growth: { title: '成长计划', kicker: 'SKILLS / GROWTH' },
     ai: { title: 'AI 助手', kicker: 'AI COACH / ASSISTANT' }
@@ -4062,7 +4085,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
 
   /* ══════════ 数据 ══════════ */
   function blankDB() {
-    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [], aiChat: [] };
+    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [], aiChat: [], shareNotes: {} };
   }
 
   function normalizeSkills(raw) {
@@ -4175,6 +4198,14 @@ body.sv-mode > *:not(#shareView){display:none !important}
       return { id: f.id || uid('f'), name: String(f.name || '未命名').slice(0, 16), pos, at: Number(f.at) || Date.now() };
     }).filter(Boolean);
     // AI 聊天记录（只存本机，随 db 持久化；最多留 100 条，单条内容截断防膨胀）
+    // 队员点评（分享页里的建议和鼓励，按队员 id 存一段文字，生成过就不用重复掏钱）
+    base.shareNotes = {};
+    if (raw.shareNotes && typeof raw.shareNotes === 'object') {
+      Object.keys(raw.shareNotes).forEach((k) => {
+        const v = raw.shareNotes[k];
+        if (typeof v === 'string' && v.trim()) base.shareNotes[k] = v.trim().slice(0, 300);
+      });
+    }
     base.aiChat = (Array.isArray(raw.aiChat) ? raw.aiChat : []).slice(-100).map((m) => {
       if (!m || typeof m !== 'object') return null;
       if (m.role !== 'user' && m.role !== 'assistant') return null;
@@ -4207,7 +4238,6 @@ body.sv-mode > *:not(#shareView){display:none !important}
     palette: [],
     paletteIndex: 0,
     confirmResolver: null,
-    checkin: { sid: null } // 训练签到页当前选中的那次训练
   };
 
   function save() {
@@ -5984,208 +6014,6 @@ body.sv-mode > *:not(#shareView){display:none !important}
 
   function importData() { $('#importFile').click(); }
 
-  /* ══════════ 训练签到（Check-in）：现场 5 秒记完一次考勤 ══════════
-     为什么单独开一页：原来这一步藏在「考勤页 → 选周 → 找日期 → 找格子」里，
-     训练现场掏出手机要 30 秒才记完。这里做成场景化单页：
-     点一下 = 出勤（再点取消），左滑 = 迟到，长按/点 ⋯ = 请假 / 缺席 / 清除。
-  ══════════════════════════════════════════════════════════════════ */
-  const CI_LONG = 450;  // 长按判定
-  const CI_SWIPE = 48;  // 横向滑动判定
-
-  function ciCandidates() {
-    const mon = getMonday(new Date());
-    ensureWeek(mon); // 本周没生成过训练就先生成，否则签到页是空的
-    const out = [];
-    [-1, 0, 1].forEach((off) => {
-      const arr = db.weeks[weekKey(addDays(mon, off * 7))];
-      if (Array.isArray(arr)) out.push(...arr);
-    });
-    return out.filter((s) => s && s.date).sort(sessionSort);
-  }
-
-  function ciPickDefault(list) {
-    if (!list.length) return null;
-    const today = dateKey(new Date());
-    return list.find((s) => s.date === today && s.status !== 'cancelled')
-      || list.find((s) => s.status !== 'cancelled' && s.date >= today)
-      || list.find((s) => s.status !== 'cancelled')
-      || list[0];
-  }
-
-  function ciSession() {
-    const list = ciCandidates();
-    return list.find((s) => s.id === state.checkin.sid) || null;
-  }
-
-  function ciSet(pid, next) {
-    const s = ciSession();
-    if (!s) return;
-    if (s.status === 'cancelled') { toast('这次训练已取消，不用签到', 'warn'); return; }
-    if (next) s.attendance[pid] = next; else delete s.attendance[pid];
-    s.updatedAt = Date.now();
-    save();
-    if (CloudOn()) {
-      const req = next
-        ? window.XGYCloud.push.attSet(s.id, pid, next)
-        : window.XGYCloud.push.attClear(s.id, pid);
-      cloudFire(req, () => window.XGYCloud.syncWeek(weekKey(getMonday(parseKey(s.date))), true).then(renderCheckin));
-    }
-    renderCheckin();
-    renderSidebar();
-  }
-
-  function ciOpenMenu(pid, anchor) {
-    document.querySelectorAll('.ci-menu').forEach((m) => m.remove());
-    const menu = document.createElement('div');
-    menu.className = 'ci-menu';
-    menu.innerHTML = ['present', 'late', 'leave', 'absent']
-      .map((k) => `<button type="button" data-st="${k}">${ATT_LABEL[k]}</button>`).join('')
-      + '<button type="button" data-st="" class="ci-clear">清除</button>';
-    document.body.appendChild(menu);
-    const r = anchor.getBoundingClientRect();
-    const mw = menu.offsetWidth, mh = menu.offsetHeight;
-    menu.style.left = `${Math.min(Math.max(8, r.left + r.width / 2 - mw / 2), window.innerWidth - mw - 8)}px`;
-    menu.style.top = `${Math.min(r.bottom + 6, window.innerHeight - mh - 8)}px`;
-    menu.querySelectorAll('button').forEach((b) => {
-      b.onclick = () => { ciSet(pid, b.dataset.st || ''); document.querySelectorAll('.ci-menu').forEach((m) => m.remove()); };
-    });
-    setTimeout(() => {
-      const away = (e) => {
-        if (e.target.closest('.ci-menu')) return;
-        document.querySelectorAll('.ci-menu').forEach((m) => m.remove());
-        document.removeEventListener('pointerdown', away);
-      };
-      document.addEventListener('pointerdown', away);
-    }, 0);
-  }
-
-  function ciBindCard(el) {
-    const pid = el.dataset.pid;
-    let sx = 0, sy = 0, timer = null, fired = false;
-    el.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
-      sx = e.clientX; sy = e.clientY; fired = false;
-      timer = setTimeout(() => { fired = true; ciOpenMenu(pid, el); }, CI_LONG);
-    });
-    el.addEventListener('pointermove', (e) => {
-      if (fired) return;
-      const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (Math.abs(dx) > CI_SWIPE && Math.abs(dx) > Math.abs(dy)) {
-        fired = true; clearTimeout(timer); ciSet(pid, 'late');
-      } else if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
-        clearTimeout(timer); // 当成滚动，不算点击
-      }
-    });
-    const stop = () => clearTimeout(timer);
-    el.addEventListener('pointerup', stop);
-    el.addEventListener('pointercancel', stop);
-    el.addEventListener('pointerleave', stop);
-    el.addEventListener('click', () => {
-      if (fired) { fired = false; return; }
-      const s = ciSession();
-      const cur = (s && s.attendance[pid]) || '';
-      ciSet(pid, cur === 'present' ? '' : 'present');
-    });
-    const more = el.querySelector('.ci-more');
-    if (more) more.onclick = (e) => { e.stopPropagation(); ciOpenMenu(pid, el); };
-  }
-
-  function renderCheckin() {
-    const box = $('#checkinBody');
-    if (!box) return;
-
-    if (!db.players.length) {
-      state.checkin.sid = null;
-      box.innerHTML = emptyState('🏐', '先添加队员', '没有队员就没法签到。先到人员管理添加第一名队员。',
-        '<button class="btn btn-primary" data-action="add-player">添加队员</button><button class="btn btn-ghost" data-goto="roster">去人员管理</button>');
-      const n = $('#navCheckinCount'); if (n) n.textContent = '';
-      return;
-    }
-
-    const list = ciCandidates();
-    if (!list.length) {
-      box.innerHTML = emptyState('📅', '还没有训练', '先到考勤管理生成本周的训练，然后回来签到。',
-        '<button class="btn btn-primary" data-goto="attendance">去考勤管理</button>');
-      const n = $('#navCheckinCount'); if (n) n.textContent = '';
-      return;
-    }
-
-    if (!state.checkin.sid || !list.some((s) => s.id === state.checkin.sid)) {
-      const d = ciPickDefault(list);
-      state.checkin.sid = d ? d.id : null;
-    }
-    const s = ciSession();
-    if (!s) return;
-
-    const chips = list.map((x) => {
-      const st = sessionStatus(x);
-      const c = sessionCounts(x);
-      const wd = WEEK_CN[parseKey(x.date).getDay()];
-      return `<button type="button" class="ci-chip${x.id === s.id ? ' on' : ''}" data-sid="${x.id}">
-        <b>${x.date.slice(5).replace('-', '.')} ${wd}</b><em>${x.start || ''}</em>
-        <i class="ci-chip-st ${st.cls}">${c.marked ? `${c.attended}/${db.players.length}` : st.text}</i>
-      </button>`;
-    }).join('');
-
-    const cards = db.players.map((p) => {
-      const st = s.attendance[p.id] || '';
-      const [a, b] = positionStyle(p.position);
-      return `<div class="ci-card ${st || 'unmarked'}" data-pid="${p.id}">
-        <span class="ci-avatar" style="--a:${a};--b:${b}">${esc(p.number ? String(p.number) : (p.name || '?')[0])}</span>
-        <b class="ci-name">${esc(p.name)}</b>
-        <em class="ci-pos">${esc(p.position || '—')}</em>
-        <span class="ci-badge">${ATT_LABEL[st] || '未登记'}</span>
-        <button type="button" class="ci-more" aria-label="更多状态">⋯</button>
-      </div>`;
-    }).join('');
-
-    const c = sessionCounts(s);
-    const unmarked = db.players.length - c.marked;
-    const st = sessionStatus(s);
-
-    box.innerHTML = `
-      <div class="ci-bar reveal">
-        <div class="ci-chips">${chips}</div>
-        <div class="ci-head">
-          <div><b>${esc(fmtDateCN(parseKey(s.date)))} ${esc(s.start || '')}${s.end ? '–' + esc(s.end) : ''}</b>
-            <em>${esc(st.text)}${s.venue ? ' · ' + esc(s.venue) : ''}</em></div>
-          <div class="ci-nums"><b>${c.attended}</b><span>到场</span><b>${unmarked}</b><span>未登记</span></div>
-        </div>
-      </div>
-      <div class="ci-grid reveal">${cards}</div>
-      <div class="ci-legend reveal">点一下 = 出勤（再点取消） · 左滑 = 迟到 · 长按或点 ⋯ = 请假 / 缺席</div>`;
-
-    box.querySelectorAll('.ci-card').forEach(ciBindCard);
-    box.querySelectorAll('.ci-chip').forEach((el) => {
-      el.onclick = () => { state.checkin.sid = el.dataset.sid; renderCheckin(); };
-    });
-
-    const n = $('#navCheckinCount');
-    if (n) { n.textContent = unmarked ? String(unmarked) : ''; n.classList.toggle('zero', !unmarked); }
-    refreshReveals();
-  }
-
-  async function ciAllPresent() {
-    const s = ciSession();
-    if (!s) { toast('先选一次训练', 'warn'); return; }
-    const ok = await confirmDialog({
-      title: '全部标记为出勤？',
-      message: `会把这次训练的所有队员都标成出勤，覆盖已有记录。`,
-      ok: '全部出勤', danger: false
-    });
-    if (!ok) return;
-    db.players.forEach((p) => { s.attendance[p.id] = 'present'; });
-    s.updatedAt = Date.now();
-    save();
-    if (CloudOn()) {
-      const reqs = db.players.map((p) => window.XGYCloud.push.attSet(s.id, p.id, 'present'));
-      cloudFire(Promise.all(reqs), () => window.XGYCloud.syncWeek(weekKey(getMonday(parseKey(s.date))), true).then(renderCheckin));
-    }
-    toast('已全部标记为出勤');
-    renderCheckin();
-    renderSidebar();
-  }
-
   /* ══════════ 训练卡：一次训练一张可转发的图 ══════════ */
   function nextSessionAfter(s) {
     const all = [];
@@ -6193,6 +6021,19 @@ body.sv-mode > *:not(#shareView){display:none !important}
     all.sort(sessionSort);
     const key = `${s.date}T${s.start || ''}`;
     return all.find((x) => x.status !== 'cancelled' && `${x.date}T${x.start || ''}` > key) || null;
+  }
+
+  /* 考勤页的「训练卡」按钮：出当前周最近一场（优先今天）的图 */
+  function openWeekCard() {
+    if (!db.players.length) { toast('先添加队员', 'warn'); return; }
+    const list = (getSessions(state.weekMonday) || []).filter((s) => s && s.date && s.status !== 'cancelled');
+    if (!list.length) { toast('这一周还没有训练，先加一次', 'warn'); return; }
+    list.sort(sessionSort);
+    const today = dateKey(new Date());
+    const target = list.find((s) => s.date === today)
+      || [...list].reverse().find((s) => s.date <= today)
+      || list[0];
+    openTrainingCard(target);
   }
 
   async function openTrainingCard(s) {
@@ -6224,6 +6065,53 @@ body.sv-mode > *:not(#shareView){display:none !important}
   }
 
   /* ══════════ 分享队伍动态（队员只读视图） ══════════ */
+  // 每项技能的「起点分」：取该队员该项最早一条调整记录里的 before。
+  // 从来没调过就当没变化（起点 = 现在），进步显示 0，不会凭空夸。
+  function skillStart(p, key) {
+    let first = null;
+    (db.skillLogs || []).forEach((l) => {
+      if (l.playerId !== p.id || l.skill !== key) return;
+      if (!first || (l.at || 0) < (first.at || 0)) first = l;
+    });
+    return first ? Number(first.before) : Number(p.skills[key] ?? 5);
+  }
+
+  function attRate(att) {
+    const marked = att.p + att.l + att.v + att.a;
+    if (!marked) return null;
+    return Math.round(((att.p + att.l) / marked) * 100);
+  }
+
+  // 短板对应的练法（本地兜底点评用，AI 那版走模型自己写）
+  const TIP_OF = {
+    serve: '每天 50 个定点发球，先追稳定再追力量',
+    receive: '对墙垫球 200 次，接球前先迈一步把身体对正',
+    set: '网前定点传球 100 次，重点练手腕弹送',
+    spike: '三步助跑起跳 30 次，先打准线再追球速',
+    block: '拦网步加手型 15 分钟，练跟球不跟人',
+    defense: '低姿移动接球 10 组、每组 20 个'
+  };
+
+  /** 没配 AI Key（或还没生成）时的兜底点评：照样有夸、有短板、有具体练法 */
+  function localNote(rate, sk, base) {
+    const head = rate == null
+      ? '考勤还没登记，先把到场记起来才有得聊'
+      : rate >= 90 ? `出勤 ${rate}%，几乎没缺过，这份稳定队里都看得见`
+      : rate >= 70 ? `出勤 ${rate}%，再少请一次假，状态就能连起来`
+      : `出勤 ${rate}%，来得少身体记不住动作，先从每周到场两次开始`;
+    let bestI = 0;
+    for (let i = 1; i < 6; i++) if (sk[i] - base[i] > sk[bestI] - base[bestI]) bestI = i;
+    const gain = +(sk[bestI] - base[bestI]).toFixed(1);
+    const up = gain > 0.05
+      ? `${SKILLS[bestI].label}从 ${base[bestI].toFixed(1)} 涨到 ${sk[bestI].toFixed(1)}，这 ${gain.toFixed(1)} 分是你自己练出来的`
+      : '技能分还没动，第一次进步往往来得比想象中快';
+    let weakI = 0;
+    for (let i = 1; i < 6; i++) if (sk[i] < sk[weakI]) weakI = i;
+    const tip = `现在最该补的是${SKILLS[weakI].label}（${sk[weakI].toFixed(1)}），${TIP_OF[SKILLS[weakI].key]}`;
+    const tail = rate != null && rate >= 90 ? '保持这个节奏，你会是场上让人放心的那个。' : '不用急，这周比上周多来一次就够了。';
+    return `${head}。${up}。${tip}。${tail}`;
+  }
+
   // 全季考勤聚合：跳过取消的训练；只统计「已登记」的格子，未登记不算缺勤
   function sharePayload() {
     const players = db.players.map((p) => {
@@ -6236,15 +6124,19 @@ body.sv-mode > *:not(#shareView){display:none !important}
         else if (st === 'leave') att.v += 1;
         else if (st === 'absent') att.a += 1;
       }));
-      // 带 id：队员在分享页认领「我是谁」后，只渲染他自己那一档
-      return { id: p.id, n: p.name, pos: p.position, no: p.number || 0, att, sk: SKILLS.map((s) => p.skills[s.key] ?? 5) };
+      const sk = SKILLS.map((s) => Number(p.skills[s.key] ?? 5));
+      const base = SKILLS.map((s) => skillStart(p, s.key));
+      // note = 分享页那段建议和鼓励：优先用 AI 生成并存在本机的，没有就用本地兜底
+      const aiNote = (db.shareNotes && db.shareNotes[p.id]) || '';
+      const note = aiNote || localNote(attRate(att), sk, base);
+      // nc：这段点评是不是 AI 写的（分享页据此标注来源，模板版不冒充 AI）
+      return { id: p.id, n: p.name, pos: p.position, no: p.number || 0, att, sk, base, note, nc: aiNote ? 1 : 0 };
     });
     const sessions = Object.values(db.weeks).flat()
       .filter((s) => s && s.status !== 'cancelled')
       .sort((a, b) => sessionSort(b, a))
       .slice(0, 8)
       .map((s) => {
-        // st = 这次训练每人的状态，队员认领后能在「最近训练」里看到自己那一次是出勤还是请假
         const c = sessionCounts(s);
         return { d: (s.date || '').slice(5), t: s.start || '', p: c.present, l: c.late, v: c.leave, a: c.absent, st: s.attendance || {} };
       })
@@ -6252,15 +6144,65 @@ body.sv-mode > *:not(#shareView){display:none !important}
     return { v: 1, team: '信工院排球队', at: Date.now(), players, sessions };
   }
 
+  /** 用队长的 AI Key 一次性给全队写点评（存本机，生成过就不重复花钱） */
+  async function generateShareNotes() {
+    const cfg = aiCfg();
+    if (!cfg.key) throw new Error('还没填 API Key');
+    const data = sharePayload();
+    const rows = data.players.map((pl, i) => {
+      const skills = {}, start = {};
+      SKILLS.forEach((sk, k) => { skills[sk.label] = +pl.sk[k].toFixed(1); start[sk.label] = +pl.base[k].toFixed(1); });
+      return { i, 姓名: pl.n, 号码: pl.no, 位置: pl.pos, 出勤率: attRate(pl.att), 出勤: pl.att, 技能: skills, 起点: start };
+    });
+    const prompt = `你是这支大学院排球队的队长，也是队里技术最细的人。下面是队员的真实数据（起点 = 赛季初的分，技能 = 现在的分，出勤率按已登记的训练算）。\n\n${JSON.stringify(rows)}\n\n给每个人写一段点评，直接对本人说、用"你"，55-85 字，必须包含三件事：\n1）具体夸一处：点名某项技能或出勤表现，带上数字对比；\n2）指出最该练的一项技能，配一个能自己练的动作或次数；\n3）一句落在实处的鼓励，不要空话、不要堆感叹号、不要"你是最棒的"。\n语气像认真但不肉麻的队长，不要出现"数据""统计""评分"这类词。\n只输出 JSON 数组，格式 [{"i":0,"t":"点评正文"}]，i 用给定编号，不要解释、不要代码块。`;
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 60000);
+    let res;
+    try {
+      res = await fetch(aiUrl(cfg.base), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.key}` },
+        body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: prompt }], stream: false, temperature: 0.8 }),
+        signal: ctl.signal
+      });
+    } finally { clearTimeout(timer); }
+    if (!res.ok) {
+      let detail = '';
+      try { const j = await res.json(); detail = (j.error && (j.error.message || j.error.code)) || j.message || ''; } catch (e) { /* ignore */ }
+      throw new Error(`HTTP ${res.status}${detail ? '：' + detail : ''}${res.status === 401 ? '（Key 不对）' : res.status === 402 ? '（余额不足）' : ''}`);
+    }
+    const j = await res.json();
+    const text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+    const a = text.indexOf('['), b = text.lastIndexOf(']');
+    if (a < 0 || b < 0) throw new Error('模型没按格式返回');
+    let arr;
+    try { arr = JSON.parse(text.slice(a, b + 1)); } catch (e) { throw new Error('返回内容解析失败'); }
+    let n = 0;
+    (Array.isArray(arr) ? arr : []).forEach((it) => {
+      const pl = data.players[it && it.i];
+      if (!pl || typeof it.t !== 'string' || !it.t.trim()) return;
+      if (!db.shareNotes) db.shareNotes = {};
+      db.shareNotes[pl.id] = it.t.trim().slice(0, 300);
+      n += 1;
+    });
+    if (!n) throw new Error('一条点评都没解析出来');
+    save();
+    return n;
+  }
+
   async function openShareModal() {
     if (!db.players.length) { toast('还没有队员，先录入队员再分享', 'warn'); return; }
+    const hasAi = !!aiCfg().key;
     const body = `<div class="share-wrap">
-      <p class="share-hint">生成一个<b>只读链接</b>发给队员：打开先认领「我是谁」，之后就只看自己的出勤率、技能雷达和最近训练。数据就编在链接里，<b>不上传任何服务器</b>。</p>
+      <p class="share-hint">生成一个<b>只读链接</b>发到队群：队员打开后输入<b>姓名 + 球衣号码</b>，就能看到自己的出勤、进步、六维图和一段点评。数据就编在链接里，<b>不上传任何服务器</b>。</p>
+      ${hasAi
+        ? `<div class="share-ai"><button type="button" class="btn btn-ghost" id="shareAi"><span>✦</span>用 AI 写点评</button><em id="shareAiSt">点一次，全队每人一段（约 10 秒）</em></div>`
+        : `<div class="share-ai is-tip"><em>点评先用内置模板生成。到「AI 助手」填个 API Key，可以让 AI 写得更贴每个人的情况。</em></div>`}
       <textarea id="shareLink" class="share-link" rows="4" readonly placeholder="生成中…"></textarea>
       <div class="share-meta mono" id="shareMeta"></div>
       <div class="share-note">
-        <p>· 这是<b>数据快照</b>，之后改了考勤或技能，要重新生成一次发给队员</p>
-        <p>· 链接里包含队员姓名和出勤数据，只发给队内的人，别贴到公开群里</p>
+        <p>· 这是<b>数据快照</b>，之后改了考勤或技能，重新生成一次再发</p>
+        <p>· 链接里含队员姓名和出勤，只发队内，别贴公开群</p>
       </div>
       <div class="share-foot"><button type="button" class="btn btn-primary" id="shareCopy">复制链接</button><button type="button" class="btn btn-ghost" id="shareClose">关闭</button></div>
     </div>`;
@@ -6268,16 +6210,18 @@ body.sv-mode > *:not(#shareView){display:none !important}
     $('#shareClose').onclick = closeModal;
     $('#shareLink').onclick = (e) => e.target.select();
     let url = '';
-    try {
-      url = await window.XGYShare.buildURL(sharePayload());
-      $('#shareLink').value = url;
-      const extra = url.length > 1800 ? '（偏长：队员较多，建议只分享给微信好友而不是贴在简介里）' : '';
-      $('#shareMeta').textContent = `SNAPSHOT LINK · ${url.length} CHARS ${extra}`;
-    } catch (err) {
-      $('#shareLink').value = '';
-      $('#shareMeta').textContent = '生成失败：' + (err && err.message ? err.message : '未知错误');
-      return;
-    }
+    const rebuild = async () => {
+      try {
+        url = await window.XGYShare.buildURL(sharePayload());
+        $('#shareLink').value = url;
+        const extra = url.length > 2400 ? '（偏长：建议只发微信好友，别贴简介）' : '';
+        $('#shareMeta').textContent = `LINK · ${url.length} CHARS ${extra}`;
+      } catch (err) {
+        $('#shareLink').value = '';
+        $('#shareMeta').textContent = '生成失败：' + (err && err.message ? err.message : '未知错误');
+      }
+    };
+    await rebuild();
     $('#shareCopy').onclick = async () => {
       try {
         await navigator.clipboard.writeText(url);
@@ -6287,6 +6231,23 @@ body.sv-mode > *:not(#shareView){display:none !important}
         document.execCommand('copy');
       }
       toast('链接已复制，去微信里粘贴发给队员吧');
+    };
+    const aiBtn = $('#shareAi');
+    if (aiBtn) aiBtn.onclick = async () => {
+      aiBtn.disabled = true;
+      const st = $('#shareAiSt');
+      if (st) st.textContent = '正在写…（一个请求，全队一起生成）';
+      try {
+        const n = await generateShareNotes();
+        if (st) st.textContent = `已为 ${n} 名队员写好点评，链接已更新，复制发出去就行`;
+        toast('点评生成好了，重新复制一次链接');
+      } catch (err) {
+        if (st) st.textContent = '生成失败：' + (err && err.message ? err.message : '未知错误');
+        toast('AI 没写成功，先用模板版也能发', 'warn');
+      } finally {
+        aiBtn.disabled = false;
+        await rebuild();
+      }
     };
   }
 
@@ -6723,7 +6684,6 @@ body.sv-mode > *:not(#shareView){display:none !important}
     if (page === 'dashboard') renderDashboard();
     if (page === 'roster') renderRoster();
     if (page === 'attendance') renderAttendance();
-    if (page === 'checkin') renderCheckin();
     if (page === 'tactics') renderTactics();
     if (page === 'growth') renderGrowth();
     if (page === 'ai') renderAiPage();
@@ -6743,7 +6703,6 @@ body.sv-mode > *:not(#shareView){display:none !important}
     if (state.page === 'dashboard') renderDashboard();
     if (state.page === 'roster') renderRoster();
     if (state.page === 'attendance') renderAttendance();
-    if (state.page === 'checkin') renderCheckin();
     if (state.page === 'tactics') renderTactics();
     if (state.page === 'growth') renderGrowth();
   }
@@ -6951,12 +6910,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     $('#attAddBtn').onclick = () => openSessionModal(null, getMonday(new Date()), { isNew: true });
     $('#attAddBtnPage').onclick = () => openSessionModal(null, state.weekMonday, { isNew: true });
     $('#allPresent').onclick = setAllPresent;
-    $('#ciAllPresent').onclick = ciAllPresent;
-    $('#ciCardBtn').onclick = () => {
-      const s = ciSession();
-      if (!s) { toast('先选一次训练', 'warn'); return; }
-      openTrainingCard(s);
-    };
+    $('#attCardBtn').onclick = openWeekCard;
     $('#attGrid').addEventListener('click', (e) => {
       const head = e.target.closest('.att-session-head');
       if (head) {

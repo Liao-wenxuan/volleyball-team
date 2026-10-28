@@ -43,10 +43,6 @@
       <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 15.5 2 2 4-4"/></svg></span>
       <span>考勤管理</span>
     </button>
-    <button class="nav-item" data-page="checkin">
-      <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/><path d="M20 14V6h-8"/></svg></span>
-      <span>训练签到</span><i class="nav-count" id="navCheckinCount">0</i>
-    </button>
     <button class="nav-item" data-page="tactics">
       <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M12 4v16"/></svg></span>
       <span>阵型板</span>
@@ -379,6 +375,7 @@
             <button id="weekNext" aria-label="下一周"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
           </div>
           <button class="btn btn-ghost" id="weekToday">回到本周</button>
+          <button class="btn btn-ghost" id="attCardBtn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 4v16"/></svg>训练卡</button>
           <button class="btn btn-primary" id="attAddBtnPage"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>加练</button>
         </div>
       </div>
@@ -441,21 +438,6 @@
     </section>
 
     <!-- ══════════ 阵型板 ══════════ -->
-    <section class="page" id="page-checkin" aria-label="训练签到">
-      <div class="page-head reveal">
-        <div>
-          <div class="eyebrow">CHECK-IN / FAST</div>
-          <h2>训练签到</h2>
-          <p>训练现场用：点一下出勤，左滑迟到，长按选请假/缺席。一次训练 5 秒记完。</p>
-        </div>
-        <div class="page-head-actions">
-          <button class="btn btn-ghost magnetic" id="ciAllPresent"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>全部出勤</button>
-          <button class="btn btn-primary magnetic" id="ciCardBtn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M12 4v16"/></svg>生成训练卡</button>
-        </div>
-      </div>
-      <div id="checkinBody"></div>
-    </section>
-
     <section class="page" id="page-tactics" aria-label="阵型板">
       <div class="page-head reveal">
         <div>

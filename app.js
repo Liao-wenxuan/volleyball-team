@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-28 · r5'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-28 · r6'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -58,7 +58,6 @@
     dashboard: { title: '球队总览', kicker: 'TEAM OPS / OVERVIEW' },
     roster: { title: '人员管理', kicker: 'ROSTER / PLAYERS' },
     attendance: { title: '考勤管理', kicker: 'ATTENDANCE / WEEK' },
-    checkin: { title: '训练签到', kicker: 'CHECK-IN / FAST' },
     tactics: { title: '阵型板', kicker: 'FORMATION / COURT' },
     growth: { title: '成长计划', kicker: 'SKILLS / GROWTH' },
     ai: { title: 'AI 助手', kicker: 'AI COACH / ASSISTANT' }
@@ -153,7 +152,7 @@
 
   /* ══════════ 数据 ══════════ */
   function blankDB() {
-    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [], aiChat: [] };
+    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [], aiChat: [], shareNotes: {} };
   }
 
   function normalizeSkills(raw) {
@@ -266,6 +265,14 @@
       return { id: f.id || uid('f'), name: String(f.name || '未命名').slice(0, 16), pos, at: Number(f.at) || Date.now() };
     }).filter(Boolean);
     // AI 聊天记录（只存本机，随 db 持久化；最多留 100 条，单条内容截断防膨胀）
+    // 队员点评（分享页里的建议和鼓励，按队员 id 存一段文字，生成过就不用重复掏钱）
+    base.shareNotes = {};
+    if (raw.shareNotes && typeof raw.shareNotes === 'object') {
+      Object.keys(raw.shareNotes).forEach((k) => {
+        const v = raw.shareNotes[k];
+        if (typeof v === 'string' && v.trim()) base.shareNotes[k] = v.trim().slice(0, 300);
+      });
+    }
     base.aiChat = (Array.isArray(raw.aiChat) ? raw.aiChat : []).slice(-100).map((m) => {
       if (!m || typeof m !== 'object') return null;
       if (m.role !== 'user' && m.role !== 'assistant') return null;
@@ -298,7 +305,6 @@
     palette: [],
     paletteIndex: 0,
     confirmResolver: null,
-    checkin: { sid: null } // 训练签到页当前选中的那次训练
   };
 
   function save() {
@@ -2075,208 +2081,6 @@
 
   function importData() { $('#importFile').click(); }
 
-  /* ══════════ 训练签到（Check-in）：现场 5 秒记完一次考勤 ══════════
-     为什么单独开一页：原来这一步藏在「考勤页 → 选周 → 找日期 → 找格子」里，
-     训练现场掏出手机要 30 秒才记完。这里做成场景化单页：
-     点一下 = 出勤（再点取消），左滑 = 迟到，长按/点 ⋯ = 请假 / 缺席 / 清除。
-  ══════════════════════════════════════════════════════════════════ */
-  const CI_LONG = 450;  // 长按判定
-  const CI_SWIPE = 48;  // 横向滑动判定
-
-  function ciCandidates() {
-    const mon = getMonday(new Date());
-    ensureWeek(mon); // 本周没生成过训练就先生成，否则签到页是空的
-    const out = [];
-    [-1, 0, 1].forEach((off) => {
-      const arr = db.weeks[weekKey(addDays(mon, off * 7))];
-      if (Array.isArray(arr)) out.push(...arr);
-    });
-    return out.filter((s) => s && s.date).sort(sessionSort);
-  }
-
-  function ciPickDefault(list) {
-    if (!list.length) return null;
-    const today = dateKey(new Date());
-    return list.find((s) => s.date === today && s.status !== 'cancelled')
-      || list.find((s) => s.status !== 'cancelled' && s.date >= today)
-      || list.find((s) => s.status !== 'cancelled')
-      || list[0];
-  }
-
-  function ciSession() {
-    const list = ciCandidates();
-    return list.find((s) => s.id === state.checkin.sid) || null;
-  }
-
-  function ciSet(pid, next) {
-    const s = ciSession();
-    if (!s) return;
-    if (s.status === 'cancelled') { toast('这次训练已取消，不用签到', 'warn'); return; }
-    if (next) s.attendance[pid] = next; else delete s.attendance[pid];
-    s.updatedAt = Date.now();
-    save();
-    if (CloudOn()) {
-      const req = next
-        ? window.XGYCloud.push.attSet(s.id, pid, next)
-        : window.XGYCloud.push.attClear(s.id, pid);
-      cloudFire(req, () => window.XGYCloud.syncWeek(weekKey(getMonday(parseKey(s.date))), true).then(renderCheckin));
-    }
-    renderCheckin();
-    renderSidebar();
-  }
-
-  function ciOpenMenu(pid, anchor) {
-    document.querySelectorAll('.ci-menu').forEach((m) => m.remove());
-    const menu = document.createElement('div');
-    menu.className = 'ci-menu';
-    menu.innerHTML = ['present', 'late', 'leave', 'absent']
-      .map((k) => `<button type="button" data-st="${k}">${ATT_LABEL[k]}</button>`).join('')
-      + '<button type="button" data-st="" class="ci-clear">清除</button>';
-    document.body.appendChild(menu);
-    const r = anchor.getBoundingClientRect();
-    const mw = menu.offsetWidth, mh = menu.offsetHeight;
-    menu.style.left = `${Math.min(Math.max(8, r.left + r.width / 2 - mw / 2), window.innerWidth - mw - 8)}px`;
-    menu.style.top = `${Math.min(r.bottom + 6, window.innerHeight - mh - 8)}px`;
-    menu.querySelectorAll('button').forEach((b) => {
-      b.onclick = () => { ciSet(pid, b.dataset.st || ''); document.querySelectorAll('.ci-menu').forEach((m) => m.remove()); };
-    });
-    setTimeout(() => {
-      const away = (e) => {
-        if (e.target.closest('.ci-menu')) return;
-        document.querySelectorAll('.ci-menu').forEach((m) => m.remove());
-        document.removeEventListener('pointerdown', away);
-      };
-      document.addEventListener('pointerdown', away);
-    }, 0);
-  }
-
-  function ciBindCard(el) {
-    const pid = el.dataset.pid;
-    let sx = 0, sy = 0, timer = null, fired = false;
-    el.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
-      sx = e.clientX; sy = e.clientY; fired = false;
-      timer = setTimeout(() => { fired = true; ciOpenMenu(pid, el); }, CI_LONG);
-    });
-    el.addEventListener('pointermove', (e) => {
-      if (fired) return;
-      const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (Math.abs(dx) > CI_SWIPE && Math.abs(dx) > Math.abs(dy)) {
-        fired = true; clearTimeout(timer); ciSet(pid, 'late');
-      } else if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
-        clearTimeout(timer); // 当成滚动，不算点击
-      }
-    });
-    const stop = () => clearTimeout(timer);
-    el.addEventListener('pointerup', stop);
-    el.addEventListener('pointercancel', stop);
-    el.addEventListener('pointerleave', stop);
-    el.addEventListener('click', () => {
-      if (fired) { fired = false; return; }
-      const s = ciSession();
-      const cur = (s && s.attendance[pid]) || '';
-      ciSet(pid, cur === 'present' ? '' : 'present');
-    });
-    const more = el.querySelector('.ci-more');
-    if (more) more.onclick = (e) => { e.stopPropagation(); ciOpenMenu(pid, el); };
-  }
-
-  function renderCheckin() {
-    const box = $('#checkinBody');
-    if (!box) return;
-
-    if (!db.players.length) {
-      state.checkin.sid = null;
-      box.innerHTML = emptyState('🏐', '先添加队员', '没有队员就没法签到。先到人员管理添加第一名队员。',
-        '<button class="btn btn-primary" data-action="add-player">添加队员</button><button class="btn btn-ghost" data-goto="roster">去人员管理</button>');
-      const n = $('#navCheckinCount'); if (n) n.textContent = '';
-      return;
-    }
-
-    const list = ciCandidates();
-    if (!list.length) {
-      box.innerHTML = emptyState('📅', '还没有训练', '先到考勤管理生成本周的训练，然后回来签到。',
-        '<button class="btn btn-primary" data-goto="attendance">去考勤管理</button>');
-      const n = $('#navCheckinCount'); if (n) n.textContent = '';
-      return;
-    }
-
-    if (!state.checkin.sid || !list.some((s) => s.id === state.checkin.sid)) {
-      const d = ciPickDefault(list);
-      state.checkin.sid = d ? d.id : null;
-    }
-    const s = ciSession();
-    if (!s) return;
-
-    const chips = list.map((x) => {
-      const st = sessionStatus(x);
-      const c = sessionCounts(x);
-      const wd = WEEK_CN[parseKey(x.date).getDay()];
-      return `<button type="button" class="ci-chip${x.id === s.id ? ' on' : ''}" data-sid="${x.id}">
-        <b>${x.date.slice(5).replace('-', '.')} ${wd}</b><em>${x.start || ''}</em>
-        <i class="ci-chip-st ${st.cls}">${c.marked ? `${c.attended}/${db.players.length}` : st.text}</i>
-      </button>`;
-    }).join('');
-
-    const cards = db.players.map((p) => {
-      const st = s.attendance[p.id] || '';
-      const [a, b] = positionStyle(p.position);
-      return `<div class="ci-card ${st || 'unmarked'}" data-pid="${p.id}">
-        <span class="ci-avatar" style="--a:${a};--b:${b}">${esc(p.number ? String(p.number) : (p.name || '?')[0])}</span>
-        <b class="ci-name">${esc(p.name)}</b>
-        <em class="ci-pos">${esc(p.position || '—')}</em>
-        <span class="ci-badge">${ATT_LABEL[st] || '未登记'}</span>
-        <button type="button" class="ci-more" aria-label="更多状态">⋯</button>
-      </div>`;
-    }).join('');
-
-    const c = sessionCounts(s);
-    const unmarked = db.players.length - c.marked;
-    const st = sessionStatus(s);
-
-    box.innerHTML = `
-      <div class="ci-bar reveal">
-        <div class="ci-chips">${chips}</div>
-        <div class="ci-head">
-          <div><b>${esc(fmtDateCN(parseKey(s.date)))} ${esc(s.start || '')}${s.end ? '–' + esc(s.end) : ''}</b>
-            <em>${esc(st.text)}${s.venue ? ' · ' + esc(s.venue) : ''}</em></div>
-          <div class="ci-nums"><b>${c.attended}</b><span>到场</span><b>${unmarked}</b><span>未登记</span></div>
-        </div>
-      </div>
-      <div class="ci-grid reveal">${cards}</div>
-      <div class="ci-legend reveal">点一下 = 出勤（再点取消） · 左滑 = 迟到 · 长按或点 ⋯ = 请假 / 缺席</div>`;
-
-    box.querySelectorAll('.ci-card').forEach(ciBindCard);
-    box.querySelectorAll('.ci-chip').forEach((el) => {
-      el.onclick = () => { state.checkin.sid = el.dataset.sid; renderCheckin(); };
-    });
-
-    const n = $('#navCheckinCount');
-    if (n) { n.textContent = unmarked ? String(unmarked) : ''; n.classList.toggle('zero', !unmarked); }
-    refreshReveals();
-  }
-
-  async function ciAllPresent() {
-    const s = ciSession();
-    if (!s) { toast('先选一次训练', 'warn'); return; }
-    const ok = await confirmDialog({
-      title: '全部标记为出勤？',
-      message: `会把这次训练的所有队员都标成出勤，覆盖已有记录。`,
-      ok: '全部出勤', danger: false
-    });
-    if (!ok) return;
-    db.players.forEach((p) => { s.attendance[p.id] = 'present'; });
-    s.updatedAt = Date.now();
-    save();
-    if (CloudOn()) {
-      const reqs = db.players.map((p) => window.XGYCloud.push.attSet(s.id, p.id, 'present'));
-      cloudFire(Promise.all(reqs), () => window.XGYCloud.syncWeek(weekKey(getMonday(parseKey(s.date))), true).then(renderCheckin));
-    }
-    toast('已全部标记为出勤');
-    renderCheckin();
-    renderSidebar();
-  }
-
   /* ══════════ 训练卡：一次训练一张可转发的图 ══════════ */
   function nextSessionAfter(s) {
     const all = [];
@@ -2284,6 +2088,19 @@
     all.sort(sessionSort);
     const key = `${s.date}T${s.start || ''}`;
     return all.find((x) => x.status !== 'cancelled' && `${x.date}T${x.start || ''}` > key) || null;
+  }
+
+  /* 考勤页的「训练卡」按钮：出当前周最近一场（优先今天）的图 */
+  function openWeekCard() {
+    if (!db.players.length) { toast('先添加队员', 'warn'); return; }
+    const list = (getSessions(state.weekMonday) || []).filter((s) => s && s.date && s.status !== 'cancelled');
+    if (!list.length) { toast('这一周还没有训练，先加一次', 'warn'); return; }
+    list.sort(sessionSort);
+    const today = dateKey(new Date());
+    const target = list.find((s) => s.date === today)
+      || [...list].reverse().find((s) => s.date <= today)
+      || list[0];
+    openTrainingCard(target);
   }
 
   async function openTrainingCard(s) {
@@ -2315,6 +2132,53 @@
   }
 
   /* ══════════ 分享队伍动态（队员只读视图） ══════════ */
+  // 每项技能的「起点分」：取该队员该项最早一条调整记录里的 before。
+  // 从来没调过就当没变化（起点 = 现在），进步显示 0，不会凭空夸。
+  function skillStart(p, key) {
+    let first = null;
+    (db.skillLogs || []).forEach((l) => {
+      if (l.playerId !== p.id || l.skill !== key) return;
+      if (!first || (l.at || 0) < (first.at || 0)) first = l;
+    });
+    return first ? Number(first.before) : Number(p.skills[key] ?? 5);
+  }
+
+  function attRate(att) {
+    const marked = att.p + att.l + att.v + att.a;
+    if (!marked) return null;
+    return Math.round(((att.p + att.l) / marked) * 100);
+  }
+
+  // 短板对应的练法（本地兜底点评用，AI 那版走模型自己写）
+  const TIP_OF = {
+    serve: '每天 50 个定点发球，先追稳定再追力量',
+    receive: '对墙垫球 200 次，接球前先迈一步把身体对正',
+    set: '网前定点传球 100 次，重点练手腕弹送',
+    spike: '三步助跑起跳 30 次，先打准线再追球速',
+    block: '拦网步加手型 15 分钟，练跟球不跟人',
+    defense: '低姿移动接球 10 组、每组 20 个'
+  };
+
+  /** 没配 AI Key（或还没生成）时的兜底点评：照样有夸、有短板、有具体练法 */
+  function localNote(rate, sk, base) {
+    const head = rate == null
+      ? '考勤还没登记，先把到场记起来才有得聊'
+      : rate >= 90 ? `出勤 ${rate}%，几乎没缺过，这份稳定队里都看得见`
+      : rate >= 70 ? `出勤 ${rate}%，再少请一次假，状态就能连起来`
+      : `出勤 ${rate}%，来得少身体记不住动作，先从每周到场两次开始`;
+    let bestI = 0;
+    for (let i = 1; i < 6; i++) if (sk[i] - base[i] > sk[bestI] - base[bestI]) bestI = i;
+    const gain = +(sk[bestI] - base[bestI]).toFixed(1);
+    const up = gain > 0.05
+      ? `${SKILLS[bestI].label}从 ${base[bestI].toFixed(1)} 涨到 ${sk[bestI].toFixed(1)}，这 ${gain.toFixed(1)} 分是你自己练出来的`
+      : '技能分还没动，第一次进步往往来得比想象中快';
+    let weakI = 0;
+    for (let i = 1; i < 6; i++) if (sk[i] < sk[weakI]) weakI = i;
+    const tip = `现在最该补的是${SKILLS[weakI].label}（${sk[weakI].toFixed(1)}），${TIP_OF[SKILLS[weakI].key]}`;
+    const tail = rate != null && rate >= 90 ? '保持这个节奏，你会是场上让人放心的那个。' : '不用急，这周比上周多来一次就够了。';
+    return `${head}。${up}。${tip}。${tail}`;
+  }
+
   // 全季考勤聚合：跳过取消的训练；只统计「已登记」的格子，未登记不算缺勤
   function sharePayload() {
     const players = db.players.map((p) => {
@@ -2327,15 +2191,19 @@
         else if (st === 'leave') att.v += 1;
         else if (st === 'absent') att.a += 1;
       }));
-      // 带 id：队员在分享页认领「我是谁」后，只渲染他自己那一档
-      return { id: p.id, n: p.name, pos: p.position, no: p.number || 0, att, sk: SKILLS.map((s) => p.skills[s.key] ?? 5) };
+      const sk = SKILLS.map((s) => Number(p.skills[s.key] ?? 5));
+      const base = SKILLS.map((s) => skillStart(p, s.key));
+      // note = 分享页那段建议和鼓励：优先用 AI 生成并存在本机的，没有就用本地兜底
+      const aiNote = (db.shareNotes && db.shareNotes[p.id]) || '';
+      const note = aiNote || localNote(attRate(att), sk, base);
+      // nc：这段点评是不是 AI 写的（分享页据此标注来源，模板版不冒充 AI）
+      return { id: p.id, n: p.name, pos: p.position, no: p.number || 0, att, sk, base, note, nc: aiNote ? 1 : 0 };
     });
     const sessions = Object.values(db.weeks).flat()
       .filter((s) => s && s.status !== 'cancelled')
       .sort((a, b) => sessionSort(b, a))
       .slice(0, 8)
       .map((s) => {
-        // st = 这次训练每人的状态，队员认领后能在「最近训练」里看到自己那一次是出勤还是请假
         const c = sessionCounts(s);
         return { d: (s.date || '').slice(5), t: s.start || '', p: c.present, l: c.late, v: c.leave, a: c.absent, st: s.attendance || {} };
       })
@@ -2343,15 +2211,65 @@
     return { v: 1, team: '信工院排球队', at: Date.now(), players, sessions };
   }
 
+  /** 用队长的 AI Key 一次性给全队写点评（存本机，生成过就不重复花钱） */
+  async function generateShareNotes() {
+    const cfg = aiCfg();
+    if (!cfg.key) throw new Error('还没填 API Key');
+    const data = sharePayload();
+    const rows = data.players.map((pl, i) => {
+      const skills = {}, start = {};
+      SKILLS.forEach((sk, k) => { skills[sk.label] = +pl.sk[k].toFixed(1); start[sk.label] = +pl.base[k].toFixed(1); });
+      return { i, 姓名: pl.n, 号码: pl.no, 位置: pl.pos, 出勤率: attRate(pl.att), 出勤: pl.att, 技能: skills, 起点: start };
+    });
+    const prompt = `你是这支大学院排球队的队长，也是队里技术最细的人。下面是队员的真实数据（起点 = 赛季初的分，技能 = 现在的分，出勤率按已登记的训练算）。\n\n${JSON.stringify(rows)}\n\n给每个人写一段点评，直接对本人说、用"你"，55-85 字，必须包含三件事：\n1）具体夸一处：点名某项技能或出勤表现，带上数字对比；\n2）指出最该练的一项技能，配一个能自己练的动作或次数；\n3）一句落在实处的鼓励，不要空话、不要堆感叹号、不要"你是最棒的"。\n语气像认真但不肉麻的队长，不要出现"数据""统计""评分"这类词。\n只输出 JSON 数组，格式 [{"i":0,"t":"点评正文"}]，i 用给定编号，不要解释、不要代码块。`;
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 60000);
+    let res;
+    try {
+      res = await fetch(aiUrl(cfg.base), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.key}` },
+        body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: prompt }], stream: false, temperature: 0.8 }),
+        signal: ctl.signal
+      });
+    } finally { clearTimeout(timer); }
+    if (!res.ok) {
+      let detail = '';
+      try { const j = await res.json(); detail = (j.error && (j.error.message || j.error.code)) || j.message || ''; } catch (e) { /* ignore */ }
+      throw new Error(`HTTP ${res.status}${detail ? '：' + detail : ''}${res.status === 401 ? '（Key 不对）' : res.status === 402 ? '（余额不足）' : ''}`);
+    }
+    const j = await res.json();
+    const text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+    const a = text.indexOf('['), b = text.lastIndexOf(']');
+    if (a < 0 || b < 0) throw new Error('模型没按格式返回');
+    let arr;
+    try { arr = JSON.parse(text.slice(a, b + 1)); } catch (e) { throw new Error('返回内容解析失败'); }
+    let n = 0;
+    (Array.isArray(arr) ? arr : []).forEach((it) => {
+      const pl = data.players[it && it.i];
+      if (!pl || typeof it.t !== 'string' || !it.t.trim()) return;
+      if (!db.shareNotes) db.shareNotes = {};
+      db.shareNotes[pl.id] = it.t.trim().slice(0, 300);
+      n += 1;
+    });
+    if (!n) throw new Error('一条点评都没解析出来');
+    save();
+    return n;
+  }
+
   async function openShareModal() {
     if (!db.players.length) { toast('还没有队员，先录入队员再分享', 'warn'); return; }
+    const hasAi = !!aiCfg().key;
     const body = `<div class="share-wrap">
-      <p class="share-hint">生成一个<b>只读链接</b>发给队员：打开先认领「我是谁」，之后就只看自己的出勤率、技能雷达和最近训练。数据就编在链接里，<b>不上传任何服务器</b>。</p>
+      <p class="share-hint">生成一个<b>只读链接</b>发到队群：队员打开后输入<b>姓名 + 球衣号码</b>，就能看到自己的出勤、进步、六维图和一段点评。数据就编在链接里，<b>不上传任何服务器</b>。</p>
+      ${hasAi
+        ? `<div class="share-ai"><button type="button" class="btn btn-ghost" id="shareAi"><span>✦</span>用 AI 写点评</button><em id="shareAiSt">点一次，全队每人一段（约 10 秒）</em></div>`
+        : `<div class="share-ai is-tip"><em>点评先用内置模板生成。到「AI 助手」填个 API Key，可以让 AI 写得更贴每个人的情况。</em></div>`}
       <textarea id="shareLink" class="share-link" rows="4" readonly placeholder="生成中…"></textarea>
       <div class="share-meta mono" id="shareMeta"></div>
       <div class="share-note">
-        <p>· 这是<b>数据快照</b>，之后改了考勤或技能，要重新生成一次发给队员</p>
-        <p>· 链接里包含队员姓名和出勤数据，只发给队内的人，别贴到公开群里</p>
+        <p>· 这是<b>数据快照</b>，之后改了考勤或技能，重新生成一次再发</p>
+        <p>· 链接里含队员姓名和出勤，只发队内，别贴公开群</p>
       </div>
       <div class="share-foot"><button type="button" class="btn btn-primary" id="shareCopy">复制链接</button><button type="button" class="btn btn-ghost" id="shareClose">关闭</button></div>
     </div>`;
@@ -2359,16 +2277,18 @@
     $('#shareClose').onclick = closeModal;
     $('#shareLink').onclick = (e) => e.target.select();
     let url = '';
-    try {
-      url = await window.XGYShare.buildURL(sharePayload());
-      $('#shareLink').value = url;
-      const extra = url.length > 1800 ? '（偏长：队员较多，建议只分享给微信好友而不是贴在简介里）' : '';
-      $('#shareMeta').textContent = `SNAPSHOT LINK · ${url.length} CHARS ${extra}`;
-    } catch (err) {
-      $('#shareLink').value = '';
-      $('#shareMeta').textContent = '生成失败：' + (err && err.message ? err.message : '未知错误');
-      return;
-    }
+    const rebuild = async () => {
+      try {
+        url = await window.XGYShare.buildURL(sharePayload());
+        $('#shareLink').value = url;
+        const extra = url.length > 2400 ? '（偏长：建议只发微信好友，别贴简介）' : '';
+        $('#shareMeta').textContent = `LINK · ${url.length} CHARS ${extra}`;
+      } catch (err) {
+        $('#shareLink').value = '';
+        $('#shareMeta').textContent = '生成失败：' + (err && err.message ? err.message : '未知错误');
+      }
+    };
+    await rebuild();
     $('#shareCopy').onclick = async () => {
       try {
         await navigator.clipboard.writeText(url);
@@ -2378,6 +2298,23 @@
         document.execCommand('copy');
       }
       toast('链接已复制，去微信里粘贴发给队员吧');
+    };
+    const aiBtn = $('#shareAi');
+    if (aiBtn) aiBtn.onclick = async () => {
+      aiBtn.disabled = true;
+      const st = $('#shareAiSt');
+      if (st) st.textContent = '正在写…（一个请求，全队一起生成）';
+      try {
+        const n = await generateShareNotes();
+        if (st) st.textContent = `已为 ${n} 名队员写好点评，链接已更新，复制发出去就行`;
+        toast('点评生成好了，重新复制一次链接');
+      } catch (err) {
+        if (st) st.textContent = '生成失败：' + (err && err.message ? err.message : '未知错误');
+        toast('AI 没写成功，先用模板版也能发', 'warn');
+      } finally {
+        aiBtn.disabled = false;
+        await rebuild();
+      }
     };
   }
 
@@ -2814,7 +2751,6 @@
     if (page === 'dashboard') renderDashboard();
     if (page === 'roster') renderRoster();
     if (page === 'attendance') renderAttendance();
-    if (page === 'checkin') renderCheckin();
     if (page === 'tactics') renderTactics();
     if (page === 'growth') renderGrowth();
     if (page === 'ai') renderAiPage();
@@ -2834,7 +2770,6 @@
     if (state.page === 'dashboard') renderDashboard();
     if (state.page === 'roster') renderRoster();
     if (state.page === 'attendance') renderAttendance();
-    if (state.page === 'checkin') renderCheckin();
     if (state.page === 'tactics') renderTactics();
     if (state.page === 'growth') renderGrowth();
   }
@@ -3042,12 +2977,7 @@
     $('#attAddBtn').onclick = () => openSessionModal(null, getMonday(new Date()), { isNew: true });
     $('#attAddBtnPage').onclick = () => openSessionModal(null, state.weekMonday, { isNew: true });
     $('#allPresent').onclick = setAllPresent;
-    $('#ciAllPresent').onclick = ciAllPresent;
-    $('#ciCardBtn').onclick = () => {
-      const s = ciSession();
-      if (!s) { toast('先选一次训练', 'warn'); return; }
-      openTrainingCard(s);
-    };
+    $('#attCardBtn').onclick = openWeekCard;
     $('#attGrid').addEventListener('click', (e) => {
       const head = e.target.closest('.att-session-head');
       if (head) {

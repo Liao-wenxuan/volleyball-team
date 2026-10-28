@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
- * share.js — 队员只读视图（队伍动态分享页）
+ * share.js — 队员端「我的训练档案」
  *
  * 纯前端、零后端：
  * - 队长侧（app.js 调用）：XGYShare.buildURL(payload) 把队伍快照
@@ -8,10 +8,12 @@
  *   置 __XGY_SHARE_MODE，主应用直接跳过初始化；然后解码并把
  *   只读视图渲染进 #shareView，其余界面元素全部隐藏
  *
- * 隐私口径：链接里带着全队数据（队长一个人管，没必要拆成 N 条链接），
- * 但**页面上只显示本人**——队员第一次打开要先认领「我是谁」，
- * 认领结果存在本机 localStorage（不随链接走），之后直接进自己的档案。
- * 想看别人必须点「换个人」重新认领，不会一打开就把全队摊开。
+ * 三条设计原则：
+ * 1. 进门前要验证：输入「姓名 + 球衣号码」对上了才放行，
+ *    页面上不列全队名单，也不会告诉对方「有几个人」以外的信息。
+ * 2. 只谈自己：出勤、进步、六维、点评，别人的数据一个字不出现。
+ * 3. 进步要算得出来：拿每项技能「赛季起点」对比现在的分，
+ *    不是拍脑袋夸，涨了多少分就说多少分。
  *
  * 编码格式：首字符是版本标记
  *   '1' = deflate-raw 压缩（CompressionStream，现代浏览器都支持）
@@ -20,7 +22,7 @@
 (function () {
   'use strict';
 
-  const SELF_KEY = 'xgy_share_self'; // 本机记住「我是谁」，不随链接走
+  const NAME_KEY = 'xgy_share_name'; // 本机只记住上次输入的姓名，方便下次填
 
   /* ══════════ base64url + 压缩编解码 ══════════ */
   function b64url(bytes) {
@@ -83,6 +85,7 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
   ));
+  const f1 = (n) => (Number(n) || 0).toFixed(1);
 
   /* ══════════ 统计 ══════════ */
   function rateOf(att) {
@@ -92,8 +95,8 @@
   }
 
   /* ══════════ 六维雷达（SVG） ══════════ */
-  function radarSVG(values, size) {
-    const cx = size / 2, cy = size / 2, R = size / 2 - 34;
+  function radarSVG(values, size, weakIndex) {
+    const cx = size / 2, cy = size / 2, R = size / 2 - 36;
     const pt = (i, r) => {
       const a = (Math.PI / 3) * i - Math.PI / 2;
       return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
@@ -113,12 +116,13 @@
     for (let i = 0; i < 6; i++) {
       const [x, y] = pt(i, R);
       axes.push(`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" class="sv-radar-axis"/>`);
-      const [lx, ly] = pt(i, R + 18);
-      labels.push(`<text x="${lx}" y="${ly}" class="sv-radar-label" text-anchor="middle" dominant-baseline="middle">${SKILL_LABELS[i]}</text>`);
+      const [lx, ly] = pt(i, R + 19);
+      const cls = i === weakIndex ? 'sv-radar-label is-weak' : 'sv-radar-label';
+      labels.push(`<text x="${lx}" y="${ly}" class="${cls}" text-anchor="middle" dominant-baseline="middle">${SKILL_LABELS[i]}</text>`);
     }
-    const dots = poly.map((p) => {
+    const dots = poly.map((p, i) => {
       const [x, y] = p.split(',');
-      return `<circle cx="${x}" cy="${y}" r="2.5" class="sv-radar-dot"/>`;
+      return `<circle cx="${x}" cy="${y}" r="${i === weakIndex ? 4 : 2.5}" class="sv-radar-dot${i === weakIndex ? ' is-weak' : ''}"/>`;
     }).join('');
     return `<svg viewBox="0 0 ${size} ${size}" class="sv-radar" role="img" aria-label="技能雷达图">
       <polygon points="${ring(1)}" class="sv-radar-ring"/>
@@ -144,7 +148,7 @@
     el.innerHTML = `
       <div class="sv-bar">
         ${logo ? `<img class="sv-logo" src="${logo}" alt="" aria-hidden="true">` : ''}
-        <span class="sv-bar-txt"><strong>${esc(team)}</strong><em>TEAM FEED · SNAPSHOT</em></span>
+        <span class="sv-bar-txt"><strong>${esc(team)}</strong><em>MY TRAINING FILE</em></span>
       </div>${inner}`;
     document.body.classList.add('sv-mode');
     const prev = document.getElementById('shareView');
@@ -153,22 +157,31 @@
     return el;
   }
 
-  /* ══════════ 认领：你是谁 ══════════ */
-  function renderPicker(data) {
+  function heroTop(right) {
+    return `<div class="sv-hero-top mono">
+      <span><i class="sv-dot"></i>TEAM SIGNAL · LIVE</span>
+      <span>${esc(right || 'XGY · VB')}</span>
+    </div>`;
+  }
+
+  /* ══════════ 第 1 步：姓名 + 号码 ══════════ */
+  function renderGate(data) {
+    const players = data.players || [];
+    const needNo = players.some((p) => Number(p.no) > 0);
+    let remembered = '';
+    try { remembered = localStorage.getItem(NAME_KEY) || ''; } catch (e) { /* ignore */ }
+
     const el = shell(data.team || '信工院排球队', `
       <section class="sv-hero">
-        <div class="sv-hero-top mono">
-          <span><i class="sv-dot"></i>TEAM SIGNAL · LIVE</span>
-          <span>XGY · VB</span>
-        </div>
+        ${heroTop()}
         <h1 class="sv-h1">
-          <span class="sv-line">先认领</span>
+          <span class="sv-line">先确认</span>
           <span class="sv-line">你是<em>谁。</em></span>
         </h1>
         <div class="sv-hero-mid">
           <div class="sv-hero-copy">
-            <span class="mono">PICK → YOUR NAME</span>
-            <p>只显示你自己的出勤和技能，别人的数据不会摊开。选一次，下次打开直接进。</p>
+            <span class="mono">NAME + JERSEY NUMBER</span>
+            <p>填你报名时的名字和球衣号码。对上了，才看得到自己的出勤和进步。</p>
           </div>
           <div class="sv-burst" aria-hidden="true">
             <i style="--r:0deg"></i><i style="--r:45deg"></i><i style="--r:90deg"></i><i style="--r:135deg"></i><b></b>
@@ -177,43 +190,90 @@
         <div class="sv-scan" aria-hidden="true"></div>
         <div class="sv-halo" aria-hidden="true"></div>
       </section>
-      <section class="sv-sec">
-        <div class="sv-sec-head mono"><span>ROSTER / ${data.players.length}</span><i>+</i></div>
-        <h2>点一下你的名字。</h2>
-        <div class="sv-pick">
-          ${data.players.map((p) => {
-            const [a, b] = ROLE_STYLE[p.pos] || ['#7b6cff', '#46e0ff'];
-            return `<button type="button" class="sv-pick-btn" data-pid="${esc(p.id)}">
-              <span class="sv-avatar" style="--a:${a};--b:${b}">${esc((p.n || '?')[0])}</span>
-              <span class="sv-pick-txt"><b>${esc(p.n)}</b><em>${esc(p.pos)}${p.no ? ' · #' + esc(p.no) : ''}</em></span>
-            </button>`;
-          }).join('')}
-        </div>
+
+      <section class="sv-sec sv-gate">
+        <div class="sv-sec-head mono"><span>VERIFY / ${players.length}</span><i>·</i></div>
+        <form class="sv-form" id="svForm" autocomplete="off">
+          <label class="sv-field"><span>姓名</span>
+            <input id="svName" type="text" inputmode="text" maxlength="12" placeholder="比如 王丹婷" value="${esc(remembered)}">
+          </label>
+          <label class="sv-field"><span>球衣号码</span>
+            <input id="svNo" type="text" inputmode="numeric" maxlength="3" placeholder="${needNo ? '比如 73' : '队里还没录号码，留空即可'}">
+          </label>
+          <p class="sv-err" id="svErr" hidden>姓名和号码对不上，再试一次。记不清就问队长。</p>
+          <button type="submit" class="sv-btn">看我的档案<i>→</i></button>
+        </form>
       </section>
+
       <footer class="sv-foot">
         <p>数据快照 · ${esc(fmtSnapshot(data.at || Date.now()))}</p>
-        <p class="mono">GENERATED BY CAPTAIN · NO SIGN-UP NEEDED</p>
+        <p class="mono">NO SIGN-UP · NO APP · JUST A LINK</p>
       </footer>`);
-    document.title = `${data.team || '信工院排球队'} · 队伍动态`;
-    el.querySelectorAll('.sv-pick-btn').forEach((btn) => {
-      btn.onclick = () => {
-        try { localStorage.setItem(SELF_KEY, btn.dataset.pid); } catch (e) { /* 隐私模式下忽略 */ }
-        const me = data.players.find((p) => p.id === btn.dataset.pid);
-        if (me) renderSelf(data, me);
-      };
-    });
+    document.title = `${data.team || '信工院排球队'} · 我的训练档案`;
+
+    const form = el.querySelector('#svForm');
+    const err = el.querySelector('#svErr');
+    const nameEl = el.querySelector('#svName');
+    const noEl = el.querySelector('#svNo');
+    const norm = (s) => String(s || '').replace(/\s+/g, '');
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      const name = norm(nameEl.value);
+      const no = norm(noEl.value);
+      const me = players.find((p) => {
+        if (norm(p.n) !== name) return false;
+        if (!needNo) return true;
+        if (!Number(p.no)) return !no; // 没录号码的队员，号码留空也放行
+        return String(Number(p.no)) === no;
+      });
+      if (!me) {
+        err.hidden = false;
+        form.classList.remove('shake');
+        void form.offsetWidth; // 重排一次，让动画能重复触发
+        form.classList.add('shake');
+        noEl.focus();
+        return;
+      }
+      err.hidden = true;
+      try { localStorage.setItem(NAME_KEY, me.n); } catch (e2) { /* ignore */ }
+      renderSelf(data, me);
+    };
+    if (remembered) noEl.focus(); else nameEl.focus();
     return el;
   }
 
-  /* ══════════ 本人档案 ══════════ */
+  /* ══════════ 第 2 步：我的档案 ══════════ */
   function renderSelf(data, me) {
-    const r = rateOf(me.att);
-    const marked = (me.att.p || 0) + (me.att.l || 0) + (me.att.v || 0) + (me.att.a || 0);
-    const teamAtt = data.players.reduce((acc, p) => {
-      acc.p += p.att.p || 0; acc.l += p.att.l || 0; acc.v += p.att.v || 0; acc.a += p.att.a || 0;
+    const players = data.players || [];
+    const att = me.att || { p: 0, l: 0, v: 0, a: 0 };
+    const r = rateOf(att);
+    const marked = (att.p || 0) + (att.l || 0) + (att.v || 0) + (att.a || 0);
+
+    const sk = (me.sk || []).map((v) => Number(v) || 0);
+    const base = (me.base || me.sk || []).map((v) => Number(v) || 0);
+    const gainTotal = sk.reduce((a, v, i) => a + (v - base[i]), 0);
+
+    // 最弱的一项 = 六维里最低的，分享页拿它当「下一步练什么」
+    let weak = 0;
+    for (let i = 1; i < sk.length; i++) if (sk[i] < sk[weak]) weak = i;
+
+    const teamAtt = players.reduce((acc, p) => {
+      const a = p.att || {};
+      acc.p += a.p || 0; acc.l += a.l || 0; acc.v += a.v || 0; acc.a += a.a || 0;
       return acc;
     }, { p: 0, l: 0, v: 0, a: 0 });
     const teamRate = rateOf(teamAtt);
+
+    const gainCells = SKILL_LABELS.map((label, i) => {
+      const d = +(sk[i] - base[i]).toFixed(1);
+      const cls = d > 0.05 ? 'up' : d < -0.05 ? 'down' : 'flat';
+      const sign = d > 0 ? '+' : '';
+      return `<div class="sv-gain-cell${i === weak ? ' is-weak' : ''}">
+        <span>${label}</span>
+        <b>${f1(sk[i])}</b>
+        <em class="${cls}">${cls === 'flat' ? '—' : sign + d.toFixed(1)}</em>
+      </div>`;
+    }).join('');
 
     const timeline = (data.sessions || []).map((s) => {
       const st = (s.st || {})[me.id] || '';
@@ -224,20 +284,20 @@
       </div>`;
     }).join('');
 
+    const note = String(me.note || '').trim();
+    const isAi = Number(me.nc) === 1;
+
     const el = shell(data.team || '信工院排球队', `
       <section class="sv-hero">
-        <div class="sv-hero-top mono">
-          <span><i class="sv-dot"></i>MY FEED · ${esc(me.pos || '')}</span>
-          <span>${esc(me.no ? '#' + me.no : 'XGY')}</span>
-        </div>
+        ${heroTop(me.no ? '#' + me.no : (me.pos || 'XGY'))}
         <h1 class="sv-h1">
           <span class="sv-line">${esc(me.n)}</span>
           <span class="sv-line">出勤<em>${r == null ? '—' : r + '%'}</em></span>
         </h1>
         <div class="sv-hero-mid">
           <div class="sv-hero-copy">
-            <span class="mono">TRAIN → RECORD → GROW</span>
-            <p>共登记 ${marked} 次训练 · 出 ${me.att.p || 0} · 迟 ${me.att.l || 0} · 请 ${me.att.v || 0} · 缺 ${me.att.a || 0}</p>
+            <span class="mono">${esc(me.pos || '')} · ${marked} 次已登记</span>
+            <p>到场 ${att.p || 0} · 迟到 ${att.l || 0} · 请假 ${att.v || 0} · 缺席 ${att.a || 0}</p>
           </div>
           <div class="sv-burst" aria-hidden="true">
             <i style="--r:0deg"></i><i style="--r:45deg"></i><i style="--r:90deg"></i><i style="--r:135deg"></i><b></b>
@@ -249,20 +309,36 @@
 
       <section class="sv-stats">
         <div class="sv-stat"><b>${r == null ? '—' : r + '%'}</b><span>我的出勤</span></div>
-        <div class="sv-stat"><b>${(me.att.p || 0) + (me.att.l || 0)}</b><span>到场次数</span></div>
-        <div class="sv-stat"><b>${me.att.l || 0}</b><span>迟到</span></div>
+        <div class="sv-stat"><b>${(att.p || 0) + (att.l || 0)}</b><span>到场次数</span></div>
+        <div class="sv-stat"><b>${att.l || 0}</b><span>迟到</span></div>
         <div class="sv-stat"><b>${teamRate == null ? '—' : teamRate + '%'}</b><span>全队出勤</span></div>
       </section>
 
       <section class="sv-sec">
-        <div class="sv-sec-head mono"><span>MY SKILLS / 01</span><i>+</i></div>
-        <h2>我的六项。</h2>
-        <div class="sv-radar-wrap">${radarSVG(me.sk || [5, 5, 5, 5, 5, 5], 300)}</div>
-        <p class="sv-note mono">0–10 SCALE · ${esc(me.n)}</p>
+        <div class="sv-sec-head mono"><span>PROGRESS / 01</span><i>↑</i></div>
+        <h2>涨了 ${gainTotal > 0 ? '+' : ''}${gainTotal.toFixed(1)} 分。</h2>
+        <p class="sv-sub">这学期六项加起来的变化。每格下面是和刚入队时的差。</p>
+        <div class="sv-gain-grid">${gainCells}</div>
       </section>
 
       <section class="sv-sec">
-        <div class="sv-sec-head mono"><span>MY RECORD / 02</span><i>+</i></div>
+        <div class="sv-sec-head mono"><span>SHAPE / 02</span><i>◇</i></div>
+        <h2>你的形状。</h2>
+        <div class="sv-radar-wrap">${radarSVG(sk, 300, weak)}</div>
+        <p class="sv-weak">凹进去的那一角是 <b>${SKILL_LABELS[weak]}</b>（${f1(sk[weak])}）· 0–10 分</p>
+      </section>
+
+      <section class="sv-sec">
+        <div class="sv-sec-head mono"><span>COACH NOTE / 03</span><i>✦</i></div>
+        <h2>${isAi ? '队长想对你说。' : '下一步练什么。'}</h2>
+        <div class="sv-tipcard">
+          <p>${esc(note || '这段时间的记录还不够，先把出勤记满几次，点评就会有内容了。')}</p>
+          <span class="mono">${isAi ? 'WRITTEN BY CAPTAIN · AI ASSISTED' : 'WRITTEN BY CAPTAIN'}</span>
+        </div>
+      </section>
+
+      <section class="sv-sec">
+        <div class="sv-sec-head mono"><span>RECORD / 04</span><i>·</i></div>
         <h2>最近训练。</h2>
         <div class="sv-tl">${timeline || '<p class="sv-empty">还没有训练记录</p>'}</div>
       </section>
@@ -270,35 +346,28 @@
       <footer class="sv-foot">
         <p>数据快照 · ${esc(fmtSnapshot(data.at || Date.now()))}</p>
         <p class="mono">GENERATED BY CAPTAIN · NO SIGN-UP NEEDED</p>
-        <button type="button" class="sv-switch" id="svSwitch">换个人 / 看错了</button>
+        <button type="button" class="sv-switch" id="svSwitch">不是我 / 换个人</button>
       </footer>`);
     document.title = `${me.n} · 我的训练档案`;
     const sw = document.getElementById('svSwitch');
-    if (sw) sw.onclick = () => {
-      try { localStorage.removeItem(SELF_KEY); } catch (e) { /* ignore */ }
-      renderPicker(data);
-    };
+    if (sw) sw.onclick = () => renderGate(data);
     return el;
   }
 
   function render(data) {
     const players = Array.isArray(data.players) ? data.players : [];
     if (!players.length) { renderError(); return; }
-    let saved = null;
-    try { saved = localStorage.getItem(SELF_KEY); } catch (e) { /* ignore */ }
-    const me = saved && players.find((p) => p.id && p.id === saved);
-    if (me) renderSelf(data, me);
-    else renderPicker(data);
+    renderGate(data);
   }
 
   function renderError() {
     const el = shell('信工院排球队', `
       <section class="sv-hero sv-hero-err">
-        <div class="sv-hero-top mono"><span><i class="sv-dot off"></i>SIGNAL LOST</span><span>XGY · VB</span></div>
+        ${heroTop().replace('LIVE', 'LOST')}
         <h1 class="sv-h1"><span class="sv-line">链接不完整</span><span class="sv-line">或已<em>过期。</em></span></h1>
         <div class="sv-hero-mid"><div class="sv-hero-copy">
           <span class="mono">COPY → FULL → LINK</span>
-          <p>请确认链接完整（微信里点右上角在浏览器打开试试），或者让队长重新生成一次。</p>
+          <p>请确认链接完整（微信里点右上角「在浏览器打开」试试），或者让队长重新生成一次。</p>
         </div></div>
       </section>`);
     document.title = '链接无效';
