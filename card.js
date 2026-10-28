@@ -1,0 +1,276 @@
+/* ═══════════════════════════════════════════════════════════════
+ * card.js — 训练卡（一次训练一张可转发的图）
+ *
+ * 为什么手写 canvas 而不是 DOM 截图：
+ *   1. 项目是「零依赖 + 单文件双击可用」，引 html2canvas 就破功
+ *   2. 卡片是固定版式，手绘比截图库更可控（不会踩字体加载、离屏渲染的坑）
+ *
+ * 只做一件事：
+ *   render(payload) → 画到 750×1334 的 canvas，返回 { dataURL, blob }
+ *   UI（弹窗 / 保存按钮）留在 app.js，本文件不碰界面
+ *
+ * payload = {
+ *   team, session:{date,start,end,venue,attendance},
+ *   players:[{id,name,number,position}],
+ *   logs:[{playerId,skill,before,after,delta}],
+ *   next:{date,start} | null
+ * }
+ * ═══════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  const W = 750, H = 1334, PAD = 60;
+  const SKILL_LABEL = { serve: '发球', receive: '一传', set: '二传', spike: '扣球', block: '拦网', defense: '防守' };
+  const ROLE_STYLE = {
+    '主攻': ['#ff8a5c', '#ffc46b'],
+    '副攻': ['#7b6cff', '#4aa8ff'],
+    '二传': ['#46e0ff', '#37e39b'],
+    '接应': ['#fb7299', '#ff9d6e'],
+    '自由人': ['#37e39b', '#b8f06a']
+  };
+  const FRONT = ['二传', '副攻', '接应']; // 画在靠网那一排
+  const WEEK_CN = ['日', '一', '二', '三', '四', '五', '六'];
+  const FONT = '"PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif';
+  const MONO = '"Cascadia Code",ui-monospace,Consolas,monospace';
+
+  const f = (w, size, mono) => `${w} ${size}px ${mono ? MONO : FONT}`;
+
+  function rr(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // 中文没有词边界，按字宽逐字断行
+  function wrap(ctx, text, maxW) {
+    const lines = [];
+    let cur = '';
+    for (const ch of String(text)) {
+      if (cur && ctx.measureText(cur + ch).width > maxW) { lines.push(cur); cur = ch; }
+      else cur += ch;
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  function bg(ctx) {
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, '#121729');
+    g.addColorStop(1, '#05070f');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    const r = ctx.createRadialGradient(W - 60, 40, 0, W - 60, 40, 420);
+    r.addColorStop(0, 'rgba(123,108,255,.22)');
+    r.addColorStop(1, 'rgba(123,108,255,0)');
+    ctx.fillStyle = r;
+    ctx.fillRect(0, 0, W, 520);
+  }
+
+  function court(ctx, x, y, w, h) {
+    rr(ctx, x, y, w, h, 22);
+    const g = ctx.createLinearGradient(x, y, x, y + h);
+    g.addColorStop(0, '#1a2244');
+    g.addColorStop(1, '#0e1424');
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.16)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const netY = y + h * 0.075;
+    ctx.strokeStyle = 'rgba(255,255,255,.5)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x + 40, netY);
+    ctx.lineTo(x + w - 40, netY);
+    ctx.stroke();
+
+    ctx.setLineDash([12, 10]);
+    ctx.strokeStyle = 'rgba(255,255,255,.22)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 26, netY + h * 0.30);
+    ctx.lineTo(x + w - 26, netY + h * 0.30);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.strokeStyle = 'rgba(255,255,255,.1)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2, netY);
+    ctx.lineTo(x + w / 2, y + h - 20);
+    ctx.stroke();
+  }
+
+  function playerDot(ctx, p, cx, cy, state) {
+    const r = 27;
+    const [c1, c2] = ROLE_STYLE[p.position] || ['#7b6cff', '#46e0ff'];
+    const g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+    g.addColorStop(0, c1);
+    g.addColorStop(1, c2);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = state === 'late' ? '#ffbb55' : 'rgba(255,255,255,.35)';
+    ctx.stroke();
+
+    ctx.fillStyle = '#0b0d16';
+    ctx.font = f(800, 20);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(p.number || (p.name || '?')[0]), cx, cy + 1);
+
+    ctx.fillStyle = 'rgba(255,255,255,.92)';
+    ctx.font = f(600, 17);
+    ctx.fillText(p.name || '', cx, cy + r + 20);
+  }
+
+  function sectionTitle(ctx, monoY, mono, cn) {
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = f(500, 15, true);
+    ctx.fillStyle = 'rgba(217,255,74,.85)';
+    ctx.fillText(mono, PAD, monoY);
+    ctx.font = f(700, 26);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(cn, PAD, monoY + 34);
+  }
+
+  async function render(payload) {
+    const p = payload || {};
+    const s = p.session || {};
+    const players = Array.isArray(p.players) ? p.players : [];
+    const att = s.attendance || {};
+    const logs = Array.isArray(p.logs) ? p.logs : [];
+
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    bg(ctx);
+
+    const d = s.date ? new Date(`${s.date}T00:00:00`) : new Date();
+    const attended = players.filter((x) => att[x.id] === 'present' || att[x.id] === 'late');
+    const marked = players.filter((x) => att[x.id]);
+    const rate = marked.length ? Math.round((attended.length / marked.length) * 100) : null;
+
+    /* 头部 */
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = f(500, 15, true);
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.fillText('XGY VOLLEYBALL · TRAINING CARD', PAD, 86);
+
+    ctx.font = f(800, 40);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(p.team || '信工院排球队', PAD, 136);
+
+    ctx.font = f(500, 21);
+    ctx.fillStyle = 'rgba(255,255,255,.62)';
+    const head2 = `${d.getMonth() + 1}月${d.getDate()}日 周${WEEK_CN[d.getDay()]} · ${s.start || ''}${s.end ? '–' + s.end : ''}${s.venue ? ' · ' + s.venue : ''}`;
+    ctx.fillText(head2, PAD, 176);
+
+    /* 到场率 */
+    const rateTxt = rate == null ? '—' : rate + '%';
+    ctx.font = f(800, 76);
+    ctx.fillStyle = '#d9ff4a';
+    ctx.fillText(rateTxt, PAD, 268);
+    ctx.font = f(600, 19);
+    ctx.fillStyle = 'rgba(255,255,255,.6)';
+    ctx.textAlign = 'right';
+    ctx.fillText(`到场 ${attended.length} / 登记 ${marked.length} / 全队 ${players.length}`, W - PAD, 262);
+    ctx.textAlign = 'left';
+
+    /* 战术板：把到场的人按前排/后排摆上去 */
+    const cx0 = PAD, cy0 = 300, cw = W - PAD * 2, ch = 480;
+    court(ctx, cx0, cy0, cw, ch);
+    const front = attended.filter((x) => FRONT.indexOf(x.position) >= 0);
+    const back = attended.filter((x) => FRONT.indexOf(x.position) < 0);
+    const place = (group, ry) => {
+      group.forEach((pl, i) => {
+        const x = cx0 + (cw * (i + 1)) / (group.length + 1);
+        playerDot(ctx, pl, x, cy0 + ch * ry, att[pl.id]);
+      });
+    };
+    place(front, 0.30);
+    place(back, 0.78);
+
+    if (!attended.length) {
+      ctx.textAlign = 'center';
+      ctx.font = f(600, 22);
+      ctx.fillStyle = 'rgba(255,255,255,.4)';
+      ctx.fillText('这次还没有人登记', cx0 + cw / 2, cy0 + ch / 2);
+      ctx.textAlign = 'left';
+    }
+
+    /* 没来的 */
+    sectionTitle(ctx, 826, 'ABSENT / 01', '没来的');
+    const out = players.filter((x) => att[x.id] === 'leave' || att[x.id] === 'absent');
+    const noMark = players.filter((x) => !att[x.id]);
+    ctx.font = f(500, 19);
+    if (out.length) {
+      ctx.fillStyle = 'rgba(255,255,255,.72)';
+      const txt = out.map((x) => `${x.name}（${att[x.id] === 'leave' ? '请假' : '缺席'}）`).join('、');
+      wrap(ctx, txt, W - PAD * 2).slice(0, 2).forEach((ln, i) => ctx.fillText(ln, PAD, 900 + i * 30));
+    } else {
+      ctx.fillStyle = 'rgba(217,255,74,.9)';
+      ctx.fillText('全员到场，一个没缺', PAD, 900);
+    }
+    if (noMark.length) {
+      ctx.fillStyle = 'rgba(255,255,255,.34)';
+      ctx.font = f(500, 17);
+      const t2 = `未登记：${noMark.map((x) => x.name).join('、')}`;
+      wrap(ctx, t2, W - PAD * 2).slice(0, 2).forEach((ln, i) => ctx.fillText(ln, PAD, 938 + i * 26));
+    }
+
+    /* 这次的进步 */
+    sectionTitle(ctx, 986, 'GROWTH / 02', '这次的进步');
+    const top = logs.slice().sort((a, b) => (b.delta || 0) - (a.delta || 0)).slice(0, 3);
+    if (top.length) {
+      top.forEach((l, i) => {
+        const pl = players.find((x) => x.id === l.playerId);
+        const yy = 1064 + i * 44;
+        ctx.textAlign = 'left';
+        ctx.font = f(700, 20);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(pl ? pl.name : '—', PAD, yy);
+        ctx.font = f(500, 18);
+        ctx.fillStyle = 'rgba(255,255,255,.6)';
+        ctx.fillText(`${SKILL_LABEL[l.skill] || l.skill} ${l.before} → ${l.after}`, PAD + 140, yy);
+        ctx.font = f(800, 20);
+        ctx.fillStyle = '#d9ff4a';
+        ctx.textAlign = 'right';
+        ctx.fillText(`+${l.delta}`, W - PAD, yy);
+      });
+    } else {
+      ctx.textAlign = 'left';
+      ctx.font = f(500, 19);
+      ctx.fillStyle = 'rgba(255,255,255,.4)';
+      ctx.fillText('这次没有记录技能调整', PAD, 1064);
+    }
+
+    /* 下一次 */
+    sectionTitle(ctx, 1198, 'NEXT / 03', '下一次');
+    ctx.font = f(600, 20);
+    ctx.fillStyle = p.next ? '#ffffff' : 'rgba(255,255,255,.4)';
+    ctx.fillText(p.next
+      ? `${Number(p.next.date.slice(5, 7))}月${Number(p.next.date.slice(8, 10))}日 周${WEEK_CN[new Date(`${p.next.date}T00:00:00`).getDay()]} ${p.next.start || ''}`
+      : '还没排下一次训练', PAD, 1272);
+
+    /* 页脚 */
+    ctx.textAlign = 'center';
+    ctx.font = f(500, 14, true);
+    ctx.fillStyle = 'rgba(255,255,255,.3)';
+    ctx.fillText('GENERATED BY CAPTAIN · 信工院排球队', W / 2, H - 46);
+
+    const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+    return { dataURL: cv.toDataURL('image/png'), blob, canvas: cv };
+  }
+
+  window.XGYCard = { render, W, H };
+})();

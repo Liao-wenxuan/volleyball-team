@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-28 · r4'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-28 · r5'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -58,6 +58,7 @@
     dashboard: { title: '球队总览', kicker: 'TEAM OPS / OVERVIEW' },
     roster: { title: '人员管理', kicker: 'ROSTER / PLAYERS' },
     attendance: { title: '考勤管理', kicker: 'ATTENDANCE / WEEK' },
+    checkin: { title: '训练签到', kicker: 'CHECK-IN / FAST' },
     tactics: { title: '阵型板', kicker: 'FORMATION / COURT' },
     growth: { title: '成长计划', kicker: 'SKILLS / GROWTH' },
     ai: { title: 'AI 助手', kicker: 'AI COACH / ASSISTANT' }
@@ -296,7 +297,8 @@
     stackOpen: false,
     palette: [],
     paletteIndex: 0,
-    confirmResolver: null
+    confirmResolver: null,
+    checkin: { sid: null } // 训练签到页当前选中的那次训练
   };
 
   function save() {
@@ -2073,6 +2075,245 @@
 
   function importData() { $('#importFile').click(); }
 
+  /* ══════════ 训练签到（Check-in）：现场 5 秒记完一次考勤 ══════════
+     为什么单独开一页：原来这一步藏在「考勤页 → 选周 → 找日期 → 找格子」里，
+     训练现场掏出手机要 30 秒才记完。这里做成场景化单页：
+     点一下 = 出勤（再点取消），左滑 = 迟到，长按/点 ⋯ = 请假 / 缺席 / 清除。
+  ══════════════════════════════════════════════════════════════════ */
+  const CI_LONG = 450;  // 长按判定
+  const CI_SWIPE = 48;  // 横向滑动判定
+
+  function ciCandidates() {
+    const mon = getMonday(new Date());
+    ensureWeek(mon); // 本周没生成过训练就先生成，否则签到页是空的
+    const out = [];
+    [-1, 0, 1].forEach((off) => {
+      const arr = db.weeks[weekKey(addDays(mon, off * 7))];
+      if (Array.isArray(arr)) out.push(...arr);
+    });
+    return out.filter((s) => s && s.date).sort(sessionSort);
+  }
+
+  function ciPickDefault(list) {
+    if (!list.length) return null;
+    const today = dateKey(new Date());
+    return list.find((s) => s.date === today && s.status !== 'cancelled')
+      || list.find((s) => s.status !== 'cancelled' && s.date >= today)
+      || list.find((s) => s.status !== 'cancelled')
+      || list[0];
+  }
+
+  function ciSession() {
+    const list = ciCandidates();
+    return list.find((s) => s.id === state.checkin.sid) || null;
+  }
+
+  function ciSet(pid, next) {
+    const s = ciSession();
+    if (!s) return;
+    if (s.status === 'cancelled') { toast('这次训练已取消，不用签到', 'warn'); return; }
+    if (next) s.attendance[pid] = next; else delete s.attendance[pid];
+    s.updatedAt = Date.now();
+    save();
+    if (CloudOn()) {
+      const req = next
+        ? window.XGYCloud.push.attSet(s.id, pid, next)
+        : window.XGYCloud.push.attClear(s.id, pid);
+      cloudFire(req, () => window.XGYCloud.syncWeek(weekKey(getMonday(parseKey(s.date))), true).then(renderCheckin));
+    }
+    renderCheckin();
+    renderSidebar();
+  }
+
+  function ciOpenMenu(pid, anchor) {
+    document.querySelectorAll('.ci-menu').forEach((m) => m.remove());
+    const menu = document.createElement('div');
+    menu.className = 'ci-menu';
+    menu.innerHTML = ['present', 'late', 'leave', 'absent']
+      .map((k) => `<button type="button" data-st="${k}">${ATT_LABEL[k]}</button>`).join('')
+      + '<button type="button" data-st="" class="ci-clear">清除</button>';
+    document.body.appendChild(menu);
+    const r = anchor.getBoundingClientRect();
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    menu.style.left = `${Math.min(Math.max(8, r.left + r.width / 2 - mw / 2), window.innerWidth - mw - 8)}px`;
+    menu.style.top = `${Math.min(r.bottom + 6, window.innerHeight - mh - 8)}px`;
+    menu.querySelectorAll('button').forEach((b) => {
+      b.onclick = () => { ciSet(pid, b.dataset.st || ''); document.querySelectorAll('.ci-menu').forEach((m) => m.remove()); };
+    });
+    setTimeout(() => {
+      const away = (e) => {
+        if (e.target.closest('.ci-menu')) return;
+        document.querySelectorAll('.ci-menu').forEach((m) => m.remove());
+        document.removeEventListener('pointerdown', away);
+      };
+      document.addEventListener('pointerdown', away);
+    }, 0);
+  }
+
+  function ciBindCard(el) {
+    const pid = el.dataset.pid;
+    let sx = 0, sy = 0, timer = null, fired = false;
+    el.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      sx = e.clientX; sy = e.clientY; fired = false;
+      timer = setTimeout(() => { fired = true; ciOpenMenu(pid, el); }, CI_LONG);
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (fired) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.abs(dx) > CI_SWIPE && Math.abs(dx) > Math.abs(dy)) {
+        fired = true; clearTimeout(timer); ciSet(pid, 'late');
+      } else if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
+        clearTimeout(timer); // 当成滚动，不算点击
+      }
+    });
+    const stop = () => clearTimeout(timer);
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+    el.addEventListener('pointerleave', stop);
+    el.addEventListener('click', () => {
+      if (fired) { fired = false; return; }
+      const s = ciSession();
+      const cur = (s && s.attendance[pid]) || '';
+      ciSet(pid, cur === 'present' ? '' : 'present');
+    });
+    const more = el.querySelector('.ci-more');
+    if (more) more.onclick = (e) => { e.stopPropagation(); ciOpenMenu(pid, el); };
+  }
+
+  function renderCheckin() {
+    const box = $('#checkinBody');
+    if (!box) return;
+
+    if (!db.players.length) {
+      state.checkin.sid = null;
+      box.innerHTML = emptyState('🏐', '先添加队员', '没有队员就没法签到。先到人员管理添加第一名队员。',
+        '<button class="btn btn-primary" data-action="add-player">添加队员</button><button class="btn btn-ghost" data-goto="roster">去人员管理</button>');
+      const n = $('#navCheckinCount'); if (n) n.textContent = '';
+      return;
+    }
+
+    const list = ciCandidates();
+    if (!list.length) {
+      box.innerHTML = emptyState('📅', '还没有训练', '先到考勤管理生成本周的训练，然后回来签到。',
+        '<button class="btn btn-primary" data-goto="attendance">去考勤管理</button>');
+      const n = $('#navCheckinCount'); if (n) n.textContent = '';
+      return;
+    }
+
+    if (!state.checkin.sid || !list.some((s) => s.id === state.checkin.sid)) {
+      const d = ciPickDefault(list);
+      state.checkin.sid = d ? d.id : null;
+    }
+    const s = ciSession();
+    if (!s) return;
+
+    const chips = list.map((x) => {
+      const st = sessionStatus(x);
+      const c = sessionCounts(x);
+      const wd = WEEK_CN[parseKey(x.date).getDay()];
+      return `<button type="button" class="ci-chip${x.id === s.id ? ' on' : ''}" data-sid="${x.id}">
+        <b>${x.date.slice(5).replace('-', '.')} ${wd}</b><em>${x.start || ''}</em>
+        <i class="ci-chip-st ${st.cls}">${c.marked ? `${c.attended}/${db.players.length}` : st.text}</i>
+      </button>`;
+    }).join('');
+
+    const cards = db.players.map((p) => {
+      const st = s.attendance[p.id] || '';
+      const [a, b] = positionStyle(p.position);
+      return `<div class="ci-card ${st || 'unmarked'}" data-pid="${p.id}">
+        <span class="ci-avatar" style="--a:${a};--b:${b}">${esc(p.number ? String(p.number) : (p.name || '?')[0])}</span>
+        <b class="ci-name">${esc(p.name)}</b>
+        <em class="ci-pos">${esc(p.position || '—')}</em>
+        <span class="ci-badge">${ATT_LABEL[st] || '未登记'}</span>
+        <button type="button" class="ci-more" aria-label="更多状态">⋯</button>
+      </div>`;
+    }).join('');
+
+    const c = sessionCounts(s);
+    const unmarked = db.players.length - c.marked;
+    const st = sessionStatus(s);
+
+    box.innerHTML = `
+      <div class="ci-bar reveal">
+        <div class="ci-chips">${chips}</div>
+        <div class="ci-head">
+          <div><b>${esc(fmtDateCN(parseKey(s.date)))} ${esc(s.start || '')}${s.end ? '–' + esc(s.end) : ''}</b>
+            <em>${esc(st.text)}${s.venue ? ' · ' + esc(s.venue) : ''}</em></div>
+          <div class="ci-nums"><b>${c.attended}</b><span>到场</span><b>${unmarked}</b><span>未登记</span></div>
+        </div>
+      </div>
+      <div class="ci-grid reveal">${cards}</div>
+      <div class="ci-legend reveal">点一下 = 出勤（再点取消） · 左滑 = 迟到 · 长按或点 ⋯ = 请假 / 缺席</div>`;
+
+    box.querySelectorAll('.ci-card').forEach(ciBindCard);
+    box.querySelectorAll('.ci-chip').forEach((el) => {
+      el.onclick = () => { state.checkin.sid = el.dataset.sid; renderCheckin(); };
+    });
+
+    const n = $('#navCheckinCount');
+    if (n) { n.textContent = unmarked ? String(unmarked) : ''; n.classList.toggle('zero', !unmarked); }
+    refreshReveals();
+  }
+
+  async function ciAllPresent() {
+    const s = ciSession();
+    if (!s) { toast('先选一次训练', 'warn'); return; }
+    const ok = await confirmDialog({
+      title: '全部标记为出勤？',
+      message: `会把这次训练的所有队员都标成出勤，覆盖已有记录。`,
+      ok: '全部出勤', danger: false
+    });
+    if (!ok) return;
+    db.players.forEach((p) => { s.attendance[p.id] = 'present'; });
+    s.updatedAt = Date.now();
+    save();
+    if (CloudOn()) {
+      const reqs = db.players.map((p) => window.XGYCloud.push.attSet(s.id, p.id, 'present'));
+      cloudFire(Promise.all(reqs), () => window.XGYCloud.syncWeek(weekKey(getMonday(parseKey(s.date))), true).then(renderCheckin));
+    }
+    toast('已全部标记为出勤');
+    renderCheckin();
+    renderSidebar();
+  }
+
+  /* ══════════ 训练卡：一次训练一张可转发的图 ══════════ */
+  function nextSessionAfter(s) {
+    const all = [];
+    Object.values(db.weeks).forEach((arr) => { if (Array.isArray(arr)) all.push(...arr); });
+    all.sort(sessionSort);
+    const key = `${s.date}T${s.start || ''}`;
+    return all.find((x) => x.status !== 'cancelled' && `${x.date}T${x.start || ''}` > key) || null;
+  }
+
+  async function openTrainingCard(s) {
+    if (!s) return;
+    const card = await window.XGYCard.render({
+      team: '信工院排球队',
+      session: s,
+      players: db.players,
+      logs: db.skillLogs.filter((l) => l.date === s.date),
+      next: nextSessionAfter(s)
+    });
+    openModal('训练卡', `<div class="card-wrap">
+      <p class="share-hint">保存后直接发到队群。图片<b>在你自己手机上生成</b>，不经过任何服务器；手机上也可以长按图片保存。</p>
+      <img class="card-preview" src="${card.dataURL}" alt="训练卡预览">
+      <div class="share-foot"><button type="button" class="btn btn-primary" id="cardSave">保存图片</button><button type="button" class="btn btn-ghost" id="cardClose">关闭</button></div>
+    </div>`, { mid: true });
+    $('#cardClose').onclick = closeModal;
+    $('#cardSave').onclick = () => {
+      const url = URL.createObjectURL(card.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `训练卡-${s.date}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast('已保存到下载目录，去微信里发给大家吧');
+    };
+  }
+
   /* ══════════ 分享队伍动态（队员只读视图） ══════════ */
   // 全季考勤聚合：跳过取消的训练；只统计「已登记」的格子，未登记不算缺勤
   function sharePayload() {
@@ -2086,15 +2327,17 @@
         else if (st === 'leave') att.v += 1;
         else if (st === 'absent') att.a += 1;
       }));
-      return { n: p.name, pos: p.position, no: p.number || 0, att, sk: SKILLS.map((s) => p.skills[s.key] ?? 5) };
+      // 带 id：队员在分享页认领「我是谁」后，只渲染他自己那一档
+      return { id: p.id, n: p.name, pos: p.position, no: p.number || 0, att, sk: SKILLS.map((s) => p.skills[s.key] ?? 5) };
     });
     const sessions = Object.values(db.weeks).flat()
       .filter((s) => s && s.status !== 'cancelled')
       .sort((a, b) => sessionSort(b, a))
       .slice(0, 8)
       .map((s) => {
+        // st = 这次训练每人的状态，队员认领后能在「最近训练」里看到自己那一次是出勤还是请假
         const c = sessionCounts(s);
-        return { d: (s.date || '').slice(5), t: s.start || '', p: c.present, l: c.late, v: c.leave, a: c.absent };
+        return { d: (s.date || '').slice(5), t: s.start || '', p: c.present, l: c.late, v: c.leave, a: c.absent, st: s.attendance || {} };
       })
       .reverse(); // 视图里按时间正序展示
     return { v: 1, team: '信工院排球队', at: Date.now(), players, sessions };
@@ -2103,7 +2346,7 @@
   async function openShareModal() {
     if (!db.players.length) { toast('还没有队员，先录入队员再分享', 'warn'); return; }
     const body = `<div class="share-wrap">
-      <p class="share-hint">生成一个<b>只读链接</b>发给队员：打开就能看到自己的出勤率、全队技能雷达和最近训练。数据就编在链接里，<b>不上传任何服务器</b>。</p>
+      <p class="share-hint">生成一个<b>只读链接</b>发给队员：打开先认领「我是谁」，之后就只看自己的出勤率、技能雷达和最近训练。数据就编在链接里，<b>不上传任何服务器</b>。</p>
       <textarea id="shareLink" class="share-link" rows="4" readonly placeholder="生成中…"></textarea>
       <div class="share-meta mono" id="shareMeta"></div>
       <div class="share-note">
@@ -2571,6 +2814,7 @@
     if (page === 'dashboard') renderDashboard();
     if (page === 'roster') renderRoster();
     if (page === 'attendance') renderAttendance();
+    if (page === 'checkin') renderCheckin();
     if (page === 'tactics') renderTactics();
     if (page === 'growth') renderGrowth();
     if (page === 'ai') renderAiPage();
@@ -2590,6 +2834,7 @@
     if (state.page === 'dashboard') renderDashboard();
     if (state.page === 'roster') renderRoster();
     if (state.page === 'attendance') renderAttendance();
+    if (state.page === 'checkin') renderCheckin();
     if (state.page === 'tactics') renderTactics();
     if (state.page === 'growth') renderGrowth();
   }
@@ -2797,6 +3042,12 @@
     $('#attAddBtn').onclick = () => openSessionModal(null, getMonday(new Date()), { isNew: true });
     $('#attAddBtnPage').onclick = () => openSessionModal(null, state.weekMonday, { isNew: true });
     $('#allPresent').onclick = setAllPresent;
+    $('#ciAllPresent').onclick = ciAllPresent;
+    $('#ciCardBtn').onclick = () => {
+      const s = ciSession();
+      if (!s) { toast('先选一次训练', 'warn'); return; }
+      openTrainingCard(s);
+    };
     $('#attGrid').addEventListener('click', (e) => {
       const head = e.target.closest('.att-session-head');
       if (head) {

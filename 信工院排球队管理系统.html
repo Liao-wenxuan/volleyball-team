@@ -2232,24 +2232,6 @@ body.sv-mode > *:not(#shareView){display:none !important}
 .sv-sec h2{margin:14px 0 16px;font-size:clamp(26px,7.5vw,32px);font-weight:800;color:#fff;letter-spacing:.01em}
 .sv-empty{font-size:12px;color:var(--sv-mut);padding:14px 0 20px}
 
-/* 出勤列表 */
-.sv-list{display:flex;flex-direction:column;gap:2px;padding-bottom:14px}
-.sv-player{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"avatar main rate" "avatar counts counts";
-  align-items:center;gap:4px 12px;padding:12px 0;border-top:1px solid var(--sv-line)}
-.sv-player:first-child{border-top:0}
-.sv-avatar{grid-area:avatar;width:34px;height:34px;border-radius:2px;display:flex;align-items:center;justify-content:center;
-  font-size:14px;font-weight:800;color:#0d0e12;background:linear-gradient(135deg,var(--a),var(--b))}
-.sv-pmain{grid-area:main;min-width:0}
-.sv-prow{display:flex;align-items:baseline;gap:8px}
-.sv-prow b{font-size:14px;font-weight:700}
-.sv-prow em{font-style:normal;font-size:10.5px;color:var(--sv-mut)}
-.sv-pbar{margin-top:7px;height:3px;background:rgba(255,255,255,.1);border-radius:1px;overflow:hidden}
-.sv-pbar i{display:block;height:100%;background:var(--sv-lime);border-radius:1px}
-.sv-prate{grid-area:rate;text-align:right}
-.sv-prate b{display:block;font-size:16px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
-.sv-prate span{font-size:9px;color:var(--sv-mut)}
-.sv-pcounts{grid-area:counts;display:flex;gap:10px;font-size:10px;color:var(--sv-mut);font-variant-numeric:tabular-nums}
-
 /* 雷达 */
 .sv-radar-wrap{display:flex;justify-content:center;padding:6px 0 2px}
 .sv-radar{width:min(300px,86vw);height:auto}
@@ -2260,23 +2242,113 @@ body.sv-mode > *:not(#shareView){display:none !important}
 .sv-radar-label{font-size:10px;fill:var(--sv-mut);font-family:inherit}
 .sv-note{text-align:center;margin:2px 0 16px}
 
-/* 最近训练 */
-.sv-sessions{padding-bottom:14px}
-.sv-session{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;
+/* 认领名单 */
+.sv-avatar{width:34px;height:34px;border-radius:2px;flex:none;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800;color:#0d0e12;background:linear-gradient(135deg,var(--a),var(--b))}
+/* 认领名单 */
+.sv-pick{display:flex;flex-direction:column;gap:2px;padding-bottom:16px}
+.sv-pick-btn{display:flex;align-items:center;gap:12px;width:100%;padding:12px 0;border:0;border-top:1px solid var(--sv-line);
+  background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.sv-pick-btn:first-child{border-top:0}
+.sv-pick-btn:active{background:rgba(255,255,255,.04)}
+.sv-pick-txt b{display:block;font-size:14px;font-weight:700}
+.sv-pick-txt em{display:block;font-style:normal;font-size:10.5px;color:var(--sv-mut);margin-top:2px}
+
+/* 我的出勤时间线 */
+.sv-tl{padding-bottom:14px}
+.sv-tl-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;
   padding:11px 0;border-top:1px solid var(--sv-line);font-size:12px}
-.sv-session:first-child{border-top:0}
-.sv-sdate{color:var(--sv-lime);font-size:11px;letter-spacing:.08em}
-.sv-stime{color:var(--sv-mut)}
-.sv-scount{color:var(--sv-ink);font-variant-numeric:tabular-nums}
-.sv-srate{font-weight:800;color:#fff;font-variant-numeric:tabular-nums;text-align:right}
+.sv-tl-row:first-child{border-top:0}
+.sv-tl-badge{padding:3px 9px;border-radius:2px;font-size:10.5px;letter-spacing:.04em;
+  background:rgba(255,255,255,.07);color:var(--sv-mut)}
+.sv-tl-badge.ok{background:rgba(217,255,74,.16);color:var(--sv-lime)}
+.sv-tl-badge.late{background:rgba(255,183,77,.16);color:#ffb74d}
+.sv-tl-badge.leave{background:rgba(120,160,255,.16);color:#8fb0ff}
+.sv-tl-badge.off{background:rgba(255,107,107,.16);color:#ff6b6b}
+
+/* 页脚换人 */
+.sv-switch{margin-top:14px;padding:9px 18px;border-radius:2px;border:1px solid var(--sv-line);
+  background:none;color:var(--sv-mut);font:inherit;font-size:11px;cursor:pointer}
+.sv-switch:active{background:rgba(255,255,255,.06)}
 
 /* 页脚 */
+
 .sv-foot{padding:22px 18px 30px;text-align:center}
 .sv-foot p{margin:0 0 8px;font-size:11px;color:var(--sv-mut)}
 
 /* 分享页：链接失效时的 hero（没有下半部分，补足底部留白） */
 .sv-hero-err{padding-bottom:34px}
 .sv-hero-err .sv-hero-mid{margin-top:18px}
+
+/* ══════════ 训练签到页（Check-in） ══════════
+   现场用：卡片够大、手势够少、状态一眼能看清 */
+.ci-bar{margin-bottom:18px}
+.ci-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.ci-chip{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 14px;border-radius:12px;
+  border:1px solid var(--line);background:var(--ov020);color:var(--text-2);cursor:pointer;text-align:left;font:inherit}
+.ci-chip b{font-size:12.5px;font-weight:600;color:var(--text)}
+.ci-chip em{font-style:normal;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ci-chip-st{font-style:normal;font-size:10px;color:var(--muted)}
+.ci-chip-st.cancelled{color:var(--red)}
+.ci-chip.on{border-color:var(--violet);background:linear-gradient(135deg,rgba(var(--violet-rgb),.16),rgba(var(--cyan-rgb),.1))}
+.ci-chip.on b{color:var(--text)}
+.ci-chip.on .ci-chip-st{color:var(--violet-2)}
+
+.ci-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-top:14px;
+  padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--ov020)}
+.ci-head b{display:block;font-size:14px;font-weight:600}
+.ci-head em{display:block;font-style:normal;margin-top:3px;font-size:11px;color:var(--muted)}
+.ci-nums{display:flex;align-items:baseline;gap:6px;flex:none}
+.ci-nums b{font-size:22px;font-weight:700;color:var(--violet-2);font-variant-numeric:tabular-nums}
+.ci-nums span{font-size:10.5px;color:var(--muted);margin-right:10px}
+
+.ci-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px}
+.ci-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px 12px;
+  border-radius:16px;border:1px solid var(--line);background:var(--ov020);cursor:pointer;
+  transition:transform .18s var(--ease),border-color .18s,background .18s;
+  -webkit-user-select:none;user-select:none;touch-action:pan-y}
+.ci-card:active{transform:scale(.96)}
+.ci-avatar{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:800;color:#0b0d16;background:linear-gradient(135deg,var(--a),var(--b));
+  box-shadow:0 6px 18px -8px var(--a)}
+.ci-name{font-size:13px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ci-pos{font-style:normal;font-size:10px;color:var(--muted)}
+.ci-badge{margin-top:2px;padding:3px 10px;border-radius:99px;font-size:10.5px;
+  background:var(--ov040);color:var(--muted);border:1px solid var(--line)}
+.ci-more{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:8px;border:0;
+  background:transparent;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;opacity:.55}
+.ci-more:hover{opacity:1;background:var(--ov040)}
+
+.ci-card.present{border-color:rgba(55,227,155,.35);background:rgba(55,227,155,.07)}
+.ci-card.present .ci-badge{background:rgba(55,227,155,.16);color:#8fdcba;border-color:rgba(55,227,155,.3)}
+.ci-card.late{border-color:rgba(255,187,85,.35);background:rgba(255,187,85,.07)}
+.ci-card.late .ci-badge{background:rgba(255,187,85,.16);color:#ffd79a;border-color:rgba(255,187,85,.3)}
+.ci-card.leave{border-color:rgba(var(--violet-rgb),.35);background:rgba(var(--violet-rgb),.08)}
+.ci-card.leave .ci-badge{background:rgba(var(--violet-rgb),.16);color:var(--violet-2);border-color:rgba(var(--violet-rgb),.3)}
+.ci-card.absent{border-color:rgba(255,107,138,.35);background:rgba(255,107,138,.07)}
+.ci-card.absent .ci-badge{background:rgba(255,107,138,.16);color:#ffb0c1;border-color:rgba(255,107,138,.3)}
+.ci-card.absent .ci-avatar{opacity:.5}
+.ci-card.present .ci-avatar{box-shadow:0 6px 18px -8px var(--a),0 0 0 3px rgba(55,227,155,.35)}
+
+.ci-legend{margin-top:14px;font-size:11px;color:var(--muted);line-height:1.8}
+
+.ci-menu{position:fixed;z-index:200;display:flex;flex-direction:column;min-width:104px;padding:5px;border-radius:12px;
+  border:1px solid var(--line);background:var(--solid);box-shadow:0 24px 50px -20px #000}
+.ci-menu button{padding:8px 12px;border:0;border-radius:8px;background:none;color:var(--text);
+  font:inherit;font-size:12.5px;text-align:left;cursor:pointer}
+.ci-menu button:hover{background:var(--ov040)}
+.ci-menu .ci-clear{color:var(--muted);border-top:1px solid var(--line);border-radius:0;margin-top:3px}
+.nav-count.zero{display:none}
+
+@media (max-width:560px){
+  .ci-grid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+  .ci-card{padding:13px 8px 10px;border-radius:14px}
+  .ci-avatar{width:40px;height:40px;font-size:15px}
+}
+
+/* ══════════ 训练卡弹窗 ══════════ */
+.card-wrap{padding:2px}
+.card-preview{display:block;width:100%;max-width:360px;margin:0 auto;border-radius:14px;border:1px solid var(--line)}
 
 </style>
 </head>
@@ -2307,6 +2379,10 @@ body.sv-mode > *:not(#shareView){display:none !important}
     <button class="nav-item" data-page="attendance">
       <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 15.5 2 2 4-4"/></svg></span>
       <span>考勤管理</span>
+    </button>
+    <button class="nav-item" data-page="checkin">
+      <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/><path d="M20 14V6h-8"/></svg></span>
+      <span>训练签到</span><i class="nav-count" id="navCheckinCount">0</i>
     </button>
     <button class="nav-item" data-page="tactics">
       <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M12 4v16"/></svg></span>
@@ -2702,6 +2778,21 @@ body.sv-mode > *:not(#shareView){display:none !important}
     </section>
 
     <!-- ══════════ 阵型板 ══════════ -->
+    <section class="page" id="page-checkin" aria-label="训练签到">
+      <div class="page-head reveal">
+        <div>
+          <div class="eyebrow">CHECK-IN / FAST</div>
+          <h2>训练签到</h2>
+          <p>训练现场用：点一下出勤，左滑迟到，长按选请假/缺席。一次训练 5 秒记完。</p>
+        </div>
+        <div class="page-head-actions">
+          <button class="btn btn-ghost magnetic" id="ciAllPresent"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>全部出勤</button>
+          <button class="btn btn-primary magnetic" id="ciCardBtn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M12 4v16"/></svg>生成训练卡</button>
+        </div>
+      </div>
+      <div id="checkinBody"></div>
+    </section>
+
     <section class="page" id="page-tactics" aria-label="阵型板">
       <div class="page-head reveal">
         <div>
@@ -3205,6 +3296,285 @@ body.sv-mode > *:not(#shareView){display:none !important}
 </script>
 <script>
 /* ═══════════════════════════════════════════════════════════════
+ * card.js — 训练卡（一次训练一张可转发的图）
+ *
+ * 为什么手写 canvas 而不是 DOM 截图：
+ *   1. 项目是「零依赖 + 单文件双击可用」，引 html2canvas 就破功
+ *   2. 卡片是固定版式，手绘比截图库更可控（不会踩字体加载、离屏渲染的坑）
+ *
+ * 只做一件事：
+ *   render(payload) → 画到 750×1334 的 canvas，返回 { dataURL, blob }
+ *   UI（弹窗 / 保存按钮）留在 app.js，本文件不碰界面
+ *
+ * payload = {
+ *   team, session:{date,start,end,venue,attendance},
+ *   players:[{id,name,number,position}],
+ *   logs:[{playerId,skill,before,after,delta}],
+ *   next:{date,start} | null
+ * }
+ * ═══════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  const W = 750, H = 1334, PAD = 60;
+  const SKILL_LABEL = { serve: '发球', receive: '一传', set: '二传', spike: '扣球', block: '拦网', defense: '防守' };
+  const ROLE_STYLE = {
+    '主攻': ['#ff8a5c', '#ffc46b'],
+    '副攻': ['#7b6cff', '#4aa8ff'],
+    '二传': ['#46e0ff', '#37e39b'],
+    '接应': ['#fb7299', '#ff9d6e'],
+    '自由人': ['#37e39b', '#b8f06a']
+  };
+  const FRONT = ['二传', '副攻', '接应']; // 画在靠网那一排
+  const WEEK_CN = ['日', '一', '二', '三', '四', '五', '六'];
+  const FONT = '"PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif';
+  const MONO = '"Cascadia Code",ui-monospace,Consolas,monospace';
+
+  const f = (w, size, mono) => `${w} ${size}px ${mono ? MONO : FONT}`;
+
+  function rr(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // 中文没有词边界，按字宽逐字断行
+  function wrap(ctx, text, maxW) {
+    const lines = [];
+    let cur = '';
+    for (const ch of String(text)) {
+      if (cur && ctx.measureText(cur + ch).width > maxW) { lines.push(cur); cur = ch; }
+      else cur += ch;
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  function bg(ctx) {
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, '#121729');
+    g.addColorStop(1, '#05070f');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    const r = ctx.createRadialGradient(W - 60, 40, 0, W - 60, 40, 420);
+    r.addColorStop(0, 'rgba(123,108,255,.22)');
+    r.addColorStop(1, 'rgba(123,108,255,0)');
+    ctx.fillStyle = r;
+    ctx.fillRect(0, 0, W, 520);
+  }
+
+  function court(ctx, x, y, w, h) {
+    rr(ctx, x, y, w, h, 22);
+    const g = ctx.createLinearGradient(x, y, x, y + h);
+    g.addColorStop(0, '#1a2244');
+    g.addColorStop(1, '#0e1424');
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.16)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const netY = y + h * 0.075;
+    ctx.strokeStyle = 'rgba(255,255,255,.5)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x + 40, netY);
+    ctx.lineTo(x + w - 40, netY);
+    ctx.stroke();
+
+    ctx.setLineDash([12, 10]);
+    ctx.strokeStyle = 'rgba(255,255,255,.22)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 26, netY + h * 0.30);
+    ctx.lineTo(x + w - 26, netY + h * 0.30);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.strokeStyle = 'rgba(255,255,255,.1)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2, netY);
+    ctx.lineTo(x + w / 2, y + h - 20);
+    ctx.stroke();
+  }
+
+  function playerDot(ctx, p, cx, cy, state) {
+    const r = 27;
+    const [c1, c2] = ROLE_STYLE[p.position] || ['#7b6cff', '#46e0ff'];
+    const g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+    g.addColorStop(0, c1);
+    g.addColorStop(1, c2);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = state === 'late' ? '#ffbb55' : 'rgba(255,255,255,.35)';
+    ctx.stroke();
+
+    ctx.fillStyle = '#0b0d16';
+    ctx.font = f(800, 20);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(p.number || (p.name || '?')[0]), cx, cy + 1);
+
+    ctx.fillStyle = 'rgba(255,255,255,.92)';
+    ctx.font = f(600, 17);
+    ctx.fillText(p.name || '', cx, cy + r + 20);
+  }
+
+  function sectionTitle(ctx, monoY, mono, cn) {
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = f(500, 15, true);
+    ctx.fillStyle = 'rgba(217,255,74,.85)';
+    ctx.fillText(mono, PAD, monoY);
+    ctx.font = f(700, 26);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(cn, PAD, monoY + 34);
+  }
+
+  async function render(payload) {
+    const p = payload || {};
+    const s = p.session || {};
+    const players = Array.isArray(p.players) ? p.players : [];
+    const att = s.attendance || {};
+    const logs = Array.isArray(p.logs) ? p.logs : [];
+
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    bg(ctx);
+
+    const d = s.date ? new Date(`${s.date}T00:00:00`) : new Date();
+    const attended = players.filter((x) => att[x.id] === 'present' || att[x.id] === 'late');
+    const marked = players.filter((x) => att[x.id]);
+    const rate = marked.length ? Math.round((attended.length / marked.length) * 100) : null;
+
+    /* 头部 */
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = f(500, 15, true);
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.fillText('XGY VOLLEYBALL · TRAINING CARD', PAD, 86);
+
+    ctx.font = f(800, 40);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(p.team || '信工院排球队', PAD, 136);
+
+    ctx.font = f(500, 21);
+    ctx.fillStyle = 'rgba(255,255,255,.62)';
+    const head2 = `${d.getMonth() + 1}月${d.getDate()}日 周${WEEK_CN[d.getDay()]} · ${s.start || ''}${s.end ? '–' + s.end : ''}${s.venue ? ' · ' + s.venue : ''}`;
+    ctx.fillText(head2, PAD, 176);
+
+    /* 到场率 */
+    const rateTxt = rate == null ? '—' : rate + '%';
+    ctx.font = f(800, 76);
+    ctx.fillStyle = '#d9ff4a';
+    ctx.fillText(rateTxt, PAD, 268);
+    ctx.font = f(600, 19);
+    ctx.fillStyle = 'rgba(255,255,255,.6)';
+    ctx.textAlign = 'right';
+    ctx.fillText(`到场 ${attended.length} / 登记 ${marked.length} / 全队 ${players.length}`, W - PAD, 262);
+    ctx.textAlign = 'left';
+
+    /* 战术板：把到场的人按前排/后排摆上去 */
+    const cx0 = PAD, cy0 = 300, cw = W - PAD * 2, ch = 480;
+    court(ctx, cx0, cy0, cw, ch);
+    const front = attended.filter((x) => FRONT.indexOf(x.position) >= 0);
+    const back = attended.filter((x) => FRONT.indexOf(x.position) < 0);
+    const place = (group, ry) => {
+      group.forEach((pl, i) => {
+        const x = cx0 + (cw * (i + 1)) / (group.length + 1);
+        playerDot(ctx, pl, x, cy0 + ch * ry, att[pl.id]);
+      });
+    };
+    place(front, 0.30);
+    place(back, 0.78);
+
+    if (!attended.length) {
+      ctx.textAlign = 'center';
+      ctx.font = f(600, 22);
+      ctx.fillStyle = 'rgba(255,255,255,.4)';
+      ctx.fillText('这次还没有人登记', cx0 + cw / 2, cy0 + ch / 2);
+      ctx.textAlign = 'left';
+    }
+
+    /* 没来的 */
+    sectionTitle(ctx, 826, 'ABSENT / 01', '没来的');
+    const out = players.filter((x) => att[x.id] === 'leave' || att[x.id] === 'absent');
+    const noMark = players.filter((x) => !att[x.id]);
+    ctx.font = f(500, 19);
+    if (out.length) {
+      ctx.fillStyle = 'rgba(255,255,255,.72)';
+      const txt = out.map((x) => `${x.name}（${att[x.id] === 'leave' ? '请假' : '缺席'}）`).join('、');
+      wrap(ctx, txt, W - PAD * 2).slice(0, 2).forEach((ln, i) => ctx.fillText(ln, PAD, 900 + i * 30));
+    } else {
+      ctx.fillStyle = 'rgba(217,255,74,.9)';
+      ctx.fillText('全员到场，一个没缺', PAD, 900);
+    }
+    if (noMark.length) {
+      ctx.fillStyle = 'rgba(255,255,255,.34)';
+      ctx.font = f(500, 17);
+      const t2 = `未登记：${noMark.map((x) => x.name).join('、')}`;
+      wrap(ctx, t2, W - PAD * 2).slice(0, 2).forEach((ln, i) => ctx.fillText(ln, PAD, 938 + i * 26));
+    }
+
+    /* 这次的进步 */
+    sectionTitle(ctx, 986, 'GROWTH / 02', '这次的进步');
+    const top = logs.slice().sort((a, b) => (b.delta || 0) - (a.delta || 0)).slice(0, 3);
+    if (top.length) {
+      top.forEach((l, i) => {
+        const pl = players.find((x) => x.id === l.playerId);
+        const yy = 1064 + i * 44;
+        ctx.textAlign = 'left';
+        ctx.font = f(700, 20);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(pl ? pl.name : '—', PAD, yy);
+        ctx.font = f(500, 18);
+        ctx.fillStyle = 'rgba(255,255,255,.6)';
+        ctx.fillText(`${SKILL_LABEL[l.skill] || l.skill} ${l.before} → ${l.after}`, PAD + 140, yy);
+        ctx.font = f(800, 20);
+        ctx.fillStyle = '#d9ff4a';
+        ctx.textAlign = 'right';
+        ctx.fillText(`+${l.delta}`, W - PAD, yy);
+      });
+    } else {
+      ctx.textAlign = 'left';
+      ctx.font = f(500, 19);
+      ctx.fillStyle = 'rgba(255,255,255,.4)';
+      ctx.fillText('这次没有记录技能调整', PAD, 1064);
+    }
+
+    /* 下一次 */
+    sectionTitle(ctx, 1198, 'NEXT / 03', '下一次');
+    ctx.font = f(600, 20);
+    ctx.fillStyle = p.next ? '#ffffff' : 'rgba(255,255,255,.4)';
+    ctx.fillText(p.next
+      ? `${Number(p.next.date.slice(5, 7))}月${Number(p.next.date.slice(8, 10))}日 周${WEEK_CN[new Date(`${p.next.date}T00:00:00`).getDay()]} ${p.next.start || ''}`
+      : '还没排下一次训练', PAD, 1272);
+
+    /* 页脚 */
+    ctx.textAlign = 'center';
+    ctx.font = f(500, 14, true);
+    ctx.fillStyle = 'rgba(255,255,255,.3)';
+    ctx.fillText('GENERATED BY CAPTAIN · 信工院排球队', W / 2, H - 46);
+
+    const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+    return { dataURL: cv.toDataURL('image/png'), blob, canvas: cv };
+  }
+
+  window.XGYCard = { render, W, H };
+})();
+
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
  * share.js — 队员只读视图（队伍动态分享页）
  *
  * 纯前端、零后端：
@@ -3214,12 +3584,19 @@ body.sv-mode > *:not(#shareView){display:none !important}
  *   置 __XGY_SHARE_MODE，主应用直接跳过初始化；然后解码并把
  *   只读视图渲染进 #shareView，其余界面元素全部隐藏
  *
+ * 隐私口径：链接里带着全队数据（队长一个人管，没必要拆成 N 条链接），
+ * 但**页面上只显示本人**——队员第一次打开要先认领「我是谁」，
+ * 认领结果存在本机 localStorage（不随链接走），之后直接进自己的档案。
+ * 想看别人必须点「换个人」重新认领，不会一打开就把全队摊开。
+ *
  * 编码格式：首字符是版本标记
  *   '1' = deflate-raw 压缩（CompressionStream，现代浏览器都支持）
  *   '0' = 未压缩 JSON（老浏览器兜底，编码侧只在不支持压缩时用）
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
+
+  const SELF_KEY = 'xgy_share_self'; // 本机记住「我是谁」，不随链接走
 
   /* ══════════ base64url + 压缩编解码 ══════════ */
   function b64url(bytes) {
@@ -3277,6 +3654,8 @@ body.sv-mode > *:not(#shareView){display:none !important}
     '接应': ['#fb7299', '#ff9d6e'],
     '自由人': ['#37e39b', '#b8f06a']
   };
+  const ST_LABEL = { present: '出勤', late: '迟到', leave: '请假', absent: '缺席' };
+  const ST_CLS = { present: 'ok', late: 'late', leave: 'leave', absent: 'off' };
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
   ));
@@ -3328,149 +3707,178 @@ body.sv-mode > *:not(#shareView){display:none !important}
     </svg>`;
   }
 
-  /* ══════════ 视图渲染 ══════════ */
-  function playerRow(p) {
-    const [a, b] = ROLE_STYLE[p.pos] || ['#7b6cff', '#46e0ff'];
-    const r = rateOf(p.att);
-    return `<div class="sv-player">
-      <span class="sv-avatar" style="--a:${a};--b:${b}">${esc((p.n || '?')[0])}</span>
-      <div class="sv-pmain">
-        <div class="sv-prow"><b>${esc(p.n)}</b><em>${esc(p.pos)}${p.no ? ' · #' + esc(p.no) : ''}</em></div>
-        <div class="sv-pbar"><i style="width:${r == null ? 0 : r}%"></i></div>
-      </div>
-      <div class="sv-prate"><b>${r == null ? '—' : r + '%'}</b><span>出勤率</span></div>
-      <div class="sv-pcounts">
-        <span>出 ${p.att.p || 0}</span><span>迟 ${p.att.l || 0}</span>
-        <span>请 ${p.att.v || 0}</span><span>缺 ${p.att.a || 0}</span>
-      </div>
-    </div>`;
-  }
-
-  function sessionRow(s) {
-    const marked = (s.p || 0) + (s.l || 0) + (s.v || 0) + (s.a || 0);
-    const r = marked ? Math.round((((s.p || 0) + (s.l || 0)) / marked) * 100) : null;
-    return `<div class="sv-session">
-      <span class="sv-sdate mono">${esc(s.d)}</span>
-      <span class="sv-stime">${esc(s.t || '')}</span>
-      <span class="sv-scount">${marked ? `到场 ${(s.p || 0) + (s.l || 0)}/${marked}` : '未登记'}</span>
-      <span class="sv-srate">${r == null ? '—' : r + '%'}</span>
-    </div>`;
-  }
-
   function fmtSnapshot(at) {
     const d = new Date(at);
     const p2 = (n) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
   }
 
-  function render(data) {
-    const players = Array.isArray(data.players) ? data.players : [];
-    const sessions = Array.isArray(data.sessions) ? data.sessions : [];
-    const team = data.team || '信工院排球队';
-
-    const totals = { p: 0, l: 0, v: 0, a: 0 };
-    players.forEach((pl) => {
-      totals.p += pl.att.p || 0; totals.l += pl.att.l || 0;
-      totals.v += pl.att.v || 0; totals.a += pl.att.a || 0;
-    });
-    const teamRate = rateOf(totals);
-    const avgSkills = [0, 1, 2, 3, 4, 5].map((i) => {
-      if (!players.length) return 0;
-      const sum = players.reduce((acc, pl) => acc + (Number((pl.sk || [])[i]) || 0), 0);
-      return Math.round((sum / players.length) * 10) / 10;
-    });
-    const perfect = players.filter((pl) => {
-      const m = (pl.att.p || 0) + (pl.att.l || 0) + (pl.att.v || 0) + (pl.att.a || 0);
-      return m > 0 && pl.att.p === m;
-    }).length;
-
-    // 复用主应用内嵌的排球 logo（不重复打包 base64）
-    const logoSrc = (document.querySelector('.brand-img') || {}).src || '';
-
+  function shell(team, inner) {
+    const logo = (document.querySelector('.brand-img') || {}).src || '';
     const el = document.createElement('div');
     el.id = 'shareView';
     el.innerHTML = `
       <div class="sv-bar">
-        ${logoSrc ? `<img class="sv-logo" src="${logoSrc}" alt="" aria-hidden="true">` : ''}
+        ${logo ? `<img class="sv-logo" src="${logo}" alt="" aria-hidden="true">` : ''}
         <span class="sv-bar-txt"><strong>${esc(team)}</strong><em>TEAM FEED · SNAPSHOT</em></span>
-      </div>
+      </div>${inner}`;
+    document.body.classList.add('sv-mode');
+    const prev = document.getElementById('shareView');
+    if (prev) prev.remove();
+    document.body.appendChild(el);
+    return el;
+  }
 
+  /* ══════════ 认领：你是谁 ══════════ */
+  function renderPicker(data) {
+    const el = shell(data.team || '信工院排球队', `
       <section class="sv-hero">
         <div class="sv-hero-top mono">
           <span><i class="sv-dot"></i>TEAM SIGNAL · LIVE</span>
           <span>XGY · VB</span>
         </div>
         <h1 class="sv-h1">
-          <span class="sv-line">每一次到场</span>
-          <span class="sv-line">都<em>算数。</em></span>
+          <span class="sv-line">先认领</span>
+          <span class="sv-line">你是<em>谁。</em></span>
         </h1>
         <div class="sv-hero-mid">
           <div class="sv-hero-copy">
-            <span class="mono">TRAIN → RECORD → GROW</span>
-            <p>${players.length} 名队员 · ${sessions.length ? `最近 ${sessions.length} 次训练` : '训练数据同步中'}${teamRate != null ? ` · 出勤率 ${teamRate}%` : ''}</p>
+            <span class="mono">PICK → YOUR NAME</span>
+            <p>只显示你自己的出勤和技能，别人的数据不会摊开。选一次，下次打开直接进。</p>
           </div>
           <div class="sv-burst" aria-hidden="true">
             <i style="--r:0deg"></i><i style="--r:45deg"></i><i style="--r:90deg"></i><i style="--r:135deg"></i><b></b>
           </div>
         </div>
-        <div class="sv-hero-foot mono">
-          <span>EVERY PRACTICE COUNTS.</span>
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v14M6 12l6 6 6-6"/></svg>
+        <div class="sv-scan" aria-hidden="true"></div>
+        <div class="sv-halo" aria-hidden="true"></div>
+      </section>
+      <section class="sv-sec">
+        <div class="sv-sec-head mono"><span>ROSTER / ${data.players.length}</span><i>+</i></div>
+        <h2>点一下你的名字。</h2>
+        <div class="sv-pick">
+          ${data.players.map((p) => {
+            const [a, b] = ROLE_STYLE[p.pos] || ['#7b6cff', '#46e0ff'];
+            return `<button type="button" class="sv-pick-btn" data-pid="${esc(p.id)}">
+              <span class="sv-avatar" style="--a:${a};--b:${b}">${esc((p.n || '?')[0])}</span>
+              <span class="sv-pick-txt"><b>${esc(p.n)}</b><em>${esc(p.pos)}${p.no ? ' · #' + esc(p.no) : ''}</em></span>
+            </button>`;
+          }).join('')}
+        </div>
+      </section>
+      <footer class="sv-foot">
+        <p>数据快照 · ${esc(fmtSnapshot(data.at || Date.now()))}</p>
+        <p class="mono">GENERATED BY CAPTAIN · NO SIGN-UP NEEDED</p>
+      </footer>`);
+    document.title = `${data.team || '信工院排球队'} · 队伍动态`;
+    el.querySelectorAll('.sv-pick-btn').forEach((btn) => {
+      btn.onclick = () => {
+        try { localStorage.setItem(SELF_KEY, btn.dataset.pid); } catch (e) { /* 隐私模式下忽略 */ }
+        const me = data.players.find((p) => p.id === btn.dataset.pid);
+        if (me) renderSelf(data, me);
+      };
+    });
+    return el;
+  }
+
+  /* ══════════ 本人档案 ══════════ */
+  function renderSelf(data, me) {
+    const r = rateOf(me.att);
+    const marked = (me.att.p || 0) + (me.att.l || 0) + (me.att.v || 0) + (me.att.a || 0);
+    const teamAtt = data.players.reduce((acc, p) => {
+      acc.p += p.att.p || 0; acc.l += p.att.l || 0; acc.v += p.att.v || 0; acc.a += p.att.a || 0;
+      return acc;
+    }, { p: 0, l: 0, v: 0, a: 0 });
+    const teamRate = rateOf(teamAtt);
+
+    const timeline = (data.sessions || []).map((s) => {
+      const st = (s.st || {})[me.id] || '';
+      return `<div class="sv-tl-row">
+        <span class="sv-sdate mono">${esc(s.d)}</span>
+        <span class="sv-stime">${esc(s.t || '')}</span>
+        <span class="sv-tl-badge ${ST_CLS[st] || 'none'}">${st ? ST_LABEL[st] : '未登记'}</span>
+      </div>`;
+    }).join('');
+
+    const el = shell(data.team || '信工院排球队', `
+      <section class="sv-hero">
+        <div class="sv-hero-top mono">
+          <span><i class="sv-dot"></i>MY FEED · ${esc(me.pos || '')}</span>
+          <span>${esc(me.no ? '#' + me.no : 'XGY')}</span>
+        </div>
+        <h1 class="sv-h1">
+          <span class="sv-line">${esc(me.n)}</span>
+          <span class="sv-line">出勤<em>${r == null ? '—' : r + '%'}</em></span>
+        </h1>
+        <div class="sv-hero-mid">
+          <div class="sv-hero-copy">
+            <span class="mono">TRAIN → RECORD → GROW</span>
+            <p>共登记 ${marked} 次训练 · 出 ${me.att.p || 0} · 迟 ${me.att.l || 0} · 请 ${me.att.v || 0} · 缺 ${me.att.a || 0}</p>
+          </div>
+          <div class="sv-burst" aria-hidden="true">
+            <i style="--r:0deg"></i><i style="--r:45deg"></i><i style="--r:90deg"></i><i style="--r:135deg"></i><b></b>
+          </div>
         </div>
         <div class="sv-scan" aria-hidden="true"></div>
         <div class="sv-halo" aria-hidden="true"></div>
       </section>
 
       <section class="sv-stats">
-        <div class="sv-stat"><b>${players.length}</b><span>队员</span></div>
-        <div class="sv-stat"><b>${sessions.length}</b><span>近期训练</span></div>
-        <div class="sv-stat"><b>${teamRate == null ? '—' : teamRate + '%'}</b><span>出勤率</span></div>
-        <div class="sv-stat"><b>${perfect}</b><span>全勤</span></div>
+        <div class="sv-stat"><b>${r == null ? '—' : r + '%'}</b><span>我的出勤</span></div>
+        <div class="sv-stat"><b>${(me.att.p || 0) + (me.att.l || 0)}</b><span>到场次数</span></div>
+        <div class="sv-stat"><b>${me.att.l || 0}</b><span>迟到</span></div>
+        <div class="sv-stat"><b>${teamRate == null ? '—' : teamRate + '%'}</b><span>全队出勤</span></div>
       </section>
 
       <section class="sv-sec">
-        <div class="sv-sec-head mono"><span>ATTENDANCE / 01</span><i>+</i></div>
-        <h2>出勤总览。</h2>
-        <div class="sv-list">${players.map(playerRow).join('') || '<p class="sv-empty">还没有队员数据</p>'}</div>
+        <div class="sv-sec-head mono"><span>MY SKILLS / 01</span><i>+</i></div>
+        <h2>我的六项。</h2>
+        <div class="sv-radar-wrap">${radarSVG(me.sk || [5, 5, 5, 5, 5, 5], 300)}</div>
+        <p class="sv-note mono">0–10 SCALE · ${esc(me.n)}</p>
       </section>
 
       <section class="sv-sec">
-        <div class="sv-sec-head mono"><span>SKILLS / 02</span><i>+</i></div>
-        <h2>技能全景。</h2>
-        <div class="sv-radar-wrap">${radarSVG(avgSkills, 300)}</div>
-        <p class="sv-note mono">TEAM AVERAGE · 0–10 SCALE</p>
-      </section>
-
-      <section class="sv-sec">
-        <div class="sv-sec-head mono"><span>RECENT / 03</span><i>+</i></div>
+        <div class="sv-sec-head mono"><span>MY RECORD / 02</span><i>+</i></div>
         <h2>最近训练。</h2>
-        <div class="sv-sessions">${sessions.map(sessionRow).join('') || '<p class="sv-empty">还没有训练记录</p>'}</div>
+        <div class="sv-tl">${timeline || '<p class="sv-empty">还没有训练记录</p>'}</div>
       </section>
 
       <footer class="sv-foot">
         <p>数据快照 · ${esc(fmtSnapshot(data.at || Date.now()))}</p>
         <p class="mono">GENERATED BY CAPTAIN · NO SIGN-UP NEEDED</p>
-      </footer>`;
+        <button type="button" class="sv-switch" id="svSwitch">换个人 / 看错了</button>
+      </footer>`);
+    document.title = `${me.n} · 我的训练档案`;
+    const sw = document.getElementById('svSwitch');
+    if (sw) sw.onclick = () => {
+      try { localStorage.removeItem(SELF_KEY); } catch (e) { /* ignore */ }
+      renderPicker(data);
+    };
+    return el;
+  }
 
-    document.title = `${team} · 队伍动态`;
-    document.body.classList.add('sv-mode');
-    document.body.appendChild(el);
+  function render(data) {
+    const players = Array.isArray(data.players) ? data.players : [];
+    if (!players.length) { renderError(); return; }
+    let saved = null;
+    try { saved = localStorage.getItem(SELF_KEY); } catch (e) { /* ignore */ }
+    const me = saved && players.find((p) => p.id && p.id === saved);
+    if (me) renderSelf(data, me);
+    else renderPicker(data);
   }
 
   function renderError() {
-    const el = document.createElement('div');
-    el.id = 'shareView';
-    el.innerHTML = `<section class="sv-hero sv-hero-err">
-      <div class="sv-hero-top mono"><span><i class="sv-dot off"></i>SIGNAL LOST</span><span>XGY · VB</span></div>
-      <h1 class="sv-h1"><span class="sv-line">链接不完整</span><span class="sv-line">或已<em>过期。</em></span></h1>
-      <div class="sv-hero-mid"><div class="sv-hero-copy">
-        <span class="mono">COPY → FULL → LINK</span>
-        <p>请确认链接完整（微信里点右上角在浏览器打开试试），或者让队长重新生成一次。</p>
-      </div></div>
-    </section>`;
+    const el = shell('信工院排球队', `
+      <section class="sv-hero sv-hero-err">
+        <div class="sv-hero-top mono"><span><i class="sv-dot off"></i>SIGNAL LOST</span><span>XGY · VB</span></div>
+        <h1 class="sv-h1"><span class="sv-line">链接不完整</span><span class="sv-line">或已<em>过期。</em></span></h1>
+        <div class="sv-hero-mid"><div class="sv-hero-copy">
+          <span class="mono">COPY → FULL → LINK</span>
+          <p>请确认链接完整（微信里点右上角在浏览器打开试试），或者让队长重新生成一次。</p>
+        </div></div>
+      </section>`);
     document.title = '链接无效';
-    document.body.classList.add('sv-mode');
-    document.body.appendChild(el);
+    return el;
   }
 
   /* ══════════ 启动：命中 #share= 就接管页面 ══════════ */
@@ -3486,8 +3894,6 @@ body.sv-mode > *:not(#shareView){display:none !important}
     mountedHash = m[1];
     // 主应用已经启动过也没关系：置标记 + 加 sv-mode 之后主界面照样被隐藏
     window.__XGY_SHARE_MODE = true;
-    const prev = document.getElementById('shareView');
-    if (prev) prev.remove(); // 换了一条分享链接
     decode(m[1]).then(render).catch(renderError);
   }
 
@@ -3520,7 +3926,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-28 · r4'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-28 · r5'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -3561,6 +3967,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     dashboard: { title: '球队总览', kicker: 'TEAM OPS / OVERVIEW' },
     roster: { title: '人员管理', kicker: 'ROSTER / PLAYERS' },
     attendance: { title: '考勤管理', kicker: 'ATTENDANCE / WEEK' },
+    checkin: { title: '训练签到', kicker: 'CHECK-IN / FAST' },
     tactics: { title: '阵型板', kicker: 'FORMATION / COURT' },
     growth: { title: '成长计划', kicker: 'SKILLS / GROWTH' },
     ai: { title: 'AI 助手', kicker: 'AI COACH / ASSISTANT' }
@@ -3799,7 +4206,8 @@ body.sv-mode > *:not(#shareView){display:none !important}
     stackOpen: false,
     palette: [],
     paletteIndex: 0,
-    confirmResolver: null
+    confirmResolver: null,
+    checkin: { sid: null } // 训练签到页当前选中的那次训练
   };
 
   function save() {
@@ -5576,6 +5984,245 @@ body.sv-mode > *:not(#shareView){display:none !important}
 
   function importData() { $('#importFile').click(); }
 
+  /* ══════════ 训练签到（Check-in）：现场 5 秒记完一次考勤 ══════════
+     为什么单独开一页：原来这一步藏在「考勤页 → 选周 → 找日期 → 找格子」里，
+     训练现场掏出手机要 30 秒才记完。这里做成场景化单页：
+     点一下 = 出勤（再点取消），左滑 = 迟到，长按/点 ⋯ = 请假 / 缺席 / 清除。
+  ══════════════════════════════════════════════════════════════════ */
+  const CI_LONG = 450;  // 长按判定
+  const CI_SWIPE = 48;  // 横向滑动判定
+
+  function ciCandidates() {
+    const mon = getMonday(new Date());
+    ensureWeek(mon); // 本周没生成过训练就先生成，否则签到页是空的
+    const out = [];
+    [-1, 0, 1].forEach((off) => {
+      const arr = db.weeks[weekKey(addDays(mon, off * 7))];
+      if (Array.isArray(arr)) out.push(...arr);
+    });
+    return out.filter((s) => s && s.date).sort(sessionSort);
+  }
+
+  function ciPickDefault(list) {
+    if (!list.length) return null;
+    const today = dateKey(new Date());
+    return list.find((s) => s.date === today && s.status !== 'cancelled')
+      || list.find((s) => s.status !== 'cancelled' && s.date >= today)
+      || list.find((s) => s.status !== 'cancelled')
+      || list[0];
+  }
+
+  function ciSession() {
+    const list = ciCandidates();
+    return list.find((s) => s.id === state.checkin.sid) || null;
+  }
+
+  function ciSet(pid, next) {
+    const s = ciSession();
+    if (!s) return;
+    if (s.status === 'cancelled') { toast('这次训练已取消，不用签到', 'warn'); return; }
+    if (next) s.attendance[pid] = next; else delete s.attendance[pid];
+    s.updatedAt = Date.now();
+    save();
+    if (CloudOn()) {
+      const req = next
+        ? window.XGYCloud.push.attSet(s.id, pid, next)
+        : window.XGYCloud.push.attClear(s.id, pid);
+      cloudFire(req, () => window.XGYCloud.syncWeek(weekKey(getMonday(parseKey(s.date))), true).then(renderCheckin));
+    }
+    renderCheckin();
+    renderSidebar();
+  }
+
+  function ciOpenMenu(pid, anchor) {
+    document.querySelectorAll('.ci-menu').forEach((m) => m.remove());
+    const menu = document.createElement('div');
+    menu.className = 'ci-menu';
+    menu.innerHTML = ['present', 'late', 'leave', 'absent']
+      .map((k) => `<button type="button" data-st="${k}">${ATT_LABEL[k]}</button>`).join('')
+      + '<button type="button" data-st="" class="ci-clear">清除</button>';
+    document.body.appendChild(menu);
+    const r = anchor.getBoundingClientRect();
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    menu.style.left = `${Math.min(Math.max(8, r.left + r.width / 2 - mw / 2), window.innerWidth - mw - 8)}px`;
+    menu.style.top = `${Math.min(r.bottom + 6, window.innerHeight - mh - 8)}px`;
+    menu.querySelectorAll('button').forEach((b) => {
+      b.onclick = () => { ciSet(pid, b.dataset.st || ''); document.querySelectorAll('.ci-menu').forEach((m) => m.remove()); };
+    });
+    setTimeout(() => {
+      const away = (e) => {
+        if (e.target.closest('.ci-menu')) return;
+        document.querySelectorAll('.ci-menu').forEach((m) => m.remove());
+        document.removeEventListener('pointerdown', away);
+      };
+      document.addEventListener('pointerdown', away);
+    }, 0);
+  }
+
+  function ciBindCard(el) {
+    const pid = el.dataset.pid;
+    let sx = 0, sy = 0, timer = null, fired = false;
+    el.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      sx = e.clientX; sy = e.clientY; fired = false;
+      timer = setTimeout(() => { fired = true; ciOpenMenu(pid, el); }, CI_LONG);
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (fired) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.abs(dx) > CI_SWIPE && Math.abs(dx) > Math.abs(dy)) {
+        fired = true; clearTimeout(timer); ciSet(pid, 'late');
+      } else if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
+        clearTimeout(timer); // 当成滚动，不算点击
+      }
+    });
+    const stop = () => clearTimeout(timer);
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+    el.addEventListener('pointerleave', stop);
+    el.addEventListener('click', () => {
+      if (fired) { fired = false; return; }
+      const s = ciSession();
+      const cur = (s && s.attendance[pid]) || '';
+      ciSet(pid, cur === 'present' ? '' : 'present');
+    });
+    const more = el.querySelector('.ci-more');
+    if (more) more.onclick = (e) => { e.stopPropagation(); ciOpenMenu(pid, el); };
+  }
+
+  function renderCheckin() {
+    const box = $('#checkinBody');
+    if (!box) return;
+
+    if (!db.players.length) {
+      state.checkin.sid = null;
+      box.innerHTML = emptyState('🏐', '先添加队员', '没有队员就没法签到。先到人员管理添加第一名队员。',
+        '<button class="btn btn-primary" data-action="add-player">添加队员</button><button class="btn btn-ghost" data-goto="roster">去人员管理</button>');
+      const n = $('#navCheckinCount'); if (n) n.textContent = '';
+      return;
+    }
+
+    const list = ciCandidates();
+    if (!list.length) {
+      box.innerHTML = emptyState('📅', '还没有训练', '先到考勤管理生成本周的训练，然后回来签到。',
+        '<button class="btn btn-primary" data-goto="attendance">去考勤管理</button>');
+      const n = $('#navCheckinCount'); if (n) n.textContent = '';
+      return;
+    }
+
+    if (!state.checkin.sid || !list.some((s) => s.id === state.checkin.sid)) {
+      const d = ciPickDefault(list);
+      state.checkin.sid = d ? d.id : null;
+    }
+    const s = ciSession();
+    if (!s) return;
+
+    const chips = list.map((x) => {
+      const st = sessionStatus(x);
+      const c = sessionCounts(x);
+      const wd = WEEK_CN[parseKey(x.date).getDay()];
+      return `<button type="button" class="ci-chip${x.id === s.id ? ' on' : ''}" data-sid="${x.id}">
+        <b>${x.date.slice(5).replace('-', '.')} ${wd}</b><em>${x.start || ''}</em>
+        <i class="ci-chip-st ${st.cls}">${c.marked ? `${c.attended}/${db.players.length}` : st.text}</i>
+      </button>`;
+    }).join('');
+
+    const cards = db.players.map((p) => {
+      const st = s.attendance[p.id] || '';
+      const [a, b] = positionStyle(p.position);
+      return `<div class="ci-card ${st || 'unmarked'}" data-pid="${p.id}">
+        <span class="ci-avatar" style="--a:${a};--b:${b}">${esc(p.number ? String(p.number) : (p.name || '?')[0])}</span>
+        <b class="ci-name">${esc(p.name)}</b>
+        <em class="ci-pos">${esc(p.position || '—')}</em>
+        <span class="ci-badge">${ATT_LABEL[st] || '未登记'}</span>
+        <button type="button" class="ci-more" aria-label="更多状态">⋯</button>
+      </div>`;
+    }).join('');
+
+    const c = sessionCounts(s);
+    const unmarked = db.players.length - c.marked;
+    const st = sessionStatus(s);
+
+    box.innerHTML = `
+      <div class="ci-bar reveal">
+        <div class="ci-chips">${chips}</div>
+        <div class="ci-head">
+          <div><b>${esc(fmtDateCN(parseKey(s.date)))} ${esc(s.start || '')}${s.end ? '–' + esc(s.end) : ''}</b>
+            <em>${esc(st.text)}${s.venue ? ' · ' + esc(s.venue) : ''}</em></div>
+          <div class="ci-nums"><b>${c.attended}</b><span>到场</span><b>${unmarked}</b><span>未登记</span></div>
+        </div>
+      </div>
+      <div class="ci-grid reveal">${cards}</div>
+      <div class="ci-legend reveal">点一下 = 出勤（再点取消） · 左滑 = 迟到 · 长按或点 ⋯ = 请假 / 缺席</div>`;
+
+    box.querySelectorAll('.ci-card').forEach(ciBindCard);
+    box.querySelectorAll('.ci-chip').forEach((el) => {
+      el.onclick = () => { state.checkin.sid = el.dataset.sid; renderCheckin(); };
+    });
+
+    const n = $('#navCheckinCount');
+    if (n) { n.textContent = unmarked ? String(unmarked) : ''; n.classList.toggle('zero', !unmarked); }
+    refreshReveals();
+  }
+
+  async function ciAllPresent() {
+    const s = ciSession();
+    if (!s) { toast('先选一次训练', 'warn'); return; }
+    const ok = await confirmDialog({
+      title: '全部标记为出勤？',
+      message: `会把这次训练的所有队员都标成出勤，覆盖已有记录。`,
+      ok: '全部出勤', danger: false
+    });
+    if (!ok) return;
+    db.players.forEach((p) => { s.attendance[p.id] = 'present'; });
+    s.updatedAt = Date.now();
+    save();
+    if (CloudOn()) {
+      const reqs = db.players.map((p) => window.XGYCloud.push.attSet(s.id, p.id, 'present'));
+      cloudFire(Promise.all(reqs), () => window.XGYCloud.syncWeek(weekKey(getMonday(parseKey(s.date))), true).then(renderCheckin));
+    }
+    toast('已全部标记为出勤');
+    renderCheckin();
+    renderSidebar();
+  }
+
+  /* ══════════ 训练卡：一次训练一张可转发的图 ══════════ */
+  function nextSessionAfter(s) {
+    const all = [];
+    Object.values(db.weeks).forEach((arr) => { if (Array.isArray(arr)) all.push(...arr); });
+    all.sort(sessionSort);
+    const key = `${s.date}T${s.start || ''}`;
+    return all.find((x) => x.status !== 'cancelled' && `${x.date}T${x.start || ''}` > key) || null;
+  }
+
+  async function openTrainingCard(s) {
+    if (!s) return;
+    const card = await window.XGYCard.render({
+      team: '信工院排球队',
+      session: s,
+      players: db.players,
+      logs: db.skillLogs.filter((l) => l.date === s.date),
+      next: nextSessionAfter(s)
+    });
+    openModal('训练卡', `<div class="card-wrap">
+      <p class="share-hint">保存后直接发到队群。图片<b>在你自己手机上生成</b>，不经过任何服务器；手机上也可以长按图片保存。</p>
+      <img class="card-preview" src="${card.dataURL}" alt="训练卡预览">
+      <div class="share-foot"><button type="button" class="btn btn-primary" id="cardSave">保存图片</button><button type="button" class="btn btn-ghost" id="cardClose">关闭</button></div>
+    </div>`, { mid: true });
+    $('#cardClose').onclick = closeModal;
+    $('#cardSave').onclick = () => {
+      const url = URL.createObjectURL(card.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `训练卡-${s.date}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast('已保存到下载目录，去微信里发给大家吧');
+    };
+  }
+
   /* ══════════ 分享队伍动态（队员只读视图） ══════════ */
   // 全季考勤聚合：跳过取消的训练；只统计「已登记」的格子，未登记不算缺勤
   function sharePayload() {
@@ -5589,15 +6236,17 @@ body.sv-mode > *:not(#shareView){display:none !important}
         else if (st === 'leave') att.v += 1;
         else if (st === 'absent') att.a += 1;
       }));
-      return { n: p.name, pos: p.position, no: p.number || 0, att, sk: SKILLS.map((s) => p.skills[s.key] ?? 5) };
+      // 带 id：队员在分享页认领「我是谁」后，只渲染他自己那一档
+      return { id: p.id, n: p.name, pos: p.position, no: p.number || 0, att, sk: SKILLS.map((s) => p.skills[s.key] ?? 5) };
     });
     const sessions = Object.values(db.weeks).flat()
       .filter((s) => s && s.status !== 'cancelled')
       .sort((a, b) => sessionSort(b, a))
       .slice(0, 8)
       .map((s) => {
+        // st = 这次训练每人的状态，队员认领后能在「最近训练」里看到自己那一次是出勤还是请假
         const c = sessionCounts(s);
-        return { d: (s.date || '').slice(5), t: s.start || '', p: c.present, l: c.late, v: c.leave, a: c.absent };
+        return { d: (s.date || '').slice(5), t: s.start || '', p: c.present, l: c.late, v: c.leave, a: c.absent, st: s.attendance || {} };
       })
       .reverse(); // 视图里按时间正序展示
     return { v: 1, team: '信工院排球队', at: Date.now(), players, sessions };
@@ -5606,7 +6255,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
   async function openShareModal() {
     if (!db.players.length) { toast('还没有队员，先录入队员再分享', 'warn'); return; }
     const body = `<div class="share-wrap">
-      <p class="share-hint">生成一个<b>只读链接</b>发给队员：打开就能看到自己的出勤率、全队技能雷达和最近训练。数据就编在链接里，<b>不上传任何服务器</b>。</p>
+      <p class="share-hint">生成一个<b>只读链接</b>发给队员：打开先认领「我是谁」，之后就只看自己的出勤率、技能雷达和最近训练。数据就编在链接里，<b>不上传任何服务器</b>。</p>
       <textarea id="shareLink" class="share-link" rows="4" readonly placeholder="生成中…"></textarea>
       <div class="share-meta mono" id="shareMeta"></div>
       <div class="share-note">
@@ -6074,6 +6723,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     if (page === 'dashboard') renderDashboard();
     if (page === 'roster') renderRoster();
     if (page === 'attendance') renderAttendance();
+    if (page === 'checkin') renderCheckin();
     if (page === 'tactics') renderTactics();
     if (page === 'growth') renderGrowth();
     if (page === 'ai') renderAiPage();
@@ -6093,6 +6743,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     if (state.page === 'dashboard') renderDashboard();
     if (state.page === 'roster') renderRoster();
     if (state.page === 'attendance') renderAttendance();
+    if (state.page === 'checkin') renderCheckin();
     if (state.page === 'tactics') renderTactics();
     if (state.page === 'growth') renderGrowth();
   }
@@ -6300,6 +6951,12 @@ body.sv-mode > *:not(#shareView){display:none !important}
     $('#attAddBtn').onclick = () => openSessionModal(null, getMonday(new Date()), { isNew: true });
     $('#attAddBtnPage').onclick = () => openSessionModal(null, state.weekMonday, { isNew: true });
     $('#allPresent').onclick = setAllPresent;
+    $('#ciAllPresent').onclick = ciAllPresent;
+    $('#ciCardBtn').onclick = () => {
+      const s = ciSession();
+      if (!s) { toast('先选一次训练', 'warn'); return; }
+      openTrainingCard(s);
+    };
     $('#attGrid').addEventListener('click', (e) => {
       const head = e.target.closest('.att-session-head');
       if (head) {
