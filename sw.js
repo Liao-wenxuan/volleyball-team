@@ -12,7 +12,7 @@
  *
  * 发新版：把 VERSION 加一，旧缓存在 activate 时自动清掉。
  * ═══════════════════════════════════════════════════════════════ */
-const VERSION = 'v3'; // v3: 静态资源改网络优先，避免改版后仍加载旧 app.js
+const VERSION = 'v4'; // v4: 新增分享只读视图 share.js + 弹窗移动端宽度修复
 const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',
@@ -20,6 +20,7 @@ const SHELL = [
   './style.css',
   './app.js',
   './cloud.js',
+  './share.js',
   './manifest.webmanifest',
   './assets/icon-192.png',
   './assets/icon-512.png',

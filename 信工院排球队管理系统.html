@@ -1238,7 +1238,7 @@ kbd{
 .dr-actions .btn{flex:1;height:38px;font-size:11.5px}
 
 /* ═══════════ 弹窗 ═══════════ */
-.modal-scrim{position:fixed;inset:0;z-index:170;display:grid;place-items:center;padding:20px;background:var(--scrim);backdrop-filter:blur(8px);opacity:0;visibility:hidden;transition:.35s}
+.modal-scrim{position:fixed;inset:0;z-index:170;display:grid;place-items:center;grid-template-columns:minmax(0,1fr);padding:20px;background:var(--scrim);backdrop-filter:blur(8px);opacity:0;visibility:hidden;transition:.35s}
 .modal-scrim.show{opacity:1;visibility:visible}
 .modal{
   width:480px;max-width:100%;max-height:88vh;overflow-y:auto;border-radius:22px;
@@ -2143,6 +2143,141 @@ html[data-mode="light"] .pwa-install{background:rgba(255,255,255,.94);border-col
   .pwa-install-txt{flex:1}
 }
 
+/* ══════════ 分享队伍动态弹窗 ══════════ */
+.share-hint{margin:0 0 12px;font-size:12px;line-height:1.8;color:var(--text-2)}
+.share-hint b{color:var(--violet)}
+.share-link{width:100%;resize:none;padding:10px 12px;border-radius:8px;border:1px solid var(--line);
+  background:var(--ov040);color:var(--text);font-size:11px;line-height:1.6;word-break:break-all;
+  font-family:"Cascadia Code",ui-monospace,Consolas,monospace}
+.share-link:focus{outline:none;border-color:var(--violet)}
+.share-meta{margin-top:6px;font-size:9.5px;letter-spacing:.12em;color:var(--muted)}
+.share-note{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--ov040);border:1px solid var(--line)}
+.share-note p{margin:0;font-size:11px;line-height:1.8;color:var(--muted)}
+.share-note b{color:var(--amber)}
+.share-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+
+/* ══════════════════════════════════════════════════════════════
+   队员只读视图（分享页）—— 移动端优先
+   视觉语言参考 iot-pillot AuthView 移动端：
+   藏青海报 hero + 荧光绿强调 + 大字号中文标题 + mono 英文小标签
+   + 直角/2px + 发丝边框 + 星爆 mark + 扫描线/光晕
+   ══════════════════════════════════════════════════════════════ */
+body.sv-mode{background:#0d0e12}
+body.sv-mode > *:not(#shareView){display:none !important}
+
+#shareView{
+  --sv-blue:#1c2a9e;--sv-blue-deep:#131c6e;--sv-lime:#d9ff4a;
+  --sv-ink:#f2f3f7;--sv-mut:#9aa0b4;--sv-line:rgba(255,255,255,.13);
+  --sv-mono:"Cascadia Code",ui-monospace,Consolas,monospace;
+  max-width:520px;margin:0 auto;min-height:100vh;background:#0d0e12;
+  color:var(--sv-ink);
+  font-family:"Inter",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  border-left:1px solid var(--sv-line);border-right:1px solid var(--sv-line);
+}
+#shareView .mono{font-family:var(--sv-mono);font-size:10px;letter-spacing:.16em;color:rgba(255,255,255,.55)}
+
+/* 顶栏 */
+.sv-bar{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--sv-line)}
+.sv-logo{width:30px;height:30px;object-fit:contain}
+.sv-bar-txt strong{display:block;font-size:13px;font-weight:700}
+.sv-bar-txt em{display:block;font-style:normal;font-family:var(--sv-mono);font-size:9px;letter-spacing:.18em;color:var(--sv-mut);margin-top:2px}
+
+/* 海报 hero */
+.sv-hero{position:relative;overflow:hidden;padding:26px 22px 0;
+  background:
+    radial-gradient(120% 90% at 85% 0%,rgba(88,110,255,.35),transparent 55%),
+    linear-gradient(168deg,var(--sv-blue) 0%,var(--sv-blue-deep) 100%);}
+.sv-hero-top{display:flex;justify-content:space-between;align-items:center}
+.sv-hero-top .sv-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#37e39b;margin-right:7px;vertical-align:1px;
+  box-shadow:0 0 8px rgba(55,227,155,.9);animation:sv-pulse 2s infinite}
+.sv-hero-top .sv-dot.off{background:#ff6b6b;box-shadow:0 0 8px rgba(255,107,107,.8)}
+@keyframes sv-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.sv-h1{margin:34px 0 0;font-size:clamp(34px,10.5vw,46px);font-weight:800;line-height:1.22;letter-spacing:.01em;color:#fff}
+.sv-line{display:block;overflow:hidden;animation:sv-rise .7s cubic-bezier(.2,.7,.2,1) both}
+.sv-line:nth-child(2){animation-delay:.12s}
+.sv-line em{font-style:normal;color:var(--sv-lime)}
+@keyframes sv-rise{from{transform:translateY(60%);opacity:0}to{transform:translateY(0);opacity:1}}
+
+.sv-hero-mid{display:flex;justify-content:space-between;align-items:flex-end;margin-top:26px}
+.sv-hero-copy p{margin:10px 0 0;font-size:12.5px;line-height:1.7;color:rgba(255,255,255,.78)}
+.sv-burst{position:relative;width:64px;height:64px;flex:none;opacity:.9}
+.sv-burst i{position:absolute;left:50%;top:50%;width:56px;height:1px;background:rgba(217,255,74,.55);
+  transform:translate(-50%,-50%) rotate(var(--r))}
+.sv-burst b{position:absolute;left:50%;top:50%;width:7px;height:7px;border-radius:50%;background:var(--sv-lime);transform:translate(-50%,-50%)}
+
+.sv-hero-foot{display:flex;justify-content:space-between;align-items:center;margin-top:30px;padding:14px 0;
+  border-top:1px solid rgba(255,255,255,.22)}
+.sv-hero-foot svg{color:rgba(255,255,255,.7);animation:sv-bob 1.8s ease-in-out infinite}
+@keyframes sv-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+
+.sv-scan{position:absolute;left:0;right:0;top:0;height:34%;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(255,255,255,.05),transparent);
+  animation:sv-scan 5.5s linear infinite}
+@keyframes sv-scan{from{transform:translateY(-120%)}to{transform:translateY(420%)}}
+.sv-halo{position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(217,255,74,.14),transparent 65%)}
+
+/* 数据条 */
+.sv-stats{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--sv-line)}
+.sv-stat{padding:16px 8px 14px;text-align:center;border-right:1px solid var(--sv-line)}
+.sv-stat:last-child{border-right:0}
+.sv-stat b{display:block;font-size:20px;font-weight:800;color:var(--sv-lime);font-variant-numeric:tabular-nums}
+.sv-stat span{display:block;margin-top:4px;font-size:10px;color:var(--sv-mut)}
+
+/* 区块 */
+.sv-sec{padding:22px 18px 6px;border-bottom:1px solid var(--sv-line)}
+.sv-sec-head{display:flex;justify-content:space-between;align-items:center}
+.sv-sec-head i{font-style:normal;color:var(--sv-lime);font-size:14px}
+.sv-sec h2{margin:14px 0 16px;font-size:clamp(26px,7.5vw,32px);font-weight:800;color:#fff;letter-spacing:.01em}
+.sv-empty{font-size:12px;color:var(--sv-mut);padding:14px 0 20px}
+
+/* 出勤列表 */
+.sv-list{display:flex;flex-direction:column;gap:2px;padding-bottom:14px}
+.sv-player{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"avatar main rate" "avatar counts counts";
+  align-items:center;gap:4px 12px;padding:12px 0;border-top:1px solid var(--sv-line)}
+.sv-player:first-child{border-top:0}
+.sv-avatar{grid-area:avatar;width:34px;height:34px;border-radius:2px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800;color:#0d0e12;background:linear-gradient(135deg,var(--a),var(--b))}
+.sv-pmain{grid-area:main;min-width:0}
+.sv-prow{display:flex;align-items:baseline;gap:8px}
+.sv-prow b{font-size:14px;font-weight:700}
+.sv-prow em{font-style:normal;font-size:10.5px;color:var(--sv-mut)}
+.sv-pbar{margin-top:7px;height:3px;background:rgba(255,255,255,.1);border-radius:1px;overflow:hidden}
+.sv-pbar i{display:block;height:100%;background:var(--sv-lime);border-radius:1px}
+.sv-prate{grid-area:rate;text-align:right}
+.sv-prate b{display:block;font-size:16px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+.sv-prate span{font-size:9px;color:var(--sv-mut)}
+.sv-pcounts{grid-area:counts;display:flex;gap:10px;font-size:10px;color:var(--sv-mut);font-variant-numeric:tabular-nums}
+
+/* 雷达 */
+.sv-radar-wrap{display:flex;justify-content:center;padding:6px 0 2px}
+.sv-radar{width:min(300px,86vw);height:auto}
+.sv-radar-ring{fill:none;stroke:rgba(255,255,255,.14)}
+.sv-radar-axis{stroke:rgba(255,255,255,.1)}
+.sv-radar-poly{fill:rgba(217,255,74,.16);stroke:var(--sv-lime);stroke-width:1.6}
+.sv-radar-dot{fill:var(--sv-lime)}
+.sv-radar-label{font-size:10px;fill:var(--sv-mut);font-family:inherit}
+.sv-note{text-align:center;margin:2px 0 16px}
+
+/* 最近训练 */
+.sv-sessions{padding-bottom:14px}
+.sv-session{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;
+  padding:11px 0;border-top:1px solid var(--sv-line);font-size:12px}
+.sv-session:first-child{border-top:0}
+.sv-sdate{color:var(--sv-lime);font-size:11px;letter-spacing:.08em}
+.sv-stime{color:var(--sv-mut)}
+.sv-scount{color:var(--sv-ink);font-variant-numeric:tabular-nums}
+.sv-srate{font-weight:800;color:#fff;font-variant-numeric:tabular-nums;text-align:right}
+
+/* 页脚 */
+.sv-foot{padding:22px 18px 30px;text-align:center}
+.sv-foot p{margin:0 0 8px;font-size:11px;color:var(--sv-mut)}
+
+/* 分享页：链接失效时的 hero（没有下半部分，补足底部留白） */
+.sv-hero-err{padding-bottom:34px}
+.sv-hero-err .sv-hero-mid{margin-top:18px}
+
 </style>
 </head>
 <body>
@@ -2249,6 +2384,7 @@ html[data-mode="light"] .pwa-install{background:rgba(255,255,255,.94);border-col
           <div class="up-links">
             <button id="menuTemplate"><span class="up-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span>训练模板</span><i>›</i></button>
             <button id="menuTheme"><span class="up-ico"><svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><circle cx="12" cy="16.5" r="3"/></svg></span><span>主题色</span><i>›</i></button>
+            <button id="menuShare"><span class="up-ico"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span><span>分享队伍动态</span><i>›</i></button>
             <button id="menuExport"><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></span><span>导出备份</span><i>›</i></button>
             <button id="menuImport"><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M12 21V9M7 14l5-5 5 5"/><path d="M4 3h16"/></svg></span><span>导入备份</span><i>›</i></button>
             <button class="danger" id="menuClear"><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/></svg></span><span>清空所有数据</span><i>›</i></button>
@@ -3068,12 +3204,312 @@ html[data-mode="light"] .pwa-install{background:rgba(255,255,255,.94);border-col
 
 </script>
 <script>
+/* ═══════════════════════════════════════════════════════════════
+ * share.js — 队员只读视图（队伍动态分享页）
+ *
+ * 纯前端、零后端：
+ * - 队长侧（app.js 调用）：XGYShare.buildURL(payload) 把队伍快照
+ *   JSON → deflate-raw → base64url，编成 `#share=...` 链接
+ * - 队员侧：打开带 #share= 的链接时，本脚本抢在 app.js 之前
+ *   置 __XGY_SHARE_MODE，主应用直接跳过初始化；然后解码并把
+ *   只读视图渲染进 #shareView，其余界面元素全部隐藏
+ *
+ * 编码格式：首字符是版本标记
+ *   '1' = deflate-raw 压缩（CompressionStream，现代浏览器都支持）
+ *   '0' = 未压缩 JSON（老浏览器兜底，编码侧只在不支持压缩时用）
+ * ═══════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  /* ══════════ base64url + 压缩编解码 ══════════ */
+  function b64url(bytes) {
+    let s = '';
+    for (let i = 0; i < bytes.length; i += 8192) {
+      s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    }
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function unb64url(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    const bin = atob(s);
+    const u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return u;
+  }
+
+  async function encode(obj) {
+    const raw = new TextEncoder().encode(JSON.stringify(obj));
+    if (typeof CompressionStream !== 'undefined') {
+      const buf = await new Response(
+        new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'))
+      ).arrayBuffer();
+      return '1' + b64url(new Uint8Array(buf));
+    }
+    return '0' + b64url(raw);
+  }
+
+  async function decode(str) {
+    const tag = str[0];
+    const bytes = unb64url(str.slice(1));
+    if (tag === '1') {
+      const buf = await new Response(
+        new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))
+      ).arrayBuffer();
+      return JSON.parse(new TextDecoder().decode(buf));
+    }
+    if (tag === '0') return JSON.parse(new TextDecoder().decode(bytes));
+    throw new Error('unknown share payload tag: ' + tag);
+  }
+
+  async function buildURL(payload) {
+    const data = await encode(payload);
+    // 用 location.href 而不是 origin+pathname：单文件走 file:// 时 origin 是 "null"，
+    // 拼出来的路径会丢掉 file:// 前缀，队员点开就打不开
+    return location.href.split('#')[0] + '#share=' + data;
+  }
+
+  /* ══════════ 常量（与 app.js 保持一致，刻意独立，分享页不依赖主应用） ══════════ */
+  const SKILL_LABELS = ['发球', '一传', '二传', '扣球', '拦网', '防守'];
+  const ROLE_STYLE = {
+    '主攻': ['#ff8a5c', '#ffc46b'],
+    '副攻': ['#7b6cff', '#4aa8ff'],
+    '二传': ['#46e0ff', '#37e39b'],
+    '接应': ['#fb7299', '#ff9d6e'],
+    '自由人': ['#37e39b', '#b8f06a']
+  };
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+
+  /* ══════════ 统计 ══════════ */
+  function rateOf(att) {
+    const marked = (att.p || 0) + (att.l || 0) + (att.v || 0) + (att.a || 0);
+    if (!marked) return null;
+    return Math.round((((att.p || 0) + (att.l || 0)) / marked) * 100);
+  }
+
+  /* ══════════ 六维雷达（SVG） ══════════ */
+  function radarSVG(values, size) {
+    const cx = size / 2, cy = size / 2, R = size / 2 - 34;
+    const pt = (i, r) => {
+      const a = (Math.PI / 3) * i - Math.PI / 2;
+      return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+    };
+    const ring = (f) => {
+      const pts = [];
+      for (let i = 0; i < 6; i++) pts.push(pt(i, R * f).join(','));
+      return pts.join(' ');
+    };
+    const poly = [];
+    for (let i = 0; i < 6; i++) {
+      const v = Math.max(0, Math.min(10, Number(values[i]) || 0));
+      poly.push(pt(i, R * (v / 10)).join(','));
+    }
+    const axes = [];
+    const labels = [];
+    for (let i = 0; i < 6; i++) {
+      const [x, y] = pt(i, R);
+      axes.push(`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" class="sv-radar-axis"/>`);
+      const [lx, ly] = pt(i, R + 18);
+      labels.push(`<text x="${lx}" y="${ly}" class="sv-radar-label" text-anchor="middle" dominant-baseline="middle">${SKILL_LABELS[i]}</text>`);
+    }
+    const dots = poly.map((p) => {
+      const [x, y] = p.split(',');
+      return `<circle cx="${x}" cy="${y}" r="2.5" class="sv-radar-dot"/>`;
+    }).join('');
+    return `<svg viewBox="0 0 ${size} ${size}" class="sv-radar" role="img" aria-label="技能雷达图">
+      <polygon points="${ring(1)}" class="sv-radar-ring"/>
+      <polygon points="${ring(0.66)}" class="sv-radar-ring"/>
+      <polygon points="${ring(0.33)}" class="sv-radar-ring"/>
+      ${axes.join('')}
+      <polygon points="${poly.join(' ')}" class="sv-radar-poly"/>
+      ${dots}
+      ${labels.join('')}
+    </svg>`;
+  }
+
+  /* ══════════ 视图渲染 ══════════ */
+  function playerRow(p) {
+    const [a, b] = ROLE_STYLE[p.pos] || ['#7b6cff', '#46e0ff'];
+    const r = rateOf(p.att);
+    return `<div class="sv-player">
+      <span class="sv-avatar" style="--a:${a};--b:${b}">${esc((p.n || '?')[0])}</span>
+      <div class="sv-pmain">
+        <div class="sv-prow"><b>${esc(p.n)}</b><em>${esc(p.pos)}${p.no ? ' · #' + esc(p.no) : ''}</em></div>
+        <div class="sv-pbar"><i style="width:${r == null ? 0 : r}%"></i></div>
+      </div>
+      <div class="sv-prate"><b>${r == null ? '—' : r + '%'}</b><span>出勤率</span></div>
+      <div class="sv-pcounts">
+        <span>出 ${p.att.p || 0}</span><span>迟 ${p.att.l || 0}</span>
+        <span>请 ${p.att.v || 0}</span><span>缺 ${p.att.a || 0}</span>
+      </div>
+    </div>`;
+  }
+
+  function sessionRow(s) {
+    const marked = (s.p || 0) + (s.l || 0) + (s.v || 0) + (s.a || 0);
+    const r = marked ? Math.round((((s.p || 0) + (s.l || 0)) / marked) * 100) : null;
+    return `<div class="sv-session">
+      <span class="sv-sdate mono">${esc(s.d)}</span>
+      <span class="sv-stime">${esc(s.t || '')}</span>
+      <span class="sv-scount">${marked ? `到场 ${(s.p || 0) + (s.l || 0)}/${marked}` : '未登记'}</span>
+      <span class="sv-srate">${r == null ? '—' : r + '%'}</span>
+    </div>`;
+  }
+
+  function fmtSnapshot(at) {
+    const d = new Date(at);
+    const p2 = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+  }
+
+  function render(data) {
+    const players = Array.isArray(data.players) ? data.players : [];
+    const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+    const team = data.team || '信工院排球队';
+
+    const totals = { p: 0, l: 0, v: 0, a: 0 };
+    players.forEach((pl) => {
+      totals.p += pl.att.p || 0; totals.l += pl.att.l || 0;
+      totals.v += pl.att.v || 0; totals.a += pl.att.a || 0;
+    });
+    const teamRate = rateOf(totals);
+    const avgSkills = [0, 1, 2, 3, 4, 5].map((i) => {
+      if (!players.length) return 0;
+      const sum = players.reduce((acc, pl) => acc + (Number((pl.sk || [])[i]) || 0), 0);
+      return Math.round((sum / players.length) * 10) / 10;
+    });
+    const perfect = players.filter((pl) => {
+      const m = (pl.att.p || 0) + (pl.att.l || 0) + (pl.att.v || 0) + (pl.att.a || 0);
+      return m > 0 && pl.att.p === m;
+    }).length;
+
+    // 复用主应用内嵌的排球 logo（不重复打包 base64）
+    const logoSrc = (document.querySelector('.brand-img') || {}).src || '';
+
+    const el = document.createElement('div');
+    el.id = 'shareView';
+    el.innerHTML = `
+      <div class="sv-bar">
+        ${logoSrc ? `<img class="sv-logo" src="${logoSrc}" alt="" aria-hidden="true">` : ''}
+        <span class="sv-bar-txt"><strong>${esc(team)}</strong><em>TEAM FEED · SNAPSHOT</em></span>
+      </div>
+
+      <section class="sv-hero">
+        <div class="sv-hero-top mono">
+          <span><i class="sv-dot"></i>TEAM SIGNAL · LIVE</span>
+          <span>XGY · VB</span>
+        </div>
+        <h1 class="sv-h1">
+          <span class="sv-line">每一次到场</span>
+          <span class="sv-line">都<em>算数。</em></span>
+        </h1>
+        <div class="sv-hero-mid">
+          <div class="sv-hero-copy">
+            <span class="mono">TRAIN → RECORD → GROW</span>
+            <p>${players.length} 名队员 · ${sessions.length ? `最近 ${sessions.length} 次训练` : '训练数据同步中'}${teamRate != null ? ` · 出勤率 ${teamRate}%` : ''}</p>
+          </div>
+          <div class="sv-burst" aria-hidden="true">
+            <i style="--r:0deg"></i><i style="--r:45deg"></i><i style="--r:90deg"></i><i style="--r:135deg"></i><b></b>
+          </div>
+        </div>
+        <div class="sv-hero-foot mono">
+          <span>EVERY PRACTICE COUNTS.</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v14M6 12l6 6 6-6"/></svg>
+        </div>
+        <div class="sv-scan" aria-hidden="true"></div>
+        <div class="sv-halo" aria-hidden="true"></div>
+      </section>
+
+      <section class="sv-stats">
+        <div class="sv-stat"><b>${players.length}</b><span>队员</span></div>
+        <div class="sv-stat"><b>${sessions.length}</b><span>近期训练</span></div>
+        <div class="sv-stat"><b>${teamRate == null ? '—' : teamRate + '%'}</b><span>出勤率</span></div>
+        <div class="sv-stat"><b>${perfect}</b><span>全勤</span></div>
+      </section>
+
+      <section class="sv-sec">
+        <div class="sv-sec-head mono"><span>ATTENDANCE / 01</span><i>+</i></div>
+        <h2>出勤总览。</h2>
+        <div class="sv-list">${players.map(playerRow).join('') || '<p class="sv-empty">还没有队员数据</p>'}</div>
+      </section>
+
+      <section class="sv-sec">
+        <div class="sv-sec-head mono"><span>SKILLS / 02</span><i>+</i></div>
+        <h2>技能全景。</h2>
+        <div class="sv-radar-wrap">${radarSVG(avgSkills, 300)}</div>
+        <p class="sv-note mono">TEAM AVERAGE · 0–10 SCALE</p>
+      </section>
+
+      <section class="sv-sec">
+        <div class="sv-sec-head mono"><span>RECENT / 03</span><i>+</i></div>
+        <h2>最近训练。</h2>
+        <div class="sv-sessions">${sessions.map(sessionRow).join('') || '<p class="sv-empty">还没有训练记录</p>'}</div>
+      </section>
+
+      <footer class="sv-foot">
+        <p>数据快照 · ${esc(fmtSnapshot(data.at || Date.now()))}</p>
+        <p class="mono">GENERATED BY CAPTAIN · NO SIGN-UP NEEDED</p>
+      </footer>`;
+
+    document.title = `${team} · 队伍动态`;
+    document.body.classList.add('sv-mode');
+    document.body.appendChild(el);
+  }
+
+  function renderError() {
+    const el = document.createElement('div');
+    el.id = 'shareView';
+    el.innerHTML = `<section class="sv-hero sv-hero-err">
+      <div class="sv-hero-top mono"><span><i class="sv-dot off"></i>SIGNAL LOST</span><span>XGY · VB</span></div>
+      <h1 class="sv-h1"><span class="sv-line">链接不完整</span><span class="sv-line">或已<em>过期。</em></span></h1>
+      <div class="sv-hero-mid"><div class="sv-hero-copy">
+        <span class="mono">COPY → FULL → LINK</span>
+        <p>请确认链接完整（微信里点右上角在浏览器打开试试），或者让队长重新生成一次。</p>
+      </div></div>
+    </section>`;
+    document.title = '链接无效';
+    document.body.classList.add('sv-mode');
+    document.body.appendChild(el);
+  }
+
+  /* ══════════ 启动：命中 #share= 就接管页面 ══════════ */
+  let mountedHash = null;
+  function boot() {
+    const m = location.hash.match(/^#share=(.+)$/);
+    if (!m) {
+      // 分享页上把 hash 清掉 → 回主应用（此时主应用多半没初始化过，刷新最干净）
+      if (mountedHash) location.reload();
+      return;
+    }
+    if (mountedHash === m[1]) return; // 同一条链接不重复渲染
+    mountedHash = m[1];
+    // 主应用已经启动过也没关系：置标记 + 加 sv-mode 之后主界面照样被隐藏
+    window.__XGY_SHARE_MODE = true;
+    const prev = document.getElementById('shareView');
+    if (prev) prev.remove(); // 换了一条分享链接
+    decode(m[1]).then(render).catch(renderError);
+  }
+
+  boot();
+  // 已经打开着主应用、再粘一条分享链接进来（只变了 hash，不会重新加载），也要能接管
+  window.addEventListener('hashchange', boot);
+
+  /* ══════════ 给主应用的接口 ══════════ */
+  window.XGYShare = { buildURL, encode };
+})();
+
+</script>
+<script>
 /* ═══════════════════════════════════════════════════════
    信工院排球队 · 本地球队管理
    队员 / 训练 / 考勤 / 技能点 · 纯原生 JS
    ═══════════════════════════════════════════════════════ */
 (function () {
   'use strict';
+
+  // 分享链接（#share=...）打开的是队员只读视图，share.js 已接管页面，主应用不启动
+  if (window.__XGY_SHARE_MODE) return;
 
   /* ══════════ 工具 ══════════ */
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -3084,7 +3520,7 @@ html[data-mode="light"] .pwa-install{background:rgba(255,255,255,.94);border-col
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-27 · r3'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-28 · r4'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -5140,6 +5576,71 @@ html[data-mode="light"] .pwa-install{background:rgba(255,255,255,.94);border-col
 
   function importData() { $('#importFile').click(); }
 
+  /* ══════════ 分享队伍动态（队员只读视图） ══════════ */
+  // 全季考勤聚合：跳过取消的训练；只统计「已登记」的格子，未登记不算缺勤
+  function sharePayload() {
+    const players = db.players.map((p) => {
+      const att = { p: 0, l: 0, v: 0, a: 0 };
+      Object.values(db.weeks).forEach((arr) => (arr || []).forEach((s) => {
+        if (s.status === 'cancelled') return;
+        const st = (s.attendance || {})[p.id];
+        if (st === 'present') att.p += 1;
+        else if (st === 'late') att.l += 1;
+        else if (st === 'leave') att.v += 1;
+        else if (st === 'absent') att.a += 1;
+      }));
+      return { n: p.name, pos: p.position, no: p.number || 0, att, sk: SKILLS.map((s) => p.skills[s.key] ?? 5) };
+    });
+    const sessions = Object.values(db.weeks).flat()
+      .filter((s) => s && s.status !== 'cancelled')
+      .sort((a, b) => sessionSort(b, a))
+      .slice(0, 8)
+      .map((s) => {
+        const c = sessionCounts(s);
+        return { d: (s.date || '').slice(5), t: s.start || '', p: c.present, l: c.late, v: c.leave, a: c.absent };
+      })
+      .reverse(); // 视图里按时间正序展示
+    return { v: 1, team: '信工院排球队', at: Date.now(), players, sessions };
+  }
+
+  async function openShareModal() {
+    if (!db.players.length) { toast('还没有队员，先录入队员再分享', 'warn'); return; }
+    const body = `<div class="share-wrap">
+      <p class="share-hint">生成一个<b>只读链接</b>发给队员：打开就能看到自己的出勤率、全队技能雷达和最近训练。数据就编在链接里，<b>不上传任何服务器</b>。</p>
+      <textarea id="shareLink" class="share-link" rows="4" readonly placeholder="生成中…"></textarea>
+      <div class="share-meta mono" id="shareMeta"></div>
+      <div class="share-note">
+        <p>· 这是<b>数据快照</b>，之后改了考勤或技能，要重新生成一次发给队员</p>
+        <p>· 链接里包含队员姓名和出勤数据，只发给队内的人，别贴到公开群里</p>
+      </div>
+      <div class="share-foot"><button type="button" class="btn btn-primary" id="shareCopy">复制链接</button><button type="button" class="btn btn-ghost" id="shareClose">关闭</button></div>
+    </div>`;
+    openModal('分享队伍动态', body, { mid: true });
+    $('#shareClose').onclick = closeModal;
+    $('#shareLink').onclick = (e) => e.target.select();
+    let url = '';
+    try {
+      url = await window.XGYShare.buildURL(sharePayload());
+      $('#shareLink').value = url;
+      const extra = url.length > 1800 ? '（偏长：队员较多，建议只分享给微信好友而不是贴在简介里）' : '';
+      $('#shareMeta').textContent = `SNAPSHOT LINK · ${url.length} CHARS ${extra}`;
+    } catch (err) {
+      $('#shareLink').value = '';
+      $('#shareMeta').textContent = '生成失败：' + (err && err.message ? err.message : '未知错误');
+      return;
+    }
+    $('#shareCopy').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch (e) {
+        const ta = $('#shareLink');
+        ta.select();
+        document.execCommand('copy');
+      }
+      toast('链接已复制，去微信里粘贴发给队员吧');
+    };
+  }
+
   async function handleImportFile(file) {
     if (!file) return;
     try {
@@ -5704,6 +6205,7 @@ html[data-mode="light"] .pwa-install{background:rgba(255,255,255,.94);border-col
 
     $('#menuTemplate').onclick = () => { closePopovers(); openSettings(); };
     $('#menuTheme').onclick = () => { closePopovers(); openTheme(); };
+    $('#menuShare').onclick = () => { closePopovers(); openShareModal(); };
     $('#menuExport').onclick = () => { closePopovers(); exportData(); };
     $('#menuImport').onclick = () => { closePopovers(); importData(); };
     $('#menuClear').onclick = () => { closePopovers(); clearAllData(); };

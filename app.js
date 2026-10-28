@@ -5,6 +5,9 @@
 (function () {
   'use strict';
 
+  // 分享链接（#share=...）打开的是队员只读视图，share.js 已接管页面，主应用不启动
+  if (window.__XGY_SHARE_MODE) return;
+
   /* ══════════ 工具 ══════════ */
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -14,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-27 · r3'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-28 · r4'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -2070,6 +2073,71 @@
 
   function importData() { $('#importFile').click(); }
 
+  /* ══════════ 分享队伍动态（队员只读视图） ══════════ */
+  // 全季考勤聚合：跳过取消的训练；只统计「已登记」的格子，未登记不算缺勤
+  function sharePayload() {
+    const players = db.players.map((p) => {
+      const att = { p: 0, l: 0, v: 0, a: 0 };
+      Object.values(db.weeks).forEach((arr) => (arr || []).forEach((s) => {
+        if (s.status === 'cancelled') return;
+        const st = (s.attendance || {})[p.id];
+        if (st === 'present') att.p += 1;
+        else if (st === 'late') att.l += 1;
+        else if (st === 'leave') att.v += 1;
+        else if (st === 'absent') att.a += 1;
+      }));
+      return { n: p.name, pos: p.position, no: p.number || 0, att, sk: SKILLS.map((s) => p.skills[s.key] ?? 5) };
+    });
+    const sessions = Object.values(db.weeks).flat()
+      .filter((s) => s && s.status !== 'cancelled')
+      .sort((a, b) => sessionSort(b, a))
+      .slice(0, 8)
+      .map((s) => {
+        const c = sessionCounts(s);
+        return { d: (s.date || '').slice(5), t: s.start || '', p: c.present, l: c.late, v: c.leave, a: c.absent };
+      })
+      .reverse(); // 视图里按时间正序展示
+    return { v: 1, team: '信工院排球队', at: Date.now(), players, sessions };
+  }
+
+  async function openShareModal() {
+    if (!db.players.length) { toast('还没有队员，先录入队员再分享', 'warn'); return; }
+    const body = `<div class="share-wrap">
+      <p class="share-hint">生成一个<b>只读链接</b>发给队员：打开就能看到自己的出勤率、全队技能雷达和最近训练。数据就编在链接里，<b>不上传任何服务器</b>。</p>
+      <textarea id="shareLink" class="share-link" rows="4" readonly placeholder="生成中…"></textarea>
+      <div class="share-meta mono" id="shareMeta"></div>
+      <div class="share-note">
+        <p>· 这是<b>数据快照</b>，之后改了考勤或技能，要重新生成一次发给队员</p>
+        <p>· 链接里包含队员姓名和出勤数据，只发给队内的人，别贴到公开群里</p>
+      </div>
+      <div class="share-foot"><button type="button" class="btn btn-primary" id="shareCopy">复制链接</button><button type="button" class="btn btn-ghost" id="shareClose">关闭</button></div>
+    </div>`;
+    openModal('分享队伍动态', body, { mid: true });
+    $('#shareClose').onclick = closeModal;
+    $('#shareLink').onclick = (e) => e.target.select();
+    let url = '';
+    try {
+      url = await window.XGYShare.buildURL(sharePayload());
+      $('#shareLink').value = url;
+      const extra = url.length > 1800 ? '（偏长：队员较多，建议只分享给微信好友而不是贴在简介里）' : '';
+      $('#shareMeta').textContent = `SNAPSHOT LINK · ${url.length} CHARS ${extra}`;
+    } catch (err) {
+      $('#shareLink').value = '';
+      $('#shareMeta').textContent = '生成失败：' + (err && err.message ? err.message : '未知错误');
+      return;
+    }
+    $('#shareCopy').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch (e) {
+        const ta = $('#shareLink');
+        ta.select();
+        document.execCommand('copy');
+      }
+      toast('链接已复制，去微信里粘贴发给队员吧');
+    };
+  }
+
   async function handleImportFile(file) {
     if (!file) return;
     try {
@@ -2634,6 +2702,7 @@
 
     $('#menuTemplate').onclick = () => { closePopovers(); openSettings(); };
     $('#menuTheme').onclick = () => { closePopovers(); openTheme(); };
+    $('#menuShare').onclick = () => { closePopovers(); openShareModal(); };
     $('#menuExport').onclick = () => { closePopovers(); exportData(); };
     $('#menuImport').onclick = () => { closePopovers(); importData(); };
     $('#menuClear').onclick = () => { closePopovers(); clearAllData(); };
