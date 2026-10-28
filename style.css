@@ -2128,6 +2128,25 @@ html[data-mode="light"] .pwa-install{background:rgba(255,255,255,.94);border-col
 }
 
 /* ══════════ 分享队伍动态弹窗 ══════════ */
+.share-qr{display:flex;flex-direction:column;align-items:center;gap:9px;margin:0 0 14px;padding:16px 16px 13px;
+  border-radius:14px;background:#fff;border:1px solid var(--line)}
+.share-qr canvas{display:block;width:min(252px,62vw);height:auto;cursor:zoom-in;border-radius:4px}
+.share-qr em{font-style:normal;font-size:9.5px;letter-spacing:.14em;color:#7c8296;text-align:center;line-height:1.5}
+.share-qr-save{margin-top:2px;padding:7px 14px;border-radius:99px;border:1px solid #d8dbe4;background:#f5f6f9;
+  color:#3c4356;font:inherit;font-size:11.5px;cursor:pointer}
+.share-qr-save:hover{background:#eceef4}
+.share-qr-save:active{transform:translateY(1px)}
+.qr-full{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;
+  background:#fff;cursor:zoom-out;animation:qr-in .18s ease-out}
+.qr-full canvas{display:block;border-radius:6px}
+@keyframes qr-in{from{opacity:0}to{opacity:1}}
+.share-link-box{margin:0 0 10px}
+.share-link-box summary{cursor:pointer;font-size:11.5px;color:var(--muted);padding:7px 0;list-style:none;user-select:none}
+.share-link-box summary::-webkit-details-marker{display:none}
+.share-link-box summary::before{content:'▸ ';color:var(--violet)}
+.share-link-box[open] summary::before{content:'▾ '}
+.share-link-box[open] summary{margin-bottom:8px}
+
 .share-hint{margin:0 0 12px;font-size:12px;line-height:1.8;color:var(--text-2)}
 .share-hint b{color:var(--violet)}
 .share-link{width:100%;resize:none;padding:10px 12px;border-radius:8px;border:1px solid var(--line);

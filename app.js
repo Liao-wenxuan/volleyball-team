@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-28 · r6'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-28 · r7'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -2149,36 +2149,6 @@
     return Math.round(((att.p + att.l) / marked) * 100);
   }
 
-  // 短板对应的练法（本地兜底点评用，AI 那版走模型自己写）
-  const TIP_OF = {
-    serve: '每天 50 个定点发球，先追稳定再追力量',
-    receive: '对墙垫球 200 次，接球前先迈一步把身体对正',
-    set: '网前定点传球 100 次，重点练手腕弹送',
-    spike: '三步助跑起跳 30 次，先打准线再追球速',
-    block: '拦网步加手型 15 分钟，练跟球不跟人',
-    defense: '低姿移动接球 10 组、每组 20 个'
-  };
-
-  /** 没配 AI Key（或还没生成）时的兜底点评：照样有夸、有短板、有具体练法 */
-  function localNote(rate, sk, base) {
-    const head = rate == null
-      ? '考勤还没登记，先把到场记起来才有得聊'
-      : rate >= 90 ? `出勤 ${rate}%，几乎没缺过，这份稳定队里都看得见`
-      : rate >= 70 ? `出勤 ${rate}%，再少请一次假，状态就能连起来`
-      : `出勤 ${rate}%，来得少身体记不住动作，先从每周到场两次开始`;
-    let bestI = 0;
-    for (let i = 1; i < 6; i++) if (sk[i] - base[i] > sk[bestI] - base[bestI]) bestI = i;
-    const gain = +(sk[bestI] - base[bestI]).toFixed(1);
-    const up = gain > 0.05
-      ? `${SKILLS[bestI].label}从 ${base[bestI].toFixed(1)} 涨到 ${sk[bestI].toFixed(1)}，这 ${gain.toFixed(1)} 分是你自己练出来的`
-      : '技能分还没动，第一次进步往往来得比想象中快';
-    let weakI = 0;
-    for (let i = 1; i < 6; i++) if (sk[i] < sk[weakI]) weakI = i;
-    const tip = `现在最该补的是${SKILLS[weakI].label}（${sk[weakI].toFixed(1)}），${TIP_OF[SKILLS[weakI].key]}`;
-    const tail = rate != null && rate >= 90 ? '保持这个节奏，你会是场上让人放心的那个。' : '不用急，这周比上周多来一次就够了。';
-    return `${head}。${up}。${tip}。${tail}`;
-  }
-
   // 全季考勤聚合：跳过取消的训练；只统计「已登记」的格子，未登记不算缺勤
   function sharePayload() {
     const players = db.players.map((p) => {
@@ -2193,11 +2163,11 @@
       }));
       const sk = SKILLS.map((s) => Number(p.skills[s.key] ?? 5));
       const base = SKILLS.map((s) => skillStart(p, s.key));
-      // note = 分享页那段建议和鼓励：优先用 AI 生成并存在本机的，没有就用本地兜底
+      // note 只带 AI 写的那段：模板点评是纯规则算出来的，队员端用同样规则现场算，
+      // 结果一模一样，但省掉整条链接一半的体积（中文文本压不动，最贵的就是它）
       const aiNote = (db.shareNotes && db.shareNotes[p.id]) || '';
-      const note = aiNote || localNote(attRate(att), sk, base);
       // nc：这段点评是不是 AI 写的（分享页据此标注来源，模板版不冒充 AI）
-      return { id: p.id, n: p.name, pos: p.position, no: p.number || 0, att, sk, base, note, nc: aiNote ? 1 : 0 };
+      return { id: p.id, n: p.name, pos: p.position, no: p.number || 0, att, sk, base, note: aiNote, nc: aiNote ? 1 : 0 };
     });
     const sessions = Object.values(db.weeks).flat()
       .filter((s) => s && s.status !== 'cancelled')
@@ -2205,7 +2175,7 @@
       .slice(0, 8)
       .map((s) => {
         const c = sessionCounts(s);
-        return { d: (s.date || '').slice(5), t: s.start || '', p: c.present, l: c.late, v: c.leave, a: c.absent, st: s.attendance || {} };
+        return { d: s.date || '', t: s.start || '', p: c.present, l: c.late, v: c.leave, a: c.absent, st: s.attendance || {} };
       })
       .reverse(); // 视图里按时间正序展示
     return { v: 1, team: '信工院排球队', at: Date.now(), players, sessions };
@@ -2221,7 +2191,7 @@
       SKILLS.forEach((sk, k) => { skills[sk.label] = +pl.sk[k].toFixed(1); start[sk.label] = +pl.base[k].toFixed(1); });
       return { i, 姓名: pl.n, 号码: pl.no, 位置: pl.pos, 出勤率: attRate(pl.att), 出勤: pl.att, 技能: skills, 起点: start };
     });
-    const prompt = `你是这支大学院排球队的队长，也是队里技术最细的人。下面是队员的真实数据（起点 = 赛季初的分，技能 = 现在的分，出勤率按已登记的训练算）。\n\n${JSON.stringify(rows)}\n\n给每个人写一段点评，直接对本人说、用"你"，55-85 字，必须包含三件事：\n1）具体夸一处：点名某项技能或出勤表现，带上数字对比；\n2）指出最该练的一项技能，配一个能自己练的动作或次数；\n3）一句落在实处的鼓励，不要空话、不要堆感叹号、不要"你是最棒的"。\n语气像认真但不肉麻的队长，不要出现"数据""统计""评分"这类词。\n只输出 JSON 数组，格式 [{"i":0,"t":"点评正文"}]，i 用给定编号，不要解释、不要代码块。`;
+    const prompt = `你是这支大学院排球队的队长，也是队里技术最细的人。下面是队员的真实数据（起点 = 赛季初的分，技能 = 现在的分，出勤率按已登记的训练算）。\n\n${JSON.stringify(rows)}\n\n给每个人写一段点评，直接对本人说、用"你"，40-50 字（链接长度直接取决于这个，超过 50 字就算失败），必须包含三件事：\n1）具体夸一处：点名某项技能或出勤表现，带上数字对比；\n2）指出最该练的一项技能，配一个能自己练的动作或次数；\n3）一句落在实处的鼓励，不要空话、不要堆感叹号、不要"你是最棒的"。\n语气像认真但不肉麻的队长，不要出现"数据""统计""评分"这类词。\n只输出 JSON 数组，格式 [{"i":0,"t":"点评正文"}]，i 用给定编号，不要解释、不要代码块。`;
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 60000);
     let res;
@@ -2249,7 +2219,7 @@
       const pl = data.players[it && it.i];
       if (!pl || typeof it.t !== 'string' || !it.t.trim()) return;
       if (!db.shareNotes) db.shareNotes = {};
-      db.shareNotes[pl.id] = it.t.trim().slice(0, 300);
+      db.shareNotes[pl.id] = it.t.trim().slice(0, 150); // 50 字中文 ≈ 150 字节，再长二维码就扫不动了
       n += 1;
     });
     if (!n) throw new Error('一条点评都没解析出来');
@@ -2261,15 +2231,23 @@
     if (!db.players.length) { toast('还没有队员，先录入队员再分享', 'warn'); return; }
     const hasAi = !!aiCfg().key;
     const body = `<div class="share-wrap">
-      <p class="share-hint">生成一个<b>只读链接</b>发到队群：队员打开后输入<b>姓名 + 球衣号码</b>，就能看到自己的出勤、进步、六维图和一段点评。数据就编在链接里，<b>不上传任何服务器</b>。</p>
+      <p class="share-hint">队员用<b>微信扫一扫</b>或长按识别下面的码，输入<b>姓名 + 球衣号码</b>，就能看到自己的出勤、进步、六维图和一段点评。数据全在码里，<b>不上传任何服务器</b>。</p>
+      <div class="share-qr">
+        <canvas id="shareQr" aria-label="队员端二维码"></canvas>
+        <em id="shareQrTips" class="mono">生成中…</em>
+        <button type="button" class="share-qr-save" id="shareQrSave">保存二维码图片</button>
+      </div>
       ${hasAi
         ? `<div class="share-ai"><button type="button" class="btn btn-ghost" id="shareAi"><span>✦</span>用 AI 写点评</button><em id="shareAiSt">点一次，全队每人一段（约 10 秒）</em></div>`
         : `<div class="share-ai is-tip"><em>点评先用内置模板生成。到「AI 助手」填个 API Key，可以让 AI 写得更贴每个人的情况。</em></div>`}
-      <textarea id="shareLink" class="share-link" rows="4" readonly placeholder="生成中…"></textarea>
-      <div class="share-meta mono" id="shareMeta"></div>
+      <details class="share-link-box">
+        <summary>或者复制链接发到群里</summary>
+        <textarea id="shareLink" class="share-link" rows="3" readonly placeholder="生成中…"></textarea>
+        <div class="share-meta mono" id="shareMeta"></div>
+      </details>
       <div class="share-note">
         <p>· 这是<b>数据快照</b>，之后改了考勤或技能，重新生成一次再发</p>
-        <p>· 链接里含队员姓名和出勤，只发队内，别贴公开群</p>
+        <p>· 码里含队员姓名和出勤，只发队内，别贴公开群</p>
       </div>
       <div class="share-foot"><button type="button" class="btn btn-primary" id="shareCopy">复制链接</button><button type="button" class="btn btn-ghost" id="shareClose">关闭</button></div>
     </div>`;
@@ -2277,15 +2255,61 @@
     $('#shareClose').onclick = closeModal;
     $('#shareLink').onclick = (e) => e.target.select();
     let url = '';
+
+    // 把链接画成二维码：队员扫码进，不用看到那串长链接
+    const paintQR = () => {
+      const cv = $('#shareQr');
+      const tips = $('#shareQrTips');
+      if (!cv || !tips) return;
+      if (!url) { tips.textContent = '链接还没生成好'; return; }
+      if (!window.XGYQR) { cv.style.display = 'none'; tips.textContent = '二维码模块没加载'; return; }
+      try {
+        const info = window.XGYQR.toCanvas(cv, url, { size: 620, quiet: 2, fg: '#0c0e14', bg: '#ffffff' });
+        // 版本越高模块越密：屏幕扫不动就靠存图发群、长按识别
+        tips.textContent = info.version <= 16
+          ? `V${info.version} · 当面扫或长按识别都行`
+          : `V${info.version} · 偏密，建议存图发群里长按识别`;
+        const save = $('#shareQrSave');
+        if (save) save.onclick = () => {
+          const name = `信工院排球队-队员码-${new Date().toISOString().slice(0, 10)}.png`;
+          cv.toBlob((blob) => {
+            if (!blob) { toast('导出失败，可以截图保存', 'warn'); return; }
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+            toast('二维码已保存，发到群里让队员长按识别');
+          }, 'image/png');
+        };
+        cv.onclick = () => {
+          const ov = document.createElement('div');
+          ov.className = 'qr-full';
+          const big = document.createElement('canvas');
+          ov.appendChild(big);
+          document.body.appendChild(ov);
+          window.XGYQR.toCanvas(big, url, { size: Math.max(720, Math.min(screen.width, screen.height) * 2), quiet: 2, fg: '#0c0e14', bg: '#ffffff' });
+          big.style.width = 'min(86vw, 86vh)';
+          ov.onclick = () => ov.remove();
+        };
+      } catch (err) {
+        cv.style.display = 'none';
+        tips.textContent = '二维码没生成：' + (err && err.message ? err.message : '未知错误') + '（可复制链接发）';
+      }
+    };
+
     const rebuild = async () => {
       try {
         url = await window.XGYShare.buildURL(sharePayload());
         $('#shareLink').value = url;
-        const extra = url.length > 2400 ? '（偏长：建议只发微信好友，别贴简介）' : '';
-        $('#shareMeta').textContent = `LINK · ${url.length} CHARS ${extra}`;
+        $('#shareMeta').textContent = `LINK · ${url.length} CHARS`;
+        paintQR();
       } catch (err) {
         $('#shareLink').value = '';
         $('#shareMeta').textContent = '生成失败：' + (err && err.message ? err.message : '未知错误');
+        const tips = $('#shareQrTips');
+        if (tips) tips.textContent = '生成失败';
       }
     };
     await rebuild();

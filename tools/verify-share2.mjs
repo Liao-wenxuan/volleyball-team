@@ -3,6 +3,10 @@ import http from 'node:http';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { createRequire } from 'node:module';
+const require_ = createRequire(import.meta.url);
+const jsQR = require_('jsqr');
+const { PNG } = require_('pngjs');
 
 const ROOT = process.cwd();
 const PORT = 5539;
@@ -81,6 +85,49 @@ try {
   await sleep(700);
   const link = await evalJS(`document.querySelector('#shareLink').value`);
   check('生成分享链接', typeof link === 'string' && link.includes('#share='), `${link ? link.length : 0} 字符`);
+  /* ── 二维码：画对了没、能不能解回同一条链接 ── */
+  const qrStat = await evalJS(`(() => {
+    const cv = document.querySelector('#shareQr');
+    if (!cv) return { err: 'canvas 不存在' };
+    const ctx = cv.getContext('2d');
+    const d = ctx.getImageData(0, 0, cv.width, cv.height).data;
+    let dark = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] < 128) dark += 1;
+    return { w: cv.width, h: cv.height, dark, total: cv.width * cv.height,
+             cssW: Math.round(cv.getBoundingClientRect().width),
+             tips: (document.querySelector('#shareQrTips') || {}).textContent || '' };
+  })()`);
+  check('二维码已画到 canvas', qrStat && qrStat.w > 0 && qrStat.dark > 0,
+    qrStat ? `${qrStat.w}×${qrStat.h}，屏幕显示 ${qrStat.cssW}px，深色 ${(qrStat.dark / qrStat.total * 100).toFixed(1)}%，${qrStat.tips}` : String(qrStat && qrStat.err));
+
+  // 用 jsQR（真解码器）扫画布像素：画出来东西必须真能被扫出来，且解回同一条链接
+  const scan = async (label, targetPx, expect) => {
+    const dataUrl = await evalJS(`(() => {
+      const cv = document.querySelector('#shareQr');
+      if (!cv) return '';
+      const target = ${targetPx ? 'Math.round(cv.getBoundingClientRect().width)' : 'cv.width'};
+      const c2 = document.createElement('canvas');
+      c2.width = target; c2.height = target;
+      const ctx = c2.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, target, target);
+      ctx.drawImage(cv, 0, 0, target, target);
+      return c2.toDataURL('image/png');
+    })()`);
+    if (!dataUrl) return { label, ok: false, why: 'canvas 不存在' };
+    const img = PNG.sync.read(Buffer.from(dataUrl.split(',')[1], 'base64'));
+    const res = jsQR(new Uint8ClampedArray(img.data), img.width, img.height);
+    const want = expect || link;
+    return { label, ok: !!res && res.data === want, got: res ? res.data : '', px: img.width };
+  };
+
+  const scans = [];
+  scans.push(await scan('原始画布', false));
+  scans.push(await scan('缩到屏幕显示尺寸', true));
+  for (const r of scans) {
+    check(`实扫解码 · ${r.label}`, r.ok,
+      r.ok ? `内容与链接一致（${r.px}px）` : `解不出或内容不符${r.got ? '：' + r.got.slice(0, 40) : ''}`);
+  }
+
   const aiBox = await evalJS(`(document.querySelector('.share-ai')||{}).className||''`);
   const hasAiBtn = await evalJS(`!!document.querySelector('#shareAi')`);
   check('分享弹窗有生成点评入口', aiBox.includes('share-ai'), hasAiBtn ? 'AI 按钮（seed 带假 Key）' : '模板提示');
@@ -139,6 +186,47 @@ try {
   const t2 = await evalJS(`(document.querySelector('.sv-h1')||{}).textContent||''`);
   check('另一名队员也能验证通过', t2.includes(p1.name), t2.replace(/\s+/g, ' '));
 
+  /* ── 带 AI 点评的版本：链接会变长，确认码还能解 ── */
+  await evalJS(`(() => {
+    const raw = localStorage.getItem('xgy_volleyball_v2');
+    const d = JSON.parse(raw);
+    d.shareNotes = {};
+    d.players.forEach((p, i) => {
+      d.shareNotes[p.id] = ('你一传从 6.0 涨到 7.0，这 1 分是自己练出来的。现在最该补的是二传，网前定点传球 100 次，重点练手腕弹送。' + '这是第' + (i + 1) + '个人的点评。');
+    });
+    localStorage.setItem('xgy_volleyball_v2', JSON.stringify(d));
+    return 'ok';
+  })()`);
+  await send('Page.navigate', { url: 'about:blank' });
+  await sleep(300);
+  await send('Page.navigate', { url: `http://127.0.0.1:${PORT}/index.html` });
+  await sleep(1600);
+  await evalJS(`document.querySelector('#menuShare').click(); 'x'`);
+  await sleep(1800);
+  const link2 = await evalJS(`document.querySelector('#shareLink').value`);
+  const tips2 = await evalJS(`(document.querySelector('#shareQrTips')||{}).textContent||''`);
+  check('带 AI 点评的链接', typeof link2 === 'string' && link2.includes('#share='), `${link2 ? link2.length : 0} 字符`);
+  check('二维码提示文案跟着变', tips2.length > 0, tips2);
+  const ai = await scan('AI 点评版原图', false, link2);
+  check('AI 点评版二维码可解', ai.ok, ai.ok ? `内容一致（${ai.px}px）` : '解不出');
+  const saveBtn = await evalJS(`!!document.querySelector('#shareQrSave')`);
+  check('有「保存二维码图片」按钮', saveBtn === true);
+  await shot('s3-share-ai.png');
+
+  /* ── 老格式链接（v1 JSON）必须还能打开 ── */
+  const legacyPath = path.join(ROOT, 'preview', 'demo-link.txt');
+  if (existsSync(legacyPath)) {
+    const legacy = readFileSync(legacyPath, 'utf8').trim();
+    await send('Page.navigate', { url: 'about:blank' });
+    await sleep(300);
+    await send('Page.navigate', { url: legacy });
+    await sleep(2200);
+    const legacyGate = await evalJS(`!!document.querySelector('#svForm')`);
+    check('老格式链接还能打开', legacyGate === true);
+    await send('Page.navigate', { url: 'about:blank' });
+    await sleep(200);
+  }
+
   /* 桌面宽度 */
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await sleep(500);
@@ -146,6 +234,7 @@ try {
   writeFileSync(path.join(SHOTS, 's2-self-full.png'), Buffer.from(r.result.data, 'base64'));
   console.log('· 截图 s2-self-full.png（整页）');
 
+  if (!failed) writeFileSync(path.join(SHOTS, 'demo-link.txt'), link, 'utf8');
   console.log(failed ? `\n${failed} 项失败` : '\n全部通过');
 } catch (e) {
   console.error('运行出错:', e.message);

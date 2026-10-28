@@ -12,9 +12,9 @@
  *
  * 发新版：把 VERSION 加一，旧缓存在 activate 时自动清掉。
  * ═══════════════════════════════════════════════════════════════ */
-// v6: 删训练签到页；队员端改「姓名+号码」验证，加进步/弱点/AI 点评
+// v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v6';
+const VERSION = 'v7';
 const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',
@@ -22,6 +22,7 @@ const SHELL = [
   './style.css',
   './app.js',
   './cloud.js',
+  './qr.js',
   './card.js',
   './share.js',
   './manifest.webmanifest',

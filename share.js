@@ -40,20 +40,165 @@
     return u;
   }
 
+  /* ══════════ 紧凑按位打包 ══════════
+     为什么不用 JSON：JSON 里每个数字都要好几个字符，光 10 个人的技能分
+     就吃掉 600 字符；按位打包后同样的信息只要 18 字节/人。
+     数据越小二维码版本越低、模块越少，手机上才扫得动。 */
+  var POS_LIST = ['主攻', '副攻', '二传', '接应', '自由人'];
+  var ST_CODE = { present: 1, late: 2, leave: 3, absent: 4 };
+  var ST_NAME = ['', 'present', 'late', 'leave', 'absent'];
+  var EPOCH_DAY = Date.UTC(2024, 0, 1) / 86400000;
+
+  function BitW() { this.bits = []; }
+  BitW.prototype.put = function (val, n) {
+    for (var i = n - 1; i >= 0; i--) this.bits.push((val >>> i) & 1);
+  };
+  BitW.prototype.text = function (str, lenBits) {
+    var enc = new TextEncoder().encode(str == null ? '' : String(str));
+    var max = (1 << lenBits) - 1;
+    if (enc.length > max) enc = enc.slice(0, max);
+    this.put(enc.length, lenBits);
+    for (var i = 0; i < enc.length; i++) this.put(enc[i], 8);
+  };
+  BitW.prototype.done = function () {
+    while (this.bits.length % 8) this.bits.push(0);
+    var out = new Uint8Array(this.bits.length / 8);
+    for (var i = 0; i < this.bits.length; i += 8) {
+      var v = 0;
+      for (var k = 0; k < 8; k++) v = (v << 1) | this.bits[i + k];
+      out[i / 8] = v;
+    }
+    return out;
+  };
+
+  function BitR(bytes) { this.b = bytes; this.p = 0; }
+  BitR.prototype.get = function (n) {
+    var v = 0;
+    for (var i = 0; i < n; i++) {
+      var idx = this.p >> 3;
+      if (idx >= this.b.length) return v;
+      v = (v << 1) | ((this.b[idx] >> (7 - (this.p & 7))) & 1);
+      this.p++;
+    }
+    return v;
+  };
+  BitR.prototype.text = function (lenBits) {
+    var n = this.get(lenBits);
+    var arr = new Uint8Array(n);
+    for (var i = 0; i < n; i++) arr[i] = this.get(8);
+    return new TextDecoder().decode(arr);
+  };
+
+  function dayIndex(dateStr) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr || ''));
+    if (!m) return 0;
+    return Math.max(0, Math.round(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000 - EPOCH_DAY));
+  }
+  function dayString(n) {
+    var d = new Date((n + EPOCH_DAY) * 86400000);
+    return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate());
+  }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  /** 技能分 0–10（0.5 步长）→ 0–20，压进 5 bit */
+  function q5(v) { return Math.max(0, Math.min(31, Math.round((Number(v) || 0) * 2))); }
+  function q6(v) { return Math.max(0, Math.min(63, Math.round(Number(v) || 0))); }
+
+  function pack(o) {
+    var players = (o.players || []).slice(0, 31);
+    var sessions = (o.sessions || []).slice(0, 15);
+    var w = new BitW();
+    w.put(2, 4);                                   // 格式版本
+    w.text(o.team || '', 6);                       // 队名（≤63 字节）
+    w.put(Math.round((Number(o.at) || Date.now()) / 1000 - EPOCH_DAY * 86400) >>> 0, 32);
+    w.put(players.length, 5);
+    players.forEach(function (p) {
+      w.text(p.n, 6);
+      w.put(q6(p.no), 7);
+      w.put(Math.max(0, POS_LIST.indexOf(p.pos)), 3);
+      var a = p.att || {};
+      w.put(q6(a.p), 6); w.put(q6(a.l), 6); w.put(q6(a.v), 6); w.put(q6(a.a), 6);
+      for (var i = 0; i < 6; i++) w.put(q5((p.sk || [])[i]), 5);
+      for (var j = 0; j < 6; j++) w.put(q5((p.base || [])[j]), 5);
+    });
+    w.put(sessions.length, 4);
+    sessions.forEach(function (s) {
+      w.put(dayIndex(s.d), 15);
+      var tt = String(s.t || '').split(':');
+      w.put(q6(tt[0]), 5);
+      w.put(q6(tt[1]), 6);
+      var st = s.st || {};
+      for (var i = 0; i < players.length; i++) w.put(ST_CODE[st[players[i].id]] || 0, 3);
+    });
+    // 只带 AI 写的那段；模板点评由队员端按同样规则现场算
+    var notes = [];
+    players.forEach(function (p, i) { if (p.note) notes.push({ i: i, t: String(p.note) }); });
+    w.put(Math.min(notes.length, 15), 4);
+    notes.slice(0, 15).forEach(function (x) {
+      w.put(x.i, 5);
+      w.text(x.t, 10);
+    });
+    return w.done();
+  }
+
+  function unpack(bytes) {
+    var r = new BitR(bytes);
+    var ver = r.get(4);
+    if (ver !== 2) throw new Error('分享数据版本不认识');
+    var team = r.text(6);
+    var at = (r.get(32) + EPOCH_DAY * 86400) * 1000;
+    var n = r.get(5);
+    var players = [];
+    for (var i = 0; i < n; i++) {
+      var p = { id: 'p' + i, n: r.text(6), no: r.get(7), pos: POS_LIST[r.get(3)] || '' };
+      p.att = { p: r.get(6), l: r.get(6), v: r.get(6), a: r.get(6) };
+      p.sk = []; p.base = [];
+      for (var k = 0; k < 6; k++) p.sk.push(r.get(5) / 2);
+      for (var k2 = 0; k2 < 6; k2++) p.base.push(r.get(5) / 2);
+      players.push(p);
+    }
+    var sn = r.get(4);
+    var sessions = [];
+    for (var s = 0; s < sn; s++) {
+      var d = dayString(r.get(15));
+      var hh = r.get(5), mi = r.get(6);
+      var st = {};
+      for (var q = 0; q < players.length; q++) {
+        var code = r.get(3);
+        if (code) st[players[q].id] = ST_NAME[code];
+      }
+      sessions.push({ d: d, t: pad2(hh) + ':' + pad2(mi), st: st });
+    }
+    var nn = r.get(4);
+    for (var z = 0; z < nn; z++) {
+      var idx = r.get(5);
+      var txt = r.text(10);
+      if (players[idx]) { players[idx].note = txt; players[idx].nc = 1; }
+    }
+    return { v: 2, team: team, at: at, players: players, sessions: sessions };
+  }
+
   async function encode(obj) {
-    const raw = new TextEncoder().encode(JSON.stringify(obj));
     if (typeof CompressionStream !== 'undefined') {
       const buf = await new Response(
-        new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'))
+        new Blob([pack(obj)]).stream().pipeThrough(new CompressionStream('deflate-raw'))
       ).arrayBuffer();
-      return '1' + b64url(new Uint8Array(buf));
+      return '2' + b64url(new Uint8Array(buf));
     }
-    return '0' + b64url(raw);
+    // 兜底：不支持压缩的老浏览器退回 JSON（体积大但不至于打不开）
+    return '0' + b64url(new TextEncoder().encode(JSON.stringify(obj)));
   }
 
   async function decode(str) {
     const tag = str[0];
     const bytes = unb64url(str.slice(1));
+    if (tag === '2') {
+      if (typeof DecompressionStream === 'undefined') throw new Error('这个浏览器打不开新格式');
+      const buf = await new Response(
+        new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))
+      ).arrayBuffer();
+      return unpack(new Uint8Array(buf));
+    }
+    // 老链接（v1 的 JSON）继续能开
     if (tag === '1') {
       const buf = await new Response(
         new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))
@@ -73,6 +218,38 @@
 
   /* ══════════ 常量（与 app.js 保持一致，刻意独立，分享页不依赖主应用） ══════════ */
   const SKILL_LABELS = ['发球', '一传', '二传', '扣球', '拦网', '防守'];
+
+  /* 短板对应的练法 —— 与队长端 app.js 里那份保持一致。
+     模板点评不进分享链接（那是纯规则算出来的，占一半体积），
+     队员端用同样的规则现场算一遍，结果一模一样。 */
+  const TIP_OF = {
+    serve: '每天 50 个定点发球，先追稳定再追力量',
+    receive: '对墙垫球 200 次，接球前先迈一步把身体对正',
+    set: '网前定点传球 100 次，重点练手腕弹送',
+    spike: '三步助跑起跳 30 次，先打准线再追球速',
+    block: '拦网步加手型 15 分钟，练跟球不跟人',
+    defense: '低姿移动接球 10 组、每组 20 个'
+  };
+  const SKILL_KEYS = ['serve', 'receive', 'set', 'spike', 'block', 'defense'];
+
+  function localNote(rate, sk, base) {
+    const head = rate == null
+      ? '考勤还没登记，先把到场记起来才有得聊'
+      : rate >= 90 ? `出勤 ${rate}%，几乎没缺过，这份稳定队里都看得见`
+        : rate >= 70 ? `出勤 ${rate}%，再少请一次假，状态就能连起来`
+          : `出勤 ${rate}%，来得少身体记不住动作，先从每周到场两次开始`;
+    let bestI = 0;
+    for (let i = 1; i < 6; i++) if (sk[i] - base[i] > sk[bestI] - base[bestI]) bestI = i;
+    const gain = +(sk[bestI] - base[bestI]).toFixed(1);
+    const up = gain > 0.05
+      ? `${SKILL_LABELS[bestI]}从 ${base[bestI].toFixed(1)} 涨到 ${sk[bestI].toFixed(1)}，这 ${gain.toFixed(1)} 分是你自己练出来的`
+      : '技能分还没动，第一次进步往往来得比想象中快';
+    let weakI = 0;
+    for (let i = 1; i < 6; i++) if (sk[i] < sk[weakI]) weakI = i;
+    const tip = `现在最该补的是${SKILL_LABELS[weakI]}（${sk[weakI].toFixed(1)}），${TIP_OF[SKILL_KEYS[weakI]]}`;
+    const tail = rate != null && rate >= 90 ? '保持这个节奏，你会是场上让人放心的那个。' : '不用急，这周比上周多来一次就够了。';
+    return `${head}。${up}。${tip}。${tail}`;
+  }
   const ROLE_STYLE = {
     '主攻': ['#ff8a5c', '#ffc46b'],
     '副攻': ['#7b6cff', '#4aa8ff'],
@@ -133,6 +310,12 @@
       ${dots}
       ${labels.join('')}
     </svg>`;
+  }
+
+  /** 日期统一显示成 MM-DD（新格式带年份，老链接不带） */
+  function fmtDay(d) {
+    const t = String(d || '');
+    return t.length >= 10 ? t.slice(5) : t;
   }
 
   function fmtSnapshot(at) {
@@ -278,14 +461,16 @@
     const timeline = (data.sessions || []).map((s) => {
       const st = (s.st || {})[me.id] || '';
       return `<div class="sv-tl-row">
-        <span class="sv-sdate mono">${esc(s.d)}</span>
+        <span class="sv-sdate mono">${esc(fmtDay(s.d))}</span>
         <span class="sv-stime">${esc(s.t || '')}</span>
         <span class="sv-tl-badge ${ST_CLS[st] || 'none'}">${st ? ST_LABEL[st] : '未登记'}</span>
       </div>`;
     }).join('');
 
-    const note = String(me.note || '').trim();
-    const isAi = Number(me.nc) === 1;
+    // 链接里只带 AI 写的那段；模板点评在队员端按同样规则现场算，不占链接体积
+    const aiNote = String(me.note || '').trim();
+    const note = aiNote || localNote(r, sk, base);
+    const isAi = Number(me.nc) === 1 && !!aiNote;
 
     const el = shell(data.team || '信工院排球队', `
       <section class="sv-hero">
@@ -395,5 +580,5 @@
   window.addEventListener('hashchange', boot);
 
   /* ══════════ 给主应用的接口 ══════════ */
-  window.XGYShare = { buildURL, encode };
+  window.XGYShare = { buildURL, encode, pack, unpack };
 })();
