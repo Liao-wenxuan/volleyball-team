@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-28 · r7'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-29 · r8'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -2272,7 +2272,14 @@
         const save = $('#shareQrSave');
         if (save) save.onclick = () => {
           const name = `信工院排球队-队员码-${new Date().toISOString().slice(0, 10)}.png`;
-          cv.toBlob((blob) => {
+          // 导出单独画一张 1240px 的：屏幕上 620 够用，存图发群/打印要更密更清晰
+          let exportCv = cv;
+          try {
+            const big = document.createElement('canvas');
+            window.XGYQR.toCanvas(big, url, { size: 1240, quiet: 3, fg: '#0c0e14', bg: '#ffffff' });
+            exportCv = big;
+          } catch (e) { /* 画不出大的就导出屏幕这张 */ }
+          exportCv.toBlob((blob) => {
             if (!blob) { toast('导出失败，可以截图保存', 'warn'); return; }
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
@@ -2314,6 +2321,7 @@
     };
     await rebuild();
     $('#shareCopy').onclick = async () => {
+      if (!url) { toast('链接还没生成好，稍等一下再点', 'warn'); return; }
       try {
         await navigator.clipboard.writeText(url);
       } catch (e) {

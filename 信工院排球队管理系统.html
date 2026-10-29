@@ -3957,6 +3957,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
   'use strict';
 
   const NAME_KEY = 'xgy_share_name'; // 本机只记住上次输入的姓名，方便下次填
+  const SELF_KEY = 'xgy_share_self'; // 验证通过后记住「姓名+号码」，下次打开免输（只存本机）
 
   /* ══════════ base64url + 压缩编解码 ══════════ */
   function b64url(bytes) {
@@ -4282,6 +4283,19 @@ body.sv-mode > *:not(#shareView){display:none !important}
   }
 
   /* ══════════ 第 1 步：姓名 + 号码 ══════════ */
+
+  /** 进门验证的唯一判据，进门和「记住本人」共用，避免两处规则漂移 */
+  function matchPlayer(players, name, no) {
+    const needNo = players.some((p) => Number(p.no) > 0);
+    return players.find((p) => {
+      if (normName(p.n) !== name) return false;
+      if (!needNo) return true;
+      if (!Number(p.no)) return !no; // 没录号码的队员，号码留空也放行
+      return String(Number(p.no)) === no;
+    }) || null;
+  }
+  function normName(s) { return String(s || '').replace(/\s+/g, ''); }
+
   function renderGate(data) {
     const players = data.players || [];
     const needNo = players.some((p) => Number(p.no) > 0);
@@ -4332,27 +4346,24 @@ body.sv-mode > *:not(#shareView){display:none !important}
     const err = el.querySelector('#svErr');
     const nameEl = el.querySelector('#svName');
     const noEl = el.querySelector('#svNo');
-    const norm = (s) => String(s || '').replace(/\s+/g, '');
     form.onsubmit = (e) => {
       e.preventDefault();
-      const name = norm(nameEl.value);
-      const no = norm(noEl.value);
-      const me = players.find((p) => {
-        if (norm(p.n) !== name) return false;
-        if (!needNo) return true;
-        if (!Number(p.no)) return !no; // 没录号码的队员，号码留空也放行
-        return String(Number(p.no)) === no;
-      });
+      const name = normName(nameEl.value);
+      const no = normName(noEl.value);
+      const me = matchPlayer(players, name, no);
       if (!me) {
         err.hidden = false;
         form.classList.remove('shake');
         void form.offsetWidth; // 重排一次，让动画能重复触发
         form.classList.add('shake');
-        noEl.focus();
+        (name ? noEl : nameEl).focus(); // 哪个没填好焦点给哪个，不提示是哪一项错（不暴露名单）
         return;
       }
       err.hidden = true;
-      try { localStorage.setItem(NAME_KEY, me.n); } catch (e2) { /* ignore */ }
+      try {
+        localStorage.setItem(NAME_KEY, me.n);
+        localStorage.setItem(SELF_KEY, JSON.stringify({ n: name, no: no }));
+      } catch (e2) { /* ignore */ }
       renderSelf(data, me);
     };
     if (remembered) noEl.focus(); else nameEl.focus();
@@ -4469,13 +4480,27 @@ body.sv-mode > *:not(#shareView){display:none !important}
       </footer>`);
     document.title = `${me.n} · 我的训练档案`;
     const sw = document.getElementById('svSwitch');
-    if (sw) sw.onclick = () => renderGate(data);
+    if (sw) sw.onclick = () => {
+      try { localStorage.removeItem(SELF_KEY); } catch (e) { /* ignore */ }
+      renderGate(data);
+    };
     return el;
+  }
+
+  /** 二次打开：本机记过「姓名+号码」且还能对上人，就直接进档案，不再问一遍 */
+  function findSelf(data) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(SELF_KEY) || 'null');
+      if (!raw || typeof raw.n !== 'string') return null;
+      return matchPlayer(data.players || [], raw.n, String(raw.no == null ? '' : raw.no));
+    } catch (e) { return null; }
   }
 
   function render(data) {
     const players = Array.isArray(data.players) ? data.players : [];
     if (!players.length) { renderError(); return; }
+    const me = findSelf(data);
+    if (me) { renderSelf(data, me); return; }
     renderGate(data);
   }
 
@@ -4538,7 +4563,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-28 · r7'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-29 · r8'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -6793,7 +6818,14 @@ body.sv-mode > *:not(#shareView){display:none !important}
         const save = $('#shareQrSave');
         if (save) save.onclick = () => {
           const name = `信工院排球队-队员码-${new Date().toISOString().slice(0, 10)}.png`;
-          cv.toBlob((blob) => {
+          // 导出单独画一张 1240px 的：屏幕上 620 够用，存图发群/打印要更密更清晰
+          let exportCv = cv;
+          try {
+            const big = document.createElement('canvas');
+            window.XGYQR.toCanvas(big, url, { size: 1240, quiet: 3, fg: '#0c0e14', bg: '#ffffff' });
+            exportCv = big;
+          } catch (e) { /* 画不出大的就导出屏幕这张 */ }
+          exportCv.toBlob((blob) => {
             if (!blob) { toast('导出失败，可以截图保存', 'warn'); return; }
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
@@ -6835,6 +6867,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     };
     await rebuild();
     $('#shareCopy').onclick = async () => {
+      if (!url) { toast('链接还没生成好，稍等一下再点', 'warn'); return; }
       try {
         await navigator.clipboard.writeText(url);
       } catch (e) {

@@ -14,7 +14,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',
