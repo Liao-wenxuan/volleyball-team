@@ -1,0 +1,969 @@
+{
+  "version": 2,
+  "settings": {
+    "theme": "aurora",
+    "ai": {
+      "base": "https://api.deepseek.com",
+      "model": "deepseek-chat",
+      "key": "sk-demo-screenshot"
+    }
+  },
+  "players": [
+    {
+      "id": "p1",
+      "name": "陈一鸣",
+      "number": 1,
+      "position": "主攻",
+      "grade": "大二",
+      "height": 186,
+      "skills": {
+        "serve": 9.5,
+        "receive": 7,
+        "set": 5,
+        "spike": 8.5,
+        "block": 6,
+        "defense": 7
+      },
+      "createdAt": 1760000000000,
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "p2",
+      "name": "李昊然",
+      "number": 2,
+      "position": "主攻",
+      "grade": "大一",
+      "height": 183,
+      "skills": {
+        "serve": 6.5,
+        "receive": 6.5,
+        "set": 4.5,
+        "spike": 7.5,
+        "block": 5.5,
+        "defense": 6
+      },
+      "createdAt": 1760000000000,
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "p3",
+      "name": "王子航",
+      "number": 3,
+      "position": "副攻",
+      "grade": "大二",
+      "height": 190,
+      "skills": {
+        "serve": 6,
+        "receive": 5.5,
+        "set": 4,
+        "spike": 8,
+        "block": 8.5,
+        "defense": 6.5
+      },
+      "createdAt": 1760000000000,
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "p4",
+      "name": "刘俊熙",
+      "number": 4,
+      "position": "副攻",
+      "grade": "大三",
+      "height": 188,
+      "skills": {
+        "serve": 5.5,
+        "receive": 5,
+        "set": 4.5,
+        "spike": 7.5,
+        "block": 7.5,
+        "defense": 6
+      },
+      "createdAt": 1760000000000,
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "p5",
+      "name": "张思远",
+      "number": 5,
+      "position": "二传",
+      "grade": "大二",
+      "height": 179,
+      "skills": {
+        "serve": 5,
+        "receive": 6,
+        "set": 9,
+        "spike": 5.5,
+        "block": 4.5,
+        "defense": 6.5
+      },
+      "createdAt": 1760000000000,
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "p6",
+      "name": "赵子墨",
+      "number": 6,
+      "position": "二传",
+      "grade": "大一",
+      "height": 177,
+      "skills": {
+        "serve": 4.5,
+        "receive": 5.5,
+        "set": 7.5,
+        "spike": 5,
+        "block": 4,
+        "defense": 5.5
+      },
+      "createdAt": 1760000000000,
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "p7",
+      "name": "黄嘉树",
+      "number": 7,
+      "position": "接应",
+      "grade": "大三",
+      "height": 185,
+      "skills": {
+        "serve": 7,
+        "receive": 6,
+        "set": 5,
+        "spike": 8,
+        "block": 6.5,
+        "defense": 7.5
+      },
+      "createdAt": 1760000000000,
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "p8",
+      "name": "周天佑",
+      "number": 8,
+      "position": "接应",
+      "grade": "大二",
+      "height": 184,
+      "skills": {
+        "serve": 6,
+        "receive": 5.5,
+        "set": 5,
+        "spike": 7,
+        "block": 6,
+        "defense": 6.5
+      },
+      "createdAt": 1760000000000,
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "p9",
+      "name": "吴启铭",
+      "number": 9,
+      "position": "自由人",
+      "grade": "大二",
+      "height": 175,
+      "skills": {
+        "serve": 4,
+        "receive": 9,
+        "set": 4.5,
+        "spike": 4.5,
+        "block": 5,
+        "defense": 9
+      },
+      "createdAt": 1760000000000,
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "p_new",
+      "name": "新队员",
+      "number": 99,
+      "position": "自由人",
+      "grade": "大一",
+      "height": 172,
+      "skills": {
+        "serve": 6,
+        "receive": 6,
+        "set": 4,
+        "spike": 5,
+        "block": 4,
+        "defense": 7
+      },
+      "createdAt": 1793331129271,
+      "updatedAt": 1793331129271
+    }
+  ],
+  "weeks": {
+    "2026-10-19": [
+      {
+        "id": "s_2026-10-19_tue",
+        "date": "2026-10-20",
+        "start": "16:30",
+        "end": "18:30",
+        "venue": "",
+        "templateId": "tue",
+        "status": "scheduled",
+        "cancelReason": "",
+        "attendance": {
+          "p1": "leave",
+          "p2": "present",
+          "p3": "present",
+          "p4": "present",
+          "p5": "late",
+          "p6": "present",
+          "p7": "present",
+          "p8": "present",
+          "p9": "present",
+          "p10": "present"
+        },
+        "createdAt": 1760000000000,
+        "updatedAt": 1760000000000
+      },
+      {
+        "id": "s_2026-10-19_fri",
+        "date": "2026-10-23",
+        "start": "16:30",
+        "end": "18:30",
+        "venue": "",
+        "templateId": "fri",
+        "status": "scheduled",
+        "cancelReason": "",
+        "attendance": {
+          "p1": "present",
+          "p2": "present",
+          "p3": "present",
+          "p4": "present",
+          "p5": "late",
+          "p6": "present",
+          "p7": "present",
+          "p8": "present",
+          "p9": "present",
+          "p10": "present"
+        },
+        "createdAt": 1760000000000,
+        "updatedAt": 1760000000000
+      },
+      {
+        "id": "s_2026-10-19_sun",
+        "date": "2026-10-25",
+        "start": "08:30",
+        "end": "11:30",
+        "venue": "",
+        "templateId": "sun",
+        "status": "scheduled",
+        "cancelReason": "",
+        "attendance": {},
+        "createdAt": 1760000000000,
+        "updatedAt": 1760000000000
+      }
+    ],
+    "2026-10-12": [
+      {
+        "id": "s_2026-10-12_tue",
+        "date": "2026-10-13",
+        "start": "16:30",
+        "end": "18:30",
+        "venue": "",
+        "templateId": "tue",
+        "status": "scheduled",
+        "cancelReason": "",
+        "attendance": {
+          "p1": "present",
+          "p2": "present",
+          "p3": "present",
+          "p4": "absent",
+          "p5": "present",
+          "p6": "present",
+          "p7": "leave",
+          "p8": "present",
+          "p9": "present",
+          "p10": "late"
+        },
+        "createdAt": 1760000000000,
+        "updatedAt": 1760000000000
+      },
+      {
+        "id": "s_2026-10-12_fri",
+        "date": "2026-10-16",
+        "start": "16:30",
+        "end": "18:30",
+        "venue": "",
+        "templateId": "fri",
+        "status": "scheduled",
+        "cancelReason": "",
+        "attendance": {
+          "p1": "present",
+          "p2": "present",
+          "p3": "present",
+          "p4": "absent",
+          "p5": "present",
+          "p6": "present",
+          "p7": "leave",
+          "p8": "present",
+          "p9": "present",
+          "p10": "late"
+        },
+        "createdAt": 1760000000000,
+        "updatedAt": 1760000000000
+      },
+      {
+        "id": "s_2026-10-12_sun",
+        "date": "2026-10-18",
+        "start": "08:30",
+        "end": "11:30",
+        "venue": "",
+        "templateId": "sun",
+        "status": "scheduled",
+        "cancelReason": "",
+        "attendance": {},
+        "createdAt": 1760000000000,
+        "updatedAt": 1760000000000
+      }
+    ],
+    "2026-10-05": [
+      {
+        "id": "s_2026-10-05_tue",
+        "date": "2026-10-06",
+        "start": "16:30",
+        "end": "18:30",
+        "venue": "",
+        "templateId": "tue",
+        "status": "scheduled",
+        "cancelReason": "",
+        "attendance": {
+          "p1": "present",
+          "p2": "present",
+          "p3": "present",
+          "p4": "present",
+          "p5": "late",
+          "p6": "present",
+          "p7": "present",
+          "p8": "present",
+          "p9": "present",
+          "p10": "present"
+        },
+        "createdAt": 1760000000000,
+        "updatedAt": 1760000000000
+      },
+      {
+        "id": "s_2026-10-05_fri",
+        "date": "2026-10-09",
+        "start": "16:30",
+        "end": "18:30",
+        "venue": "",
+        "templateId": "fri",
+        "status": "scheduled",
+        "cancelReason": "",
+        "attendance": {
+          "p1": "present",
+          "p2": "present",
+          "p3": "present",
+          "p4": "present",
+          "p5": "late",
+          "p6": "present",
+          "p7": "present",
+          "p8": "present",
+          "p9": "present",
+          "p10": "present"
+        },
+        "createdAt": 1760000000000,
+        "updatedAt": 1760000000000
+      },
+      {
+        "id": "s_2026-10-05_sun",
+        "date": "2026-10-11",
+        "start": "08:30",
+        "end": "11:30",
+        "venue": "",
+        "templateId": "sun",
+        "status": "scheduled",
+        "cancelReason": "",
+        "attendance": {},
+        "createdAt": 1760000000000,
+        "updatedAt": 1760000000000
+      }
+    ],
+    "2026-10-26": [
+      {
+        "id": "s_extra",
+        "date": "2026-10-29",
+        "start": "19:00",
+        "end": "21:00",
+        "venue": "风雨球场",
+        "status": "scheduled",
+        "cancelReason": "",
+        "attendance": {
+          "p1": "present",
+          "p2": "present",
+          "p3": "present",
+          "p4": "present",
+          "p5": "present",
+          "p6": "present",
+          "p7": "present",
+          "p8": "present",
+          "p9": "present",
+          "p10": "present"
+        },
+        "createdAt": 1793331129271,
+        "updatedAt": 1793331129271
+      }
+    ]
+  },
+  "skillLogs": [
+    {
+      "id": "log1",
+      "playerId": "p1",
+      "skill": "receive",
+      "before": 6,
+      "after": 7,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-20",
+      "at": 1760503600000
+    },
+    {
+      "id": "log2",
+      "playerId": "p1",
+      "skill": "set",
+      "before": 4.5,
+      "after": 5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-21",
+      "at": 1760507200000
+    },
+    {
+      "id": "log3",
+      "playerId": "p1",
+      "skill": "block",
+      "before": 5.5,
+      "after": 6,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-23",
+      "at": 1760510800000
+    },
+    {
+      "id": "log4",
+      "playerId": "p1",
+      "skill": "defense",
+      "before": 6,
+      "after": 7,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-24",
+      "at": 1760514400000
+    },
+    {
+      "id": "log5",
+      "playerId": "p2",
+      "skill": "serve",
+      "before": 5.5,
+      "after": 6.5,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-20",
+      "at": 1760518000000
+    },
+    {
+      "id": "log6",
+      "playerId": "p2",
+      "skill": "receive",
+      "before": 6,
+      "after": 6.5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-21",
+      "at": 1760521600000
+    },
+    {
+      "id": "log7",
+      "playerId": "p2",
+      "skill": "spike",
+      "before": 7,
+      "after": 7.5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-23",
+      "at": 1760525200000
+    },
+    {
+      "id": "log8",
+      "playerId": "p2",
+      "skill": "block",
+      "before": 4.5,
+      "after": 5.5,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-24",
+      "at": 1760528800000
+    },
+    {
+      "id": "log9",
+      "playerId": "p3",
+      "skill": "serve",
+      "before": 5.5,
+      "after": 6,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-21",
+      "at": 1760532400000
+    },
+    {
+      "id": "log10",
+      "playerId": "p3",
+      "skill": "set",
+      "before": 3.5,
+      "after": 4,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-23",
+      "at": 1760536000000
+    },
+    {
+      "id": "log11",
+      "playerId": "p3",
+      "skill": "spike",
+      "before": 7,
+      "after": 8,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-24",
+      "at": 1760539600000
+    },
+    {
+      "id": "log12",
+      "playerId": "p3",
+      "skill": "defense",
+      "before": 5.5,
+      "after": 6.5,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-20",
+      "at": 1760543200000
+    },
+    {
+      "id": "log13",
+      "playerId": "p4",
+      "skill": "receive",
+      "before": 4.5,
+      "after": 5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-23",
+      "at": 1760546800000
+    },
+    {
+      "id": "log14",
+      "playerId": "p4",
+      "skill": "set",
+      "before": 3.5,
+      "after": 4.5,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-24",
+      "at": 1760550400000
+    },
+    {
+      "id": "log15",
+      "playerId": "p4",
+      "skill": "block",
+      "before": 6.5,
+      "after": 7.5,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-20",
+      "at": 1760554000000
+    },
+    {
+      "id": "log16",
+      "playerId": "p4",
+      "skill": "defense",
+      "before": 5.5,
+      "after": 6,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-21",
+      "at": 1760557600000
+    },
+    {
+      "id": "log17",
+      "playerId": "p5",
+      "skill": "serve",
+      "before": 4.5,
+      "after": 5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-23",
+      "at": 1760561200000
+    },
+    {
+      "id": "log18",
+      "playerId": "p5",
+      "skill": "receive",
+      "before": 5,
+      "after": 6,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-24",
+      "at": 1760564800000
+    },
+    {
+      "id": "log19",
+      "playerId": "p5",
+      "skill": "spike",
+      "before": 4.5,
+      "after": 5.5,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-20",
+      "at": 1760568400000
+    },
+    {
+      "id": "log20",
+      "playerId": "p5",
+      "skill": "block",
+      "before": 4,
+      "after": 4.5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-21",
+      "at": 1760572000000
+    },
+    {
+      "id": "log21",
+      "playerId": "p6",
+      "skill": "serve",
+      "before": 3.5,
+      "after": 4.5,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-24",
+      "at": 1760575600000
+    },
+    {
+      "id": "log22",
+      "playerId": "p6",
+      "skill": "set",
+      "before": 6.5,
+      "after": 7.5,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-20",
+      "at": 1760579200000
+    },
+    {
+      "id": "log23",
+      "playerId": "p6",
+      "skill": "spike",
+      "before": 4.5,
+      "after": 5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-21",
+      "at": 1760582800000
+    },
+    {
+      "id": "log24",
+      "playerId": "p6",
+      "skill": "defense",
+      "before": 5,
+      "after": 5.5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-23",
+      "at": 1760586400000
+    },
+    {
+      "id": "log25",
+      "playerId": "p7",
+      "skill": "receive",
+      "before": 5,
+      "after": 6,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-20",
+      "at": 1760590000000
+    },
+    {
+      "id": "log26",
+      "playerId": "p7",
+      "skill": "set",
+      "before": 4.5,
+      "after": 5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-21",
+      "at": 1760593600000
+    },
+    {
+      "id": "log27",
+      "playerId": "p7",
+      "skill": "block",
+      "before": 6,
+      "after": 6.5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-23",
+      "at": 1760597200000
+    },
+    {
+      "id": "log28",
+      "playerId": "p7",
+      "skill": "defense",
+      "before": 6.5,
+      "after": 7.5,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-24",
+      "at": 1760600800000
+    },
+    {
+      "id": "log29",
+      "playerId": "p8",
+      "skill": "serve",
+      "before": 5,
+      "after": 6,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-20",
+      "at": 1760604400000
+    },
+    {
+      "id": "log30",
+      "playerId": "p8",
+      "skill": "receive",
+      "before": 5,
+      "after": 5.5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-21",
+      "at": 1760608000000
+    },
+    {
+      "id": "log31",
+      "playerId": "p8",
+      "skill": "spike",
+      "before": 6.5,
+      "after": 7,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-23",
+      "at": 1760611600000
+    },
+    {
+      "id": "log32",
+      "playerId": "p8",
+      "skill": "block",
+      "before": 5,
+      "after": 6,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-24",
+      "at": 1760615200000
+    },
+    {
+      "id": "log33",
+      "playerId": "p9",
+      "skill": "serve",
+      "before": 3.5,
+      "after": 4,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-21",
+      "at": 1760618800000
+    },
+    {
+      "id": "log34",
+      "playerId": "p9",
+      "skill": "set",
+      "before": 4,
+      "after": 4.5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-23",
+      "at": 1760622400000
+    },
+    {
+      "id": "log35",
+      "playerId": "p9",
+      "skill": "spike",
+      "before": 3.5,
+      "after": 4.5,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-24",
+      "at": 1760626000000
+    },
+    {
+      "id": "log36",
+      "playerId": "p9",
+      "skill": "defense",
+      "before": 8,
+      "after": 9,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-20",
+      "at": 1760629600000
+    },
+    {
+      "id": "log37",
+      "playerId": "p10",
+      "skill": "receive",
+      "before": 7.5,
+      "after": 8,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-23",
+      "at": 1760633200000
+    },
+    {
+      "id": "log38",
+      "playerId": "p10",
+      "skill": "set",
+      "before": 3,
+      "after": 4,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-24",
+      "at": 1760636800000
+    },
+    {
+      "id": "log39",
+      "playerId": "p10",
+      "skill": "block",
+      "before": 3.5,
+      "after": 4.5,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-20",
+      "at": 1760640400000
+    },
+    {
+      "id": "log40",
+      "playerId": "p10",
+      "skill": "defense",
+      "before": 8,
+      "after": 8.5,
+      "delta": 0.5,
+      "source": "training",
+      "date": "2026-10-21",
+      "at": 1760644000000
+    },
+    {
+      "id": "log1",
+      "playerId": "p1",
+      "skill": "receive",
+      "before": 6,
+      "after": 7,
+      "delta": 1,
+      "source": "training",
+      "date": "2026-10-20",
+      "at": 1760503600000
+    },
+    {
+      "id": "log_new",
+      "playerId": "p1",
+      "skill": "serve",
+      "before": 7.5,
+      "after": 9.5,
+      "delta": 2,
+      "source": "training",
+      "date": "2026-10-29",
+      "at": 1793331129271
+    }
+  ],
+  "formation": {
+    "version": 1,
+    "preset": "base",
+    "pos": {
+      "s": {
+        "x": 6.3,
+        "y": 1.1
+      },
+      "mb": {
+        "x": 4.5,
+        "y": 0.85
+      },
+      "opp": {
+        "x": 2.6,
+        "y": 1.35
+      },
+      "oh1": {
+        "x": 1.8,
+        "y": 5.6
+      },
+      "lib": {
+        "x": 4.5,
+        "y": 7
+      },
+      "oh2": {
+        "x": 7,
+        "y": 5.9
+      }
+    }
+  },
+  "formations": [
+    {
+      "id": "f_demo1",
+      "name": "接发球站位",
+      "pos": {
+        "s": {
+          "x": 6.3,
+          "y": 1.1
+        },
+        "mb": {
+          "x": 4.5,
+          "y": 0.85
+        },
+        "opp": {
+          "x": 2.6,
+          "y": 1.35
+        },
+        "oh1": {
+          "x": 1.8,
+          "y": 5.6
+        },
+        "lib": {
+          "x": 4.5,
+          "y": 7
+        },
+        "oh2": {
+          "x": 7,
+          "y": 5.9
+        }
+      },
+      "at": 1760600000000
+    },
+    {
+      "id": "f_demo2",
+      "name": "防反退守",
+      "pos": {
+        "s": {
+          "x": 6.8,
+          "y": 3.6
+        },
+        "mb": {
+          "x": 4.5,
+          "y": 3.35
+        },
+        "opp": {
+          "x": 2.2,
+          "y": 3.8
+        },
+        "oh1": {
+          "x": 1.4,
+          "y": 7.4
+        },
+        "lib": {
+          "x": 4.5,
+          "y": 8.2
+        },
+        "oh2": {
+          "x": 7.4,
+          "y": 7.4
+        }
+      },
+      "at": 1760700000000
+    }
+  ],
+  "aiChat": [],
+  "savedAt": 1793331129269
+}

@@ -1669,6 +1669,28 @@ kbd{
 .help-body p{font-size:11px;line-height:1.8;color:var(--text-2);margin-bottom:9px}
 .help-body b{color:#fff}
 
+/* 导入备份：不能用 display:none，iOS 上会拒绝弹文件选择器 */
+.file-ghost{position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;border:0;padding:0}
+.imp-wrap{display:flex;flex-direction:column;gap:10px}
+.imp-lead{font-size:11.5px;line-height:1.7;color:var(--text-2)}
+.imp-lead b{color:#fff}
+.imp-opt{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border:1px solid var(--ov080);
+  border-radius:12px;cursor:pointer;background:var(--ov030)}
+.imp-opt:has(input:checked){border-color:rgba(var(--violet-rgb),.55);background:rgba(var(--violet-rgb),.08)}
+.imp-opt input{margin-top:2px;accent-color:var(--violet-2)}
+.imp-opt strong{display:block;font-size:12.5px;color:#fff;margin-bottom:3px}
+.imp-opt em{font-style:normal;font-size:11px;line-height:1.55;color:var(--muted)}
+.imp-preview{background:var(--ov030);border:1px solid var(--ov060);border-radius:12px;padding:11px 13px;display:flex;flex-direction:column;gap:6px}
+.imp-row{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--text-2)}
+.imp-row b{color:#fff;font-weight:600;text-align:right}
+.imp-row.imp-mut b,.imp-row.imp-mut span{color:var(--muted);font-weight:500}
+.imp-choice{display:flex;flex-direction:column;gap:9px}
+.imp-choice .btn{width:100%;justify-content:center}
+.imp-note{font-size:10.5px;color:var(--muted);line-height:1.6}
+.imp-ta{width:100%;min-height:150px;resize:vertical;padding:11px 13px;border-radius:12px;
+  border:1px solid var(--ov080);background:var(--ov030);color:var(--text);font:12px/1.5 ui-monospace,Consolas,monospace}
+.imp-ta:focus{outline:none;border-color:rgba(var(--violet-rgb),.55)}
+
 /* 弹窗宽度 */
 .modal.mid{width:720px}
 .modal.wide{width:min(980px,96vw)}
@@ -3021,7 +3043,10 @@ body.sv-mode > *:not(#shareView){display:none !important}
 </div>
 
 <div class="toast-stack" id="toasts" aria-live="polite"></div>
-<input type="file" id="importFile" accept="application/json,.json" hidden>
+<!-- 不能写 accept=".json"：iPadOS/部分 Android 的文档选择器按 UTI 过滤，
+     .json 认不出来会把备份文件变灰点不动；也不能用 hidden（display:none），
+     部分 iOS 版本对这种输入框不弹选择器。类型校验交给 app.js。 -->
+<input type="file" id="importFile" class="file-ghost" tabindex="-1" aria-hidden="true">
 
 <script>
 /* ═══════════════════════════════════════════════════════════════
@@ -5096,7 +5121,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-30 · r10'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-30 · r11'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -7180,7 +7205,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     <div class="settings-section">
       <h4>数据管理</h4>
       <p class="settings-desc">所有数据只保存在这台电脑的浏览器里。换电脑、清缓存或重装系统前，先导出 JSON 备份。</p>
-      <div class="settings-actions"><button class="btn btn-ghost" data-action="export">导出 JSON</button><button class="btn btn-ghost" data-action="import">导入 JSON</button><button class="btn btn-danger-ghost" data-action="clear-data">清空所有数据</button></div>
+      <div class="settings-actions"><button class="btn btn-ghost" data-action="export">导出 JSON</button><button class="btn btn-ghost" data-action="import">导入 JSON</button><button class="btn btn-ghost" data-action="paste-import">粘贴导入</button><button class="btn btn-danger-ghost" data-action="clear-data">清空所有数据</button></div>
     </div>`;
     openModal('设置', body, { mid: true });
     $('#templateForm').onsubmit = (e) => {
@@ -7197,7 +7222,8 @@ body.sv-mode > *:not(#shareView){display:none !important}
   }
 
   function exportData() {
-    const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+    // savedAt 只写进文件，不进库：导入弹窗用它显示「这份备份是哪天的」
+    const blob = new Blob([JSON.stringify({ ...db, savedAt: Date.now() }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `xgy-volleyball-${dateKey(new Date())}.json`;
@@ -7702,16 +7728,246 @@ body.sv-mode > *:not(#shareView){display:none !important}
     if (prefill) { input.value = prefill; parse(); } else { setTimeout(() => input.focus(), 80); }
   }
 
+  /* ══════════ 导入备份：按队员合并 / 完全覆盖 ══════════
+   * 为什么要有「合并」：电脑录数据、平板登记考勤是常态。
+   * 完全覆盖会把平板新增的考勤抹掉；合并按「姓名+号码」认人，
+   * 同一个人用备份覆盖，备份里没有的人保留、备份里多的人补上。
+   * 号码一方可能没录（0），所以号码没对上时，只有「两边这个名字都唯一」才按姓名认。 */
+  function mergeBackup(incoming) {
+    const inc = normalizeDB(incoming);
+    const noKey = (p) => `${String(p.name).trim()}::${Number(p.number) || 0}`;
+    const nmKey = (p) => String(p.name).trim();
+    const countName = (list) => list.reduce((m, p) => m.set(nmKey(p), (m.get(nmKey(p)) || 0) + 1), new Map());
+    const curNameCount = countName(db.players);
+    const incNameCount = countName(inc.players);
+    const curByNo = new Map(db.players.map((p) => [noKey(p), p]));
+
+    const idMap = new Map();          // 备份里的队员 id → 本机 id
+    const matched = [];
+    const added = [];
+    const usedIds = new Set(db.players.map((p) => p.id));
+
+    inc.players.forEach((p) => {
+      let hit = curByNo.get(noKey(p));
+      if (!hit) {
+        const nm = nmKey(p);
+        if (curNameCount.get(nm) === 1 && incNameCount.get(nm) === 1) {
+          hit = db.players.find((x) => nmKey(x) === nm);
+        }
+      }
+      if (hit) {
+        idMap.set(p.id, hit.id);
+        matched.push({ cur: hit, inc: p });
+      } else {
+        const nid = p.id && !usedIds.has(p.id) ? p.id : uid('p');
+        usedIds.add(nid);
+        idMap.set(p.id, nid);
+        added.push({ ...p, id: nid });
+      }
+    });
+
+    const out = clone(db);
+    /* 1) 队员：匹配上的用备份覆盖技能/位置/年级/身高；本机独有的原样保留 */
+    out.players = db.players.map((p) => {
+      const pair = matched.find((m) => m.cur.id === p.id);
+      if (!pair) return p;
+      return {
+        ...p,
+        position: pair.inc.position,
+        grade: pair.inc.grade,
+        height: pair.inc.height,
+        skills: pair.inc.skills,
+        updatedAt: Math.max(Number(p.updatedAt) || 0, Number(pair.inc.updatedAt) || 0)
+      };
+    }).concat(added);
+
+    /* 2) 训练：按「日期 + 开始时间」认定同一场，同场用备份的考勤整格覆盖。
+          考勤里的队员 id 必须过一遍 idMap，否则两边 id 不同会写出孤儿数据。 */
+    let sOver = 0, sAdd = 0;
+    const weeks = {};
+    const weekKeys = new Set([...Object.keys(db.weeks || {}), ...Object.keys(inc.weeks || {})]);
+    [...weekKeys].sort().forEach((k) => {
+      const cur = Array.isArray(db.weeks[k]) ? db.weeks[k] : [];
+      const incW = Array.isArray(inc.weeks[k]) ? inc.weeks[k] : [];
+      const merged = cur.map((s) => ({ ...s, attendance: { ...(s.attendance || {}) } }));
+      incW.forEach((is) => {
+        const att = {};
+        Object.keys(is.attendance || {}).forEach((pid) => {
+          const nid = idMap.get(pid);
+          if (nid) att[nid] = is.attendance[pid];
+        });
+        const same = merged.find((s) => s.date === is.date && s.start === is.start);
+        if (same) {
+          same.end = is.end;
+          same.venue = is.venue;
+          same.status = is.status;
+          same.cancelReason = is.cancelReason;
+          same.attendance = att;
+          same.updatedAt = Math.max(Number(same.updatedAt) || 0, Number(is.updatedAt) || 0);
+          sOver += 1;
+        } else {
+          merged.push({ ...is, id: merged.some((s) => s.id === is.id) ? uid('s') : is.id, attendance: att });
+          sAdd += 1;
+        }
+      });
+      merged.sort(sessionSort);
+      if (merged.length) weeks[k] = merged;
+    });
+    out.weeks = weeks;
+
+    /* 3) 技能记录：只追加不覆盖，按「人+项+日期+前后分」去重 */
+    const seen = new Set(db.skillLogs.map((l) => `${l.playerId}|${l.skill}|${l.date}|${l.before}|${l.after}`));
+    const logs = db.skillLogs.slice();
+    let lAdd = 0;
+    inc.skillLogs.forEach((l) => {
+      const pid = idMap.get(l.playerId);
+      if (!pid) return;
+      const key = `${pid}|${l.skill}|${l.date}|${l.before}|${l.after}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      logs.push({ ...l, playerId: pid, id: logs.some((x) => x.id === l.id) ? uid('log') : l.id });
+      lAdd += 1;
+    });
+    logs.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || (Number(a.at) || 0) - (Number(b.at) || 0));
+    out.skillLogs = logs;
+
+    /* 4) AI 点评：有新的就换成新的 */
+    const notes = { ...(db.shareNotes || {}) };
+    Object.keys(inc.shareNotes || {}).forEach((pid) => {
+      const nid = idMap.get(pid);
+      if (nid && inc.shareNotes[pid]) notes[nid] = inc.shareNotes[pid];
+    });
+    out.shareNotes = notes;
+
+    /* 训练模板 / 主题 / 阵型库属于这台设备自己的偏好，合并时不动 */
+    return {
+      db: out,
+      stats: {
+        matched: matched.length,
+        added: added.length,
+        kept: db.players.length - matched.length,
+        sOver, sAdd, lAdd,
+        incPlayers: inc.players.length,
+        incSessions: Object.values(inc.weeks || {}).reduce((n, arr) => n + (Array.isArray(arr) ? arr.length : 0), 0),
+        incLogs: inc.skillLogs.length
+      }
+    };
+  }
+
+  /* 打开「导入」弹窗：选模式 → 看预览 → 落库。选文件 / 粘贴 / 剪贴板三个入口共用 */
+  function openImportDialog(incoming, label) {
+    if (!incoming || typeof incoming !== 'object') { toast('备份内容读不出来', 'warn'); return; }
+    if (incoming.version !== SCHEMA) { toast(`备份版本是 ${String(incoming.version)}，当前需要 ${SCHEMA}`, 'warn'); return; }
+    const merged = mergeBackup(incoming);
+    const st = merged.stats;
+    const sum = (mode) => mode === 'merge'
+      ? `<div class="imp-row"><span>队员</span><b>匹配 ${st.matched} · 新增 ${st.added} · 本机保留 ${st.kept}</b></div>
+         <div class="imp-row"><span>训练</span><b>覆盖 ${st.sOver} 场 · 新增 ${st.sAdd} 场</b></div>
+         <div class="imp-row"><span>技能记录</span><b>追加 ${st.lAdd} 条</b></div>
+         <div class="imp-row imp-mut"><span>不动</span><b>训练模板、主题、阵型库</b></div>`
+      : `<div class="imp-row"><span>结果</span><b>${st.incPlayers} 名队员 · ${st.incSessions} 次训练 · ${st.incLogs} 条技能记录</b></div>
+         <div class="imp-row imp-mut"><span>代价</span><b>本机现有数据全部清掉</b></div>`;
+
+    const savedTxt = (() => {
+      const v = incoming.savedAt;
+      if (!v) return '';
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 1e11) { const d = new Date(n); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+      return String(v).slice(0, 10);
+    })();
+
+    openModal('导入备份', `<div class="imp-wrap">
+      <p class="imp-lead">来源：<b>${esc(label)}</b>${savedTxt ? `，导出于 ${esc(savedTxt)}` : ''}。</p>
+      <label class="imp-opt"><input type="radio" name="impMode" value="merge" checked><span><strong>按队员合并</strong><em>同姓名同号码的人用备份覆盖；备份里的新队员补上；本机独有的保留。</em></span></label>
+      <label class="imp-opt"><input type="radio" name="impMode" value="replace"><span><strong>完全覆盖</strong><em>清空本机全部数据，变成备份的样子。</em></span></label>
+      <div class="imp-preview" id="impPreview">${sum('merge')}</div>
+      <div class="form-foot"><button type="button" class="btn btn-primary" id="impGo">导入</button><button type="button" class="btn btn-ghost" id="impCancel">取消</button></div>
+    </div>`, { mid: true });
+
+    const modeOf = () => (document.querySelector('input[name="impMode"]:checked') || {}).value || 'merge';
+    document.querySelectorAll('input[name="impMode"]').forEach((r) => {
+      r.onchange = () => { $('#impPreview').innerHTML = sum(modeOf()); };
+    });
+    $('#impCancel').onclick = closeModal;
+    $('#impGo').onclick = async () => {
+      if (modeOf() === 'replace') {
+        const ok = await confirmDialog({
+          title: '完全覆盖？',
+          message: `本机现有的 ${db.players.length} 名队员、全部考勤和技能记录会被删掉，换成备份的内容。`,
+          ok: '覆盖'
+        });
+        if (!ok) return;
+        db = normalizeDB(incoming);
+      } else {
+        db = merged.db;
+      }
+      save();
+      location.reload();
+    };
+  }
+
+  /* 平板友好：文件选择器认不出 .json 时，粘贴整段内容也能导入 */
+  function openImportChooser() {
+    openModal('导入备份', `<div class="imp-wrap">
+      <p class="imp-lead">备份在「文件」App 里就直接选；如果在微信/QQ 里收到，先「用其他应用打开 → 存储到文件」，或者在这里粘贴内容。</p>
+      <div class="imp-choice">
+        <button type="button" class="btn btn-primary" id="impPickFile">选择备份文件</button>
+        <button type="button" class="btn btn-ghost" id="impPickPaste">粘贴备份内容</button>
+      </div>
+      <p class="imp-note">两种入口后面都会让你选「按队员合并」还是「完全覆盖」，不会一按就覆盖。</p>
+    </div>`, { mid: true });
+    // 先触发文件选择（保留用户手势），再关弹窗：iOS 上晚一步调 click() 会没反应
+    $('#impPickFile').onclick = () => { $('#importFile').click(); closeModal(); };
+    $('#impPickPaste').onclick = () => openPasteImport();
+  }
+
+  function openPasteImport() {
+    openModal('粘贴备份导入', `<div class="imp-wrap">
+      <p class="imp-lead">把备份文件用文本方式打开、全选复制，粘到这里。iPad 上文件选择器常常不让选 .json，这是绕过去的办法。</p>
+      <textarea class="imp-ta" id="impText" rows="8" placeholder='{"version":2,"players":[...]}'></textarea>
+      <div class="form-foot">
+        <button type="button" class="btn btn-ghost" id="impClip">读剪贴板</button>
+        <button type="button" class="btn btn-primary" id="impParse">解析</button>
+        <button type="button" class="btn btn-ghost" id="impPasteCancel">取消</button>
+      </div>
+    </div>`, { mid: true });
+    const ta = $('#impText');
+    $('#impPasteCancel').onclick = closeModal;
+    $('#impClip').onclick = async () => {
+      try {
+        const t = await navigator.clipboard.readText();
+        if (!t) { toast('剪贴板是空的', 'warn'); return; }
+        ta.value = t;
+        toast('已从剪贴板读入');
+      } catch (e) {
+        toast('读不了剪贴板，长按输入框手动粘贴', 'warn');
+      }
+    };
+    $('#impParse').onclick = () => {
+      const t = String(ta.value || '').trim().replace(/^\uFEFF/, '');
+      if (!t) { toast('先把备份内容粘进来', 'warn'); return; }
+      let raw;
+      try { raw = JSON.parse(t); } catch (e) { toast('这不是有效的 JSON，检查有没有粘漏', 'warn'); return; }
+      openImportDialog(raw, '粘贴的内容');
+    };
+  }
+
+  function readFileText(file) {
+    if (file && typeof file.text === 'function') return file.text();
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result || ''));
+      r.onerror = () => rej(r.error);
+      r.readAsText(file);
+    });
+  }
+
   async function handleImportFile(file) {
     if (!file) return;
     try {
-      const text = await file.text();
+      const text = (await readFileText(file)).replace(/^\uFEFF/, '');
       const raw = JSON.parse(text);
-      if (!raw || raw.version !== SCHEMA) { toast('备份文件版本不匹配', 'warn'); return; }
-      const next = normalizeDB(raw);
-      const ok = await confirmDialog({ title: '导入备份？', message: `会覆盖当前所有数据，导入 ${next.players.length} 名队员、${next.skillLogs.length} 条技能记录。`, ok: '覆盖并导入' });
-      if (!ok) return;
-      db = next; save(); location.reload();
+      openImportDialog(raw, file.name || '备份文件');
     } catch (e) {
       toast('导入失败：文件不是有效的 JSON', 'warn');
     } finally {
@@ -8227,7 +8483,8 @@ body.sv-mode > *:not(#shareView){display:none !important}
         else if (action === 'add-session') openSessionModal(null, targetMonday, { isNew: true });
         else if (action === 'reset-week') resetWeek(targetMonday);
         else if (action === 'export') exportData();
-        else if (action === 'import') importData();
+        else if (action === 'import') openImportChooser();
+        else if (action === 'paste-import') openPasteImport();
         else if (action === 'clear-data') clearAllData();
         else if (action === 'template') openSettings();
         else if (action === 'help') openHelp();
@@ -8269,7 +8526,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     $('#menuTheme').onclick = () => { closePopovers(); openTheme(); };
     $('#menuShare').onclick = () => { closePopovers(); openShareModal(); };
     $('#menuExport').onclick = () => { closePopovers(); exportData(); };
-    $('#menuImport').onclick = () => { closePopovers(); importData(); };
+    $('#menuImport').onclick = () => { closePopovers(); openImportChooser(); };
     $('#menuClear').onclick = () => { closePopovers(); clearAllData(); };
     $('#menuAbout').onclick = () => { closePopovers(); openHelp(); };
 

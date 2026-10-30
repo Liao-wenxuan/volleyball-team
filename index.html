@@ -627,7 +627,10 @@
 </div>
 
 <div class="toast-stack" id="toasts" aria-live="polite"></div>
-<input type="file" id="importFile" accept="application/json,.json" hidden>
+<!-- 不能写 accept=".json"：iPadOS/部分 Android 的文档选择器按 UTI 过滤，
+     .json 认不出来会把备份文件变灰点不动；也不能用 hidden（display:none），
+     部分 iOS 版本对这种输入框不弹选择器。类型校验交给 app.js。 -->
+<input type="file" id="importFile" class="file-ghost" tabindex="-1" aria-hidden="true">
 
 <script src="cloud.js"></script>
 <script src="qr.js"></script>
