@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-29 · r8'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-29 · r9'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -2178,7 +2178,23 @@
         return { d: s.date || '', t: s.start || '', p: c.present, l: c.late, v: c.leave, a: c.absent, st: s.attendance || {} };
       })
       .reverse(); // 视图里按时间正序展示
-    return { v: 1, team: '信工院排球队', at: Date.now(), players, sessions };
+    // 接下来几次还没结束的训练：队员要请假，得先知道「请哪一次」
+    const now = Date.now();
+    const next = [];
+    const seen = new Set();
+    for (let w = 0; w < 4 && next.length < 4; w++) {
+      const monday = getMonday(addDays(new Date(), w * 7));
+      getSessions(monday).forEach((s) => {
+        if (s.status === 'cancelled') return;
+        if (sessionEnd(s).getTime() <= now) return;
+        const k = `${s.date}T${s.start}`;
+        if (seen.has(k)) return;
+        seen.add(k);
+        next.push({ d: s.date, t: s.start });
+      });
+    }
+    next.sort((a, b) => (`${a.d}T${a.t}` < `${b.d}T${b.t}` ? -1 : 1));
+    return { v: 1, team: '信工院排球队', at: Date.now(), players, sessions, next: next.slice(0, 4) };
   }
 
   /** 用队长的 AI Key 一次性给全队写点评（存本机，生成过就不重复花钱） */
@@ -2248,6 +2264,7 @@
       <div class="share-note">
         <p>· 这是<b>数据快照</b>，之后改了考勤或技能，重新生成一次再发</p>
         <p>· 码里含队员姓名和出勤，只发队内，别贴公开群</p>
+        <p>· 队员要请假，让他在页面底部点「请假」拿回执码，你在考勤页点「回执」登记</p>
       </div>
       <div class="share-foot"><button type="button" class="btn btn-primary" id="shareCopy">复制链接</button><button type="button" class="btn btn-ghost" id="shareClose">关闭</button></div>
     </div>`;
@@ -2350,6 +2367,146 @@
     };
   }
 
+  /* ══════════ 请假回执：队员反向请假 ══════════
+     链路：队员在分享页点请假 → 本机算出 12 位回执码 → 微信发给队长 →
+     队长在这里粘贴（或点他发来的 #rcpt= 链接）→ 一键登记成请假。
+     不需要服务器，也不新增任何持久化字段：登记结果直接写进考勤。 */
+  function playersByFp(fp) {
+    if (!window.XGYShare || !window.XGYShare.fpOf) return [];
+    return db.players.filter((p) => window.XGYShare.fpOf(p.name, p.number) === fp);
+  }
+
+  function openReceiptModal(prefill) {
+    if (!db.players.length) { toast('还没有队员，先录入队员再收回执', 'warn'); return; }
+    const body = `<div class="rcpt-wrap">
+      <p class="rcpt-hint">队员在分享页点「请假」会拿到一串 <b>12 位回执码</b>。把他发来的整段话粘进来（或直接开他发来的回执链接），核对无误后一键登记。</p>
+      <textarea id="rcptInput" class="rcpt-input" rows="3" spellcheck="false" placeholder="粘贴回执码，例如 7Q3M-9PDK-2XAB"></textarea>
+      <div class="rcpt-preview" id="rcptPreview"></div>
+      <div class="share-foot"><button type="button" class="btn btn-primary" id="rcptApply" disabled>登记为请假</button><button type="button" class="btn btn-ghost" id="rcptCancel">关闭</button></div>
+    </div>`;
+    openModal('队员请假回执', body, { mid: true });
+    $('#rcptCancel').onclick = closeModal;
+    const input = $('#rcptInput');
+    const prev = $('#rcptPreview');
+    const applyBtn = $('#rcptApply');
+    let rc = null;
+    let cands = [];
+    let cand = null;
+    let target = null; // { monday, session }
+
+    const card = (player, bad, inner) => {
+      const [a, b] = positionStyle(player.position);
+      return `<div class="rcpt-card${bad ? ' is-bad' : ''}">
+        <div class="rcpt-who">
+          <span class="u-avatar" style="--a:${a};--b:${b}">${esc((player.name || '?')[0])}</span>
+          <strong>${esc(player.name)}</strong><em>${player.number ? '#' + player.number + ' · ' : ''}${esc(player.position)}</em>
+        </div>
+        <dl class="rcpt-facts">${inner}</dl>
+      </div>`;
+    };
+
+    const syncApply = () => {
+      let ok = !!(cand && rc && target && target.session);
+      let why = '';
+      if (cand && target && target.session) {
+        if (target.session.status === 'cancelled') { ok = false; why = '那次已取消'; }
+        else if (target.session.attendance[cand.id] === 'leave') { ok = false; why = '已经是请假'; }
+      }
+      applyBtn.disabled = !ok;
+      applyBtn.textContent = why ? `无需登记（${why}）` : '登记为请假';
+    };
+
+    const showTarget = () => {
+      if (!rc) return;
+      target = (() => {
+        const monday = getMonday(parseKey(rc.date));
+        const hits = getSessions(monday).filter((s) => s.date === rc.date);
+        return { monday, session: hits.find((s) => s.start === rc.start) || hits[0] || null };
+      })();
+      if (!cand) return;
+      const s = target.session;
+      let stateLine;
+      if (!s) stateLine = `<dd class="warn">那天没有训练记录</dd>`;
+      else if (s.status === 'cancelled') stateLine = `<dd class="warn">那次已取消</dd>`;
+      else {
+        const cur = s.attendance[cand.id] || '';
+        stateLine = cur === 'leave' ? '<dd>已经是请假</dd>'
+          : cur ? `<dd class="warn">现在是「${ATT_LABEL[cur]}」，会被改成请假</dd>`
+            : '<dd>未登记</dd>';
+      }
+      prev.innerHTML = card(cand, false, `
+        <div><dt>哪一次</dt><dd>${esc(fmtDateCN(parseKey(rc.date)))} ${esc(rc.start)}</dd></div>
+        <div><dt>原因</dt><dd>${esc(rc.reasonText)}</dd></div>
+        <div><dt>当前</dt>${stateLine}</div>`);
+      syncApply();
+    };
+
+    const parse = () => {
+      rc = null; cands = []; cand = null; target = null;
+      prev.innerHTML = '';
+      applyBtn.disabled = true;
+      applyBtn.textContent = '登记为请假';
+      const raw = String(input.value || '').trim();
+      if (!raw) return;
+      try {
+        rc = window.XGYShare.decodeReceipt(raw);
+      } catch (err) {
+        prev.innerHTML = `<div class="rcpt-card is-bad"><b>${esc(err.message)}</b><p>回执码是 12 位，形如 <span class="mono">7Q3M-9PDK-2XAB</span>。整段消息一起粘也行。</p></div>`;
+        return;
+      }
+      cands = playersByFp(rc.fp);
+      if (!cands.length) {
+        prev.innerHTML = `<div class="rcpt-card is-bad"><b>队里对不上这个人</b><p>可能改过名字或号码，也可能这条回执不是发给咱们队的。让对方重新生成一次，或者你手动登记。</p><p class="mono">${esc(rc.date)} ${esc(rc.start)} · ${esc(rc.reasonText)}</p></div>`;
+        return;
+      }
+      if (cands.length === 1) {
+        cand = cands[0];
+        showTarget();
+        return;
+      }
+      // 同名同号（数据重复录了两次）：让人自己点一下
+      prev.innerHTML = card(cands[0], false, `
+        <div><dt>哪一次</dt><dd>${esc(fmtDateCN(parseKey(rc.date)))} ${esc(rc.start)}</dd></div>
+        <div><dt>原因</dt><dd>${esc(rc.reasonText)}</dd></div>
+        <div><dt>注意</dt><dd class="warn">队里有 ${cands.length} 人同名同号，点一下是谁</dd></div>`)
+        + `<div class="rcpt-pick">${cands.map((p, i) => `<button type="button" data-pick="${i}">${esc(p.name)} · ${esc(p.position)}</button>`).join('')}</div>`;
+      prev.querySelectorAll('[data-pick]').forEach((btn) => {
+        btn.onclick = () => {
+          cand = cands[Number(btn.dataset.pick)];
+          prev.querySelectorAll('[data-pick]').forEach((b) => b.classList.toggle('on', b === btn));
+          showTarget();
+        };
+      });
+    };
+
+    applyBtn.onclick = async () => {
+      if (!cand || !rc || !target || !target.session) return;
+      applyBtn.disabled = true;
+      applyBtn.textContent = '登记中…';
+      const monday = getMonday(parseKey(rc.date));
+      // 云端模式：本周可能是懒加载的，先把服务器那份拉下来，别拿模板里的临时 id 去写
+      if (CloudOn() && !Array.isArray(db.weeks[weekKey(monday)])) {
+        try { await window.XGYCloud.syncWeek(weekKey(monday), true); } catch (e) { /* 拉不到就按本地写 */ }
+      }
+      const sessions = ensureWeek(monday);
+      const hits = (sessions || []).filter((s) => s.date === rc.date);
+      const s = hits.find((x) => x.start === rc.start) || hits[0];
+      if (!s) { toast('那天没有训练安排，可能被删掉了', 'warn'); applyBtn.disabled = false; applyBtn.textContent = '登记为请假'; return; }
+      if (s.status === 'cancelled') { toast('那次训练已取消，不用请假', 'warn'); applyBtn.disabled = false; applyBtn.textContent = '登记为请假'; return; }
+      s.attendance[cand.id] = 'leave';
+      s.updatedAt = Date.now();
+      save();
+      if (CloudOn()) cloudFire(window.XGYCloud.push.attSet(s.id, cand.id, 'leave'), () => window.XGYCloud.syncWeek(weekKey(monday), true).then(renderAttendance));
+      state.weekMonday = monday;
+      closeModal();
+      go('attendance');
+      toast(`${cand.name} · ${fmtMD(parseKey(s.date))} 已登记为请假`);
+    };
+
+    input.addEventListener('input', parse);
+    if (prefill) { input.value = prefill; parse(); } else { setTimeout(() => input.focus(), 80); }
+  }
+
   async function handleImportFile(file) {
     if (!file) return;
     try {
@@ -2383,6 +2540,7 @@
       <p><b>5. 训练后调技能。</b> 成长页点格子单项调整，或用「训练后调整」按当次参训名单批量加减。0–10 分，步进 0.5。</p>
       <p><b>6. 阵型板摆站位。</b> 进入阵型页，手指（或鼠标）把 6 个角色拖到防守位置，松手按 0.25m 吸附并自动保存；摆好后点「存当前」起个名字存进阵型库，点列表随时套用。双击或方向键可微调。</p>
       <p><b>7. 定期备份。</b> 设置或头像菜单里导出 JSON。换电脑前先导出。</p>
+      <p><b>8. 队员请假。</b> 队员在分享页底部点「请假」，选一次训练和原因，会拿到一串 12 位回执码；他把码（或整段消息）发给你，你在考勤页点「回执」粘进去，那次就登记成请假。他要是点了「复制回执链接」，你直接点开链接也会自动弹确认。</p>
     </div>`, { mid: true });
   }
 
@@ -3010,6 +3168,7 @@
     $('#attAddBtnPage').onclick = () => openSessionModal(null, state.weekMonday, { isNew: true });
     $('#allPresent').onclick = setAllPresent;
     $('#attCardBtn').onclick = openWeekCard;
+    $('#attRcptBtn').onclick = () => openReceiptModal();
     $('#attGrid').addEventListener('click', (e) => {
       const head = e.target.closest('.att-session-head');
       if (head) {
@@ -3463,6 +3622,12 @@ ${aiContext()}`;
     bind();
     refreshReveals();
     setTimeout(refreshReveals, 400);
+    // 队员发来的回执链接（#rcpt=…）：直接弹确认框；hash 先清掉，免得刷新又弹一次
+    const rc = location.hash.match(/^#rcpt=(.+)$/);
+    if (rc) {
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ignore */ }
+      setTimeout(() => openReceiptModal(decodeURIComponent(rc[1])), 260);
+    }
     if (window.XGYCloud) {
       window.XGYCloud.attach({
         toast,

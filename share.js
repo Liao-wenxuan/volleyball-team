@@ -108,7 +108,7 @@
     var players = (o.players || []).slice(0, 31);
     var sessions = (o.sessions || []).slice(0, 15);
     var w = new BitW();
-    w.put(2, 4);                                   // 格式版本
+    w.put(3, 4);                                   // 格式版本（3 = 加入「接下来几次训练」和请假回执）
     w.text(o.team || '', 6);                       // 队名（≤63 字节）
     w.put(Math.round((Number(o.at) || Date.now()) / 1000 - EPOCH_DAY * 86400) >>> 0, 32);
     w.put(players.length, 5);
@@ -130,6 +130,15 @@
       var st = s.st || {};
       for (var i = 0; i < players.length; i++) w.put(ST_CODE[st[players[i].id]] || 0, 3);
     });
+    // 接下来还没开始的几次训练：队员请假要从中挑一次，不然他不知道自己该请哪天
+    var next = (o.next || []).slice(0, 4);
+    w.put(next.length, 3);
+    next.forEach(function (x) {
+      w.put(dayIndex(x.d), 15);
+      var nt = String(x.t || '').split(':');
+      w.put(q6(nt[0]), 5);
+      w.put(q6(nt[1]), 6);
+    });
     // 只带 AI 写的那段；模板点评由队员端按同样规则现场算
     var notes = [];
     players.forEach(function (p, i) { if (p.note) notes.push({ i: i, t: String(p.note) }); });
@@ -144,7 +153,7 @@
   function unpack(bytes) {
     var r = new BitR(bytes);
     var ver = r.get(4);
-    if (ver !== 2) throw new Error('分享数据版本不认识');
+    if (ver !== 2 && ver !== 3) throw new Error('分享数据版本不认识');
     var team = r.text(6);
     var at = (r.get(32) + EPOCH_DAY * 86400) * 1000;
     var n = r.get(5);
@@ -169,13 +178,22 @@
       }
       sessions.push({ d: d, t: pad2(hh) + ':' + pad2(mi), st: st });
     }
+    var next = [];
+    if (ver >= 3) {
+      var nx = r.get(3);
+      for (var y = 0; y < nx; y++) {
+        var nd = dayString(r.get(15));
+        var nh = r.get(5), nm = r.get(6);
+        next.push({ d: nd, t: pad2(nh) + ':' + pad2(nm) });
+      }
+    }
     var nn = r.get(4);
     for (var z = 0; z < nn; z++) {
       var idx = r.get(5);
       var txt = r.text(10);
       if (players[idx]) { players[idx].note = txt; players[idx].nc = 1; }
     }
-    return { v: 2, team: team, at: at, players: players, sessions: sessions };
+    return { v: ver, team: team, at: at, players: players, sessions: sessions, next: next };
   }
 
   async function encode(obj) {
@@ -215,6 +233,117 @@
     // 用 location.href 而不是 origin+pathname：单文件走 file:// 时 origin 是 "null"，
     // 拼出来的路径会丢掉 file:// 前缀，队员点开就打不开
     return location.href.split('#')[0] + '#share=' + data;
+  }
+
+  /* ══════════ 请假回执码 ══════════
+     没有服务器，请假这件事只能靠「人肉回传」：
+     队员在分享页点请假 → 本机算出一串 12 位回执码 → 发到群里 →
+     队长在考勤页粘贴，解出「谁 / 哪次 / 为什么」，一键登记成请假。
+
+     码里不写明文姓名，只放 16 位「姓名+号码」指纹：队长端按同一算法
+     把队里每个人算一遍就能对上人，码本身泄露不了名单。
+
+     位分配（48 bit + 8 bit CRC）：
+       3  格式版本（=1）
+       16 姓名指纹
+       15 日期（距 2024-01-01 的天数）
+       5  开始小时
+       6  开始分钟
+       3  原因编号
+     → 6 字节正文 + 1 字节 CRC8 → Crockford Base32 → 12 个字符
+     字母表去掉 I / L / O / U：念出来不会混、抄写不会错。 */
+  var REASONS = ['生病', '家里有事', '课程冲突', '考试', '实习/工作', '其他'];
+  var B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+  function crc8(bytes) {
+    var crc = 0;
+    for (var i = 0; i < bytes.length; i++) {
+      crc ^= bytes[i];
+      for (var b = 0; b < 8; b++) crc = (crc & 0x80) ? ((crc << 1) ^ 0x07) & 0xff : (crc << 1) & 0xff;
+    }
+    return crc;
+  }
+
+  /** 队员指纹：姓名（去空白）+ 号码 的 FNV-1a 低 16 位，两端必须一模一样 */
+  function fpOf(name, no) {
+    var s = String(name == null ? '' : name).replace(/\s+/g, '') + '#' + (Number(no) || 0);
+    var b = new TextEncoder().encode(s);
+    var h = 0x811c9dc5;
+    for (var i = 0; i < b.length; i++) { h ^= b[i]; h = Math.imul(h, 0x01000193) >>> 0; }
+    return h & 0xffff;
+  }
+
+  function b32enc(bytes) {
+    var out = '', buf = 0, bits = 0;
+    for (var i = 0; i < bytes.length; i++) {
+      buf = (buf << 8) | bytes[i]; bits += 8;
+      while (bits >= 5) { out += B32[(buf >>> (bits - 5)) & 31]; bits -= 5; }
+    }
+    if (bits) out += B32[(buf << (5 - bits)) & 31];
+    return out;
+  }
+
+  function b32dec(str) {
+    var out = [], buf = 0, bits = 0;
+    for (var i = 0; i < str.length; i++) {
+      var v = B32.indexOf(str[i]);
+      if (v < 0) return null;
+      buf = ((buf << 5) | v) & 0xffffff; bits += 5;
+      if (bits >= 8) { out.push((buf >>> (bits - 8)) & 0xff); bits -= 8; }
+    }
+    return new Uint8Array(out);
+  }
+
+  /** 把用户粘进来的东西（整段消息 / 带横线的码）归一成 12 位码 */
+  function normalizeCode(input) {
+    var t = String(input || '').toUpperCase();
+    var url = t.match(/#RCPT=([0-9A-Z-]+)/);
+    if (url) t = url[1];
+    var grouped = t.match(/[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}/);
+    if (grouped) t = grouped[0];
+    else {
+      // 没横线：只在「独立词」里找 12 位的，避免把整段话的字母拼成假码
+      var tok = t.split(/[^0-9A-Z]+/).filter(function (x) { return x.length === 12; });
+      t = tok.length ? tok[0] : '';
+    }
+    var d = String(t).replace(/[^0-9A-Z]/g, '').replace(/O/g, '0').replace(/[IL]/g, '1');
+    return d.length === 12 ? d : '';
+  }
+
+  function encodeReceipt(o) {
+    var w = new BitW();
+    w.put(1, 3);                                   // 回执格式版本
+    w.put(fpOf(o.name, o.no), 16);
+    w.put(dayIndex(o.date), 15);
+    var tt = String(o.start || '00:00').split(':');
+    w.put(q6(tt[0]), 5);
+    w.put(q6(tt[1]), 6);
+    w.put(Math.max(0, Math.min(7, Number(o.reason) || 0)), 3);
+    var body = w.done();                            // 正好 6 字节
+    var full = new Uint8Array(body.length + 1);
+    full.set(body, 0);
+    full[body.length] = crc8(body);
+    var code = b32enc(full);
+    return code.replace(/(.{4})(?=.)/g, '$1-');
+  }
+
+  function decodeReceipt(input) {
+    var code = normalizeCode(input);
+    if (!code) throw new Error('没找到 12 位回执码');
+    var bytes = b32dec(code);
+    if (!bytes || bytes.length < 7) throw new Error('回执码不完整');
+    var body = bytes.subarray(0, 6);
+    if (crc8(body) !== bytes[6]) throw new Error('回执码校验不过，可能粘漏了字符');
+    var r = new BitR(body);
+    var ver = r.get(3);
+    if (ver !== 1) throw new Error('回执码版本不认识');
+    var fp = r.get(16);
+    var day = r.get(15);
+    var hh = r.get(5), mm = r.get(6), reason = r.get(3);
+    return {
+      v: 1, fp: fp, date: dayString(day), start: pad2(hh) + ':' + pad2(mm),
+      reason: reason, reasonText: REASONS[reason] || '其他', code: code
+    };
   }
 
   /* ══════════ 常量（与 app.js 保持一致，刻意独立，分享页不依赖主应用） ══════════ */
@@ -323,6 +452,110 @@
     const d = new Date(at);
     const p2 = (n) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+  }
+
+  const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+  /** 10月31日 周五 */
+  function fmtDayCN(dateStr) {
+    const d = new Date(String(dateStr || '') + 'T00:00:00');
+    if (Number.isNaN(d.getTime())) return String(dateStr || '');
+    return `${d.getMonth() + 1}月${d.getDate()}日 ${WEEK_CN[d.getDay()]}`;
+  }
+
+  function leaveForm(next) {
+    const list = (next || []).filter((x) => x && x.d);
+    if (!list.length) {
+      return `<div class="sv-leave-empty">
+        <p>这条链接里没有还没开始的训练了。</p>
+        <p class="mono">让队长重新生成一次链接再发你</p>
+      </div>`;
+    }
+    return `<div class="sv-leave-list">${list.map((x, i) => `<button type="button" class="sv-leave-opt" data-i="${i}">
+        <b>${esc(fmtDayCN(x.d))}</b><em>${esc(x.t || '')} 待训练</em>
+      </button>`).join('')}</div>
+      <div class="sv-reasons" role="group" aria-label="请假原因">${REASONS.map((r, i) => `<button type="button" class="sv-reason" data-r="${i}">${esc(r)}</button>`).join('')}</div>
+      <button type="button" class="sv-btn sv-make" disabled>生成回执<i>→</i></button>
+      <div class="sv-rcpt" hidden>
+        <span class="mono">LEAVE RECEIPT</span>
+        <b class="sv-rcpt-code">—</b>
+        <p class="sv-rcpt-tip">发给队长：他打开考勤页点「回执」，粘进去就登记好了。</p>
+        <div class="sv-rcpt-acts">
+          <button type="button" class="sv-btn sv-rcpt-copy">复制回执</button>
+          <button type="button" class="sv-btn sv-btn-ghost sv-rcpt-link">复制回执链接</button>
+        </div>
+        <p class="sv-rcpt-st mono" hidden></p>
+      </div>`;
+  }
+
+  async function copyText(t) {
+    try { await navigator.clipboard.writeText(t); return true; } catch (e) { /* 微信里常被拦 */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = t;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-999px;left:0;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, t.length);
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch (e2) { return false; }
+  }
+
+  function wireLeave(data, me, root) {
+    const next = (data.next || []).filter((x) => x && x.d).slice(0, 4);
+    const make = root.querySelector('.sv-make');
+    if (!next.length || !make) return;
+    const opts = Array.prototype.slice.call(root.querySelectorAll('.sv-leave-opt'));
+    const chips = Array.prototype.slice.call(root.querySelectorAll('.sv-reason'));
+    const box = root.querySelector('.sv-rcpt');
+    const codeEl = root.querySelector('.sv-rcpt-code');
+    const st = root.querySelector('.sv-rcpt-st');
+    let pick = -1;
+    let reason = -1;
+    const sync = () => { make.disabled = !(pick >= 0 && reason >= 0); };
+    opts.forEach((btn) => {
+      btn.onclick = () => {
+        pick = Number(btn.dataset.i);
+        opts.forEach((b) => b.classList.toggle('on', b === btn));
+        sync();
+      };
+    });
+    chips.forEach((btn) => {
+      btn.onclick = () => {
+        reason = Number(btn.dataset.r);
+        chips.forEach((b) => b.classList.toggle('on', b === btn));
+        sync();
+      };
+    });
+    const say = (t) => { if (st) { st.hidden = false; st.textContent = t; } };
+    make.onclick = () => {
+      const s = next[pick];
+      let code = '';
+      try {
+        code = encodeReceipt({ name: me.n, no: me.no, date: s.d, start: s.t, reason: reason });
+      } catch (err) {
+        say('生成失败：' + (err && err.message ? err.message : '未知错误'));
+        return;
+      }
+      const msg = `【请假回执】${me.n}${me.no ? ' #' + me.no : ''}\n${fmtDayCN(s.d)} ${s.t || ''}\n原因：${REASONS[reason] || '其他'}\n回执码：${code}\n（队长：考勤页 →「回执」→ 粘贴这一行）`;
+      if (codeEl) codeEl.textContent = code;
+      if (box) box.hidden = false;
+      if (box) box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const copyBtn = box && box.querySelector('.sv-rcpt-copy');
+      const linkBtn = box && box.querySelector('.sv-rcpt-link');
+      if (copyBtn) copyBtn.onclick = async () => {
+        const done = await copyText(msg);
+        say(done ? '已复制，发到群里就行' : '复制被拦了，长按上面的码手动复制');
+      };
+      if (linkBtn) linkBtn.onclick = async () => {
+        const url = location.href.split('#')[0] + '#rcpt=' + code;
+        const done = await copyText(url);
+        say(done ? '回执链接已复制，队长点开就能确认' : '复制被拦了，改用上面的码');
+      };
+    };
   }
 
   function shell(team, inner) {
@@ -539,6 +772,13 @@
         <div class="sv-tl">${timeline || '<p class="sv-empty">还没有训练记录</p>'}</div>
       </section>
 
+      <section class="sv-sec sv-leave" id="svLeave">
+        <div class="sv-sec-head mono"><span>LEAVE / 05</span><i>↩</i></div>
+        <h2>来不了，说一声。</h2>
+        <p class="sv-sub">选一次还没开始的训练、点个原因，生成回执发给队长。他登记完，这次就记成请假，不算缺席。</p>
+        ${leaveForm(data.next)}
+      </section>
+
       <footer class="sv-foot">
         <p>数据快照 · ${esc(fmtSnapshot(data.at || Date.now()))}</p>
         <p class="mono">GENERATED BY CAPTAIN · NO SIGN-UP NEEDED</p>
@@ -550,6 +790,8 @@
       try { localStorage.removeItem(SELF_KEY); } catch (e) { /* ignore */ }
       renderGate(data);
     };
+    const leaveRoot = document.getElementById('svLeave');
+    if (leaveRoot) wireLeave(data, me, leaveRoot);
     return el;
   }
 
@@ -605,5 +847,5 @@
   window.addEventListener('hashchange', boot);
 
   /* ══════════ 给主应用的接口 ══════════ */
-  window.XGYShare = { buildURL, encode, pack, unpack };
+  window.XGYShare = { buildURL, encode, pack, unpack, encodeReceipt, decodeReceipt, fpOf, REASONS };
 })();
