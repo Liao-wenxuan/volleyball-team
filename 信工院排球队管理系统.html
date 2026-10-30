@@ -1523,6 +1523,19 @@ kbd{
 .ex-tag.absent{background:rgba(255,107,138,.12);color:var(--red)}
 .exception-more{font-size:8.5px;color:var(--muted);padding:4px;text-align:center}
 
+/* 阵容完整度 */
+.lineup-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.lu-chip{font-size:10px;padding:4px 9px;border-radius:14px;border:1px solid transparent;font-weight:600}
+.lu-chip.on{background:rgba(var(--violet-rgb),.14);color:var(--violet-2);border-color:rgba(var(--violet-rgb),.3)}
+.lu-chip.off{background:rgba(255,107,138,.1);color:var(--red);border-color:rgba(255,107,138,.28)}
+.lu-chip.dim{background:var(--ov050);color:var(--muted)}
+.lu-chip.off::before,.lu-chip.on::before{margin-right:2px}
+.lineup-note p{font-size:10px;line-height:1.55;margin:3px 0}
+.lu-ok{color:var(--green)}
+.lu-bad{color:var(--text)}
+.lu-bad b{color:var(--red);font-weight:700;margin-right:2px}
+.lu-mut{color:var(--muted)}
+
 /* 技能矩阵 */
 .matrix-scroll{overflow-x:auto;padding-bottom:2px}
 .matrix{min-width:700px;display:flex;flex-direction:column;gap:4px}
@@ -2758,6 +2771,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
           <button class="btn btn-ghost" id="weekToday">回到本周</button>
           <button class="btn btn-ghost" id="attRcptBtn"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4z"/><path d="m9 10 2 2 4-4"/></svg>回执</button>
           <button class="btn btn-ghost" id="attCardBtn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 4v16"/></svg>训练卡</button>
+          <button class="btn btn-ghost" id="attSeasonBtn"><svg viewBox="0 0 24 24"><path d="M3 20h18M6 20V9m6 11V4m6 16v-7"/></svg>赛季卡</button>
           <button class="btn btn-primary" id="attAddBtnPage"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>加练</button>
         </div>
       </div>
@@ -2792,6 +2806,11 @@ body.sv-mode > *:not(#shareView){display:none !important}
           </section>
 
           <aside class="att-side">
+            <section class="panel reveal">
+              <header class="panel-head"><div><h3>阵容完整度</h3><p>本周谁到过，战术就能练什么</p></div></header>
+              <div class="lineup-grid" id="lineupGrid"></div>
+              <div class="lineup-note" id="lineupNote"></div>
+            </section>
             <section class="panel reveal">
               <header class="panel-head"><div><h3>出勤构成</h3><p>只统计已登记项</p></div></header>
               <div class="donut-box">
@@ -3985,6 +4004,223 @@ body.sv-mode > *:not(#shareView){display:none !important}
   window.XGYCard = { render, W, H };
 })();
 
+/* ═══════════════════════════════════════════════════════════════
+ * renderSeason(payload) — 赛季卡（一学期一张的总结图）
+ *
+ * payload = {
+ *   team, range,                       // '9.1 – 10.28'
+ *   totals: { sessions, rate, players, logs },   // rate 可能是 null（没有登记）
+ *   weeks: [{ label, rate, positions }],         // 每周：出勤率 + 到过的位置
+ *   radar: { skills: [{ label, start, now }] }   // 全队六维：起点 vs 现在
+ * }
+ * ═══════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  const W = 750, H = 1334, PAD = 60;
+  const POS_ORDER = ['主攻', '副攻', '二传', '接应', '自由人'];
+  const FONT = '"PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif';
+  const MONO = '"Cascadia Code",ui-monospace,Consolas,monospace';
+  const f = (w, size, mono) => `${w} ${size}px ${mono ? MONO : FONT}`;
+
+  function rr(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function title(ctx, monoY, mono, cn) {
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = f(500, 15, true);
+    ctx.fillStyle = 'rgba(217,255,74,.85)';
+    ctx.fillText(mono, PAD, monoY);
+    ctx.font = f(700, 26);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(cn, PAD, monoY + 34);
+  }
+
+  function emptyHint(ctx, cy, text) {
+    ctx.font = f(500, 19);
+    ctx.fillStyle = 'rgba(255,255,255,.4)';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, W / 2, cy);
+    ctx.textAlign = 'left';
+  }
+
+  async function renderSeason(payload) {
+    const p = payload || {};
+    const weeks = Array.isArray(p.weeks) ? p.weeks : [];
+    const totals = p.totals || {};
+    const radar = (p.radar && p.radar.skills) || [];
+
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+
+    /* 背景（与训练卡同款） */
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, '#121729'); g.addColorStop(1, '#05070f');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const rg = ctx.createRadialGradient(W - 60, 40, 0, W - 60, 40, 420);
+    rg.addColorStop(0, 'rgba(123,108,255,.22)'); rg.addColorStop(1, 'rgba(123,108,255,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, 520);
+
+    /* 头部 */
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.font = f(500, 15, true);
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.fillText('XGY VOLLEYBALL · SEASON CARD', PAD, 86);
+    ctx.font = f(800, 40); ctx.fillStyle = '#ffffff';
+    ctx.fillText(p.team || '信工院排球队', PAD, 136);
+    ctx.font = f(500, 21); ctx.fillStyle = 'rgba(255,255,255,.62)';
+    ctx.fillText(p.range || '', PAD, 176);
+
+    /* 大数字：整体出勤率 */
+    ctx.font = f(800, 76);
+    ctx.fillStyle = '#d9ff4a';
+    ctx.fillText(totals.rate == null ? '—' : totals.rate + '%', PAD, 268);
+    ctx.font = f(600, 19); ctx.fillStyle = 'rgba(255,255,255,.6)';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${totals.sessions || 0} 次训练 · ${totals.players || 0} 名队员 · ${totals.logs || 0} 条技能记录`, W - PAD, 262);
+    ctx.textAlign = 'left';
+
+    /* ── 01 出勤折线 ── */
+    title(ctx, 322, 'ATTENDANCE / 01', '每周出勤率');
+    const cx0 = PAD, cw = W - PAD * 2, cy0 = 396, ch = 170;
+    const shown = weeks.slice(-16);
+    const withRate = shown.filter((x) => x.rate != null);
+    if (!withRate.length) {
+      emptyHint(ctx, cy0 + ch / 2, '还没有登记过考勤');
+    } else {
+      const x = (i) => shown.length === 1 ? cx0 + cw / 2 : cx0 + (cw * i) / (shown.length - 1);
+      const y = (r) => cy0 + ch - (ch * r) / 100;
+      // 网格线
+      [0, 50, 100].forEach((r) => {
+        ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(cx0, y(r)); ctx.lineTo(cx0 + cw, y(r)); ctx.stroke();
+        ctx.font = f(500, 13, true); ctx.fillStyle = 'rgba(255,255,255,.35)';
+        ctx.fillText(String(r), cx0 - 24, y(r) + 4);
+      });
+      // 折线 + 点
+      ctx.strokeStyle = '#d9ff4a'; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      let started = false;
+      shown.forEach((wk, i) => {
+        if (wk.rate == null) return;
+        const px = x(i), py = y(wk.rate);
+        if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+      shown.forEach((wk, i) => {
+        if (wk.rate == null) return;
+        ctx.beginPath(); ctx.arc(x(i), y(wk.rate), 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#d9ff4a'; ctx.fill();
+        ctx.fillStyle = '#0b0d16'; ctx.font = f(800, 11);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(wk.rate), x(i), y(wk.rate) + 1);
+      });
+      ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+      // x 轴标签（最多 8 个，避免挤）
+      const step = Math.max(1, Math.ceil(shown.length / 8));
+      ctx.font = f(500, 14, true); ctx.fillStyle = 'rgba(255,255,255,.4)';
+      ctx.textAlign = 'center';
+      shown.forEach((wk, i) => { if (i % step === 0 || i === shown.length - 1) ctx.fillText(wk.label, x(i), cy0 + ch + 26); });
+      ctx.textAlign = 'left';
+    }
+
+    /* ── 02 位置热力 ── */
+    title(ctx, 648, 'LINEUP / 02', '位置完整度热力');
+    const hy0 = 716, rowH = 26, cellW = Math.min(34, (cw - 90) / Math.max(1, shown.length));
+    if (!shown.length || !weeks.some((wk) => (wk.positions || []).length)) {
+      emptyHint(ctx, hy0 + 30, '还没有可以统计的训练');
+    } else {
+      ctx.font = f(500, 16);
+      POS_ORDER.forEach((pos, r) => {
+        const yy = hy0 + r * rowH;
+        ctx.fillStyle = 'rgba(255,255,255,.75)';
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(pos, cx0, yy + rowH / 2 - 4);
+        shown.forEach((wk, i) => {
+          const on = (wk.positions || []).includes(pos);
+          ctx.fillStyle = on ? 'rgba(217,255,74,.9)' : 'rgba(255,255,255,.08)';
+          rr(ctx, cx0 + 80 + i * (cellW + 4), yy - 2, cellW, rowH - 8, 4);
+          ctx.fill();
+        });
+      });
+      ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+      ctx.font = f(500, 14); ctx.fillStyle = 'rgba(255,255,255,.4)';
+      ctx.fillText('亮 = 该位置本周至少到过一次', cx0, hy0 + POS_ORDER.length * rowH + 16);
+    }
+
+    /* ── 03 全队六维雷达 ── */
+    title(ctx, 932, 'TEAM RADAR / 03', '全队六维 · 起点 vs 现在');
+    // 图例画在标题行右侧（雷达下方是页脚的地盘，别挤）
+    ctx.font = f(500, 15);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.fillRect(W - PAD - 158, 955, 14, 4);
+    ctx.fillText('起点', W - PAD - 138, 962);
+    ctx.fillStyle = '#d9ff4a';
+    ctx.fillRect(W - PAD - 74, 955, 14, 4);
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.fillText('现在', W - PAD - 54, 962);
+    ctx.textBaseline = 'alphabetic';
+    const rcx = W / 2, rcy = 1118, rr0 = 104, n = radar.length;
+    if (!n || !radar.some((s) => s.start !== s.now)) {
+      emptyHint(ctx, rcy, '还没有技能调整记录');
+    } else {
+      const ang = (i) => -Math.PI / 2 + (i * 2 * Math.PI) / n;
+      const pt = (i, v) => [rcx + Math.cos(ang(i)) * rr0 * (v / 10), rcy + Math.sin(ang(i)) * rr0 * (v / 10)];
+      // 骨架
+      for (let ring = 1; ring <= 5; ring++) {
+        ctx.beginPath();
+        for (let i = 0; i <= n; i++) {
+          const [px, py] = pt(i % n, ring * 2);
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.lineWidth = 1; ctx.stroke();
+      }
+      for (let i = 0; i < n; i++) {
+        const [px, py] = pt(i, 10);
+        ctx.beginPath(); ctx.moveTo(rcx, rcy); ctx.lineTo(px, py);
+        ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.stroke();
+        const [lx, ly] = pt(i, 13.2);
+        ctx.font = f(600, 17); ctx.fillStyle = 'rgba(255,255,255,.8)';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(radar[i].label, lx, ly);
+      }
+      ctx.textBaseline = 'alphabetic';
+      const poly = (key, stroke, fill) => {
+        ctx.beginPath();
+        radar.forEach((s, i) => {
+          const [px, py] = pt(i, Math.max(0.2, s[key]));
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        });
+        ctx.closePath();
+        ctx.fillStyle = fill; ctx.fill();
+        ctx.strokeStyle = stroke; ctx.lineWidth = 2.5; ctx.stroke();
+      };
+      poly('start', 'rgba(255,255,255,.4)', 'rgba(255,255,255,.08)');
+      poly('now', '#d9ff4a', 'rgba(217,255,74,.18)');
+    }
+
+    /* 页脚 */
+    ctx.textAlign = 'center';
+    ctx.font = f(500, 14, true);
+    ctx.fillStyle = 'rgba(255,255,255,.3)';
+    ctx.fillText('GENERATED BY CAPTAIN · 信工院排球队', W / 2, H - 46);
+
+    const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+    return { dataURL: cv.toDataURL('image/png'), blob, canvas: cv };
+  }
+
+  window.XGYSeason = { render: renderSeason };
+})();
+
 </script>
 <script>
 /* ═══════════════════════════════════════════════════════════════
@@ -4860,7 +5096,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-29 · r9'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-30 · r10'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -6378,8 +6614,58 @@ body.sv-mode > *:not(#shareView){display:none !important}
     $('#attGrid').innerHTML = html;
   }
 
+  /* ══════════ 阵容完整度：排球特有的领域指标 ══════════
+   * 出勤率回答「来了多少人」，这个回答「缺谁、还能练什么」。
+   * 判据：本周至少到过一次（出勤/迟到）就算在；请假/缺席/未登记不算。 */
+  const POS_CONSEQ = {
+    '主攻': '四号位强攻和一传反轮练不了',
+    '副攻': '拦网配合和三号位快攻练不了',
+    '二传': '进攻组织整个跑不起来',
+    '接应': '二号位进攻和右路防守练不了',
+    '自由人': '防守轮转和垫球串联练不了'
+  };
+
+  function lineupIntegrity(monday) {
+    const active = getSessions(monday).filter((s) => s.status !== 'cancelled');
+    const came = new Set();
+    active.forEach((s) => db.players.forEach((p) => {
+      const st = s.attendance[p.id];
+      if (st === 'present' || st === 'late') came.add(p.position);
+    }));
+    return {
+      sessions: active.length,
+      on: POSITIONS.filter((x) => came.has(x)),
+      missing: POSITIONS.filter((x) => !came.has(x))
+    };
+  }
+
+  function renderLineup(li) {
+    const grid = $('#lineupGrid');
+    const note = $('#lineupNote');
+    if (!grid || !note) return;
+    if (!db.players.length || !li.sessions) {
+      grid.innerHTML = POSITIONS.map((x) => `<span class="lu-chip dim">${x}</span>`).join('');
+      note.innerHTML = `<p class="lu-mut">${db.players.length ? '本周还没有训练或还没人登记' : '先添加队员'}</p>`;
+      return;
+    }
+    const posOf = {};
+    db.players.forEach((p) => { (posOf[p.position] = posOf[p.position] || []).push(p); });
+    grid.innerHTML = POSITIONS.map((x) => {
+      const ok = li.on.includes(x);
+      const names = (posOf[x] || []).filter((p) => li.on.includes(x)).map((p) => p.name);
+      const title = ok ? `${x}：${names.join('、') || '—'} 本周到过` : `${x}：本周没人到过`;
+      return `<span class="lu-chip ${ok ? 'on' : 'off'}" title="${esc(title)}">${ok ? '✓' : '✕'} ${x}</span>`;
+    }).join('');
+    if (!li.missing.length) {
+      note.innerHTML = `<p class="lu-ok">五个位置都到过，战术课想怎么排就怎么排。</p>`;
+    } else {
+      note.innerHTML = li.missing.map((x) => `<p class="lu-bad"><b>缺${x}</b> · ${POS_CONSEQ[x]}</p>`).join('');
+    }
+  }
+
   function renderAttSide(stats) {
     paintDonut(stats);
+    renderLineup(lineupIntegrity(state.weekMonday));
     const list = $('#sessionList');
     if (!stats.sessions.length) list.innerHTML = miniEmpty('本周没有训练。');
     else list.innerHTML = stats.sessions.map((s) => {
@@ -6971,6 +7257,72 @@ body.sv-mode > *:not(#shareView){display:none !important}
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast('已保存到下载目录，去微信里发给大家吧');
+    };
+  }
+
+  /* ══════════ 赛季卡：一学期一张的总结图 ══════════ */
+  function seasonPayload() {
+    const keys = Object.keys(db.weeks).filter((k) => Array.isArray(db.weeks[k]) && db.weeks[k].length).sort();
+    let attSum = 0, attMarked = 0, activeTotal = 0, logCount = 0;
+    const weeks = keys.map((k) => {
+      const monday = parseKey(k);
+      const active = db.weeks[k].filter((s) => s.status !== 'cancelled');
+      let on = 0, marked = 0;
+      const camePos = new Set();
+      active.forEach((s) => db.players.forEach((p) => {
+        const st = (s.attendance || {})[p.id];
+        if (!st) return;
+        marked += 1;
+        if (st === 'present' || st === 'late') { on += 1; camePos.add(p.position); }
+      }));
+      attSum += on; attMarked += marked; activeTotal += active.length;
+      const d = parseKey(k);
+      return {
+        label: `${d.getMonth() + 1}.${d.getDate()}`,
+        rate: marked ? Math.round((on / marked) * 100) : null,
+        positions: POSITIONS.filter((x) => camePos.has(x))
+      };
+    });
+    logCount = (db.skillLogs || []).length;
+    // 全队六维：起点 = 每人每项最早记录的 before 的均值；现在 = 当前分均值
+    const radar = { skills: SKILLS.map((sk) => {
+      let s0 = 0, s1 = 0;
+      db.players.forEach((p) => { s0 += skillStart(p, sk.key); s1 += Number(p.skills[sk.key] ?? 5); });
+      const n = Math.max(1, db.players.length);
+      return { label: sk.label, start: +(s0 / n).toFixed(1), now: +(s1 / n).toFixed(1) };
+    }) };
+    const range = weeks.length
+      ? `${weeks[0].label} – ${parseKey(keys[keys.length - 1]).getMonth() + 1}.${parseKey(keys[keys.length - 1]).getDate()}`
+      : '';
+    return {
+      team: '信工院排球队',
+      range,
+      totals: { sessions: activeTotal, rate: attMarked ? Math.round((attSum / attMarked) * 100) : null, players: db.players.length, logs: logCount },
+      weeks,
+      radar
+    };
+  }
+
+  async function openSeasonCard() {
+    if (!db.players.length) { toast('先添加队员', 'warn'); return; }
+    if (!hasAnyAttendance()) { toast('还没有登记过考勤，先记几周再来看总结', 'warn'); return; }
+    const card = await window.XGYSeason.render(seasonPayload());
+    openModal('赛季卡', `<div class="card-wrap">
+      <p class="share-hint">一学期一张的总结图：每周出勤、位置完整度热力、全队六维进步。<b>在你自己设备上生成</b>，不经过任何服务器。</p>
+      <img class="card-preview" src="${card.dataURL}" alt="赛季卡预览">
+      <div class="share-foot"><button type="button" class="btn btn-primary" id="cardSave2">保存图片</button><button type="button" class="btn btn-ghost" id="cardClose2">关闭</button></div>
+    </div>`, { mid: true });
+    $('#cardClose2').onclick = closeModal;
+    $('#cardSave2').onclick = () => {
+      const url = URL.createObjectURL(card.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `赛季卡-${dateKey(new Date())}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast('赛季卡已保存，学期末发群里正好');
     };
   }
 
@@ -8011,6 +8363,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     $('#attAddBtnPage').onclick = () => openSessionModal(null, state.weekMonday, { isNew: true });
     $('#allPresent').onclick = setAllPresent;
     $('#attCardBtn').onclick = openWeekCard;
+    $('#attSeasonBtn').onclick = openSeasonCard;
     $('#attRcptBtn').onclick = () => openReceiptModal();
     $('#attGrid').addEventListener('click', (e) => {
       const head = e.target.closest('.att-session-head');

@@ -1509,6 +1509,19 @@ kbd{
 .ex-tag.absent{background:rgba(255,107,138,.12);color:var(--red)}
 .exception-more{font-size:8.5px;color:var(--muted);padding:4px;text-align:center}
 
+/* 阵容完整度 */
+.lineup-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.lu-chip{font-size:10px;padding:4px 9px;border-radius:14px;border:1px solid transparent;font-weight:600}
+.lu-chip.on{background:rgba(var(--violet-rgb),.14);color:var(--violet-2);border-color:rgba(var(--violet-rgb),.3)}
+.lu-chip.off{background:rgba(255,107,138,.1);color:var(--red);border-color:rgba(255,107,138,.28)}
+.lu-chip.dim{background:var(--ov050);color:var(--muted)}
+.lu-chip.off::before,.lu-chip.on::before{margin-right:2px}
+.lineup-note p{font-size:10px;line-height:1.55;margin:3px 0}
+.lu-ok{color:var(--green)}
+.lu-bad{color:var(--text)}
+.lu-bad b{color:var(--red);font-weight:700;margin-right:2px}
+.lu-mut{color:var(--muted)}
+
 /* 技能矩阵 */
 .matrix-scroll{overflow-x:auto;padding-bottom:2px}
 .matrix{min-width:700px;display:flex;flex-direction:column;gap:4px}

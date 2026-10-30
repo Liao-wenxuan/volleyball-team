@@ -377,6 +377,7 @@
           <button class="btn btn-ghost" id="weekToday">回到本周</button>
           <button class="btn btn-ghost" id="attRcptBtn"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4z"/><path d="m9 10 2 2 4-4"/></svg>回执</button>
           <button class="btn btn-ghost" id="attCardBtn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 4v16"/></svg>训练卡</button>
+          <button class="btn btn-ghost" id="attSeasonBtn"><svg viewBox="0 0 24 24"><path d="M3 20h18M6 20V9m6 11V4m6 16v-7"/></svg>赛季卡</button>
           <button class="btn btn-primary" id="attAddBtnPage"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>加练</button>
         </div>
       </div>
@@ -411,6 +412,11 @@
           </section>
 
           <aside class="att-side">
+            <section class="panel reveal">
+              <header class="panel-head"><div><h3>阵容完整度</h3><p>本周谁到过，战术就能练什么</p></div></header>
+              <div class="lineup-grid" id="lineupGrid"></div>
+              <div class="lineup-note" id="lineupNote"></div>
+            </section>
             <section class="panel reveal">
               <header class="panel-head"><div><h3>出勤构成</h3><p>只统计已登记项</p></div></header>
               <div class="donut-box">

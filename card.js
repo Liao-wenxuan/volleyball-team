@@ -274,3 +274,220 @@
 
   window.XGYCard = { render, W, H };
 })();
+
+/* ═══════════════════════════════════════════════════════════════
+ * renderSeason(payload) — 赛季卡（一学期一张的总结图）
+ *
+ * payload = {
+ *   team, range,                       // '9.1 – 10.28'
+ *   totals: { sessions, rate, players, logs },   // rate 可能是 null（没有登记）
+ *   weeks: [{ label, rate, positions }],         // 每周：出勤率 + 到过的位置
+ *   radar: { skills: [{ label, start, now }] }   // 全队六维：起点 vs 现在
+ * }
+ * ═══════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  const W = 750, H = 1334, PAD = 60;
+  const POS_ORDER = ['主攻', '副攻', '二传', '接应', '自由人'];
+  const FONT = '"PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif';
+  const MONO = '"Cascadia Code",ui-monospace,Consolas,monospace';
+  const f = (w, size, mono) => `${w} ${size}px ${mono ? MONO : FONT}`;
+
+  function rr(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function title(ctx, monoY, mono, cn) {
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = f(500, 15, true);
+    ctx.fillStyle = 'rgba(217,255,74,.85)';
+    ctx.fillText(mono, PAD, monoY);
+    ctx.font = f(700, 26);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(cn, PAD, monoY + 34);
+  }
+
+  function emptyHint(ctx, cy, text) {
+    ctx.font = f(500, 19);
+    ctx.fillStyle = 'rgba(255,255,255,.4)';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, W / 2, cy);
+    ctx.textAlign = 'left';
+  }
+
+  async function renderSeason(payload) {
+    const p = payload || {};
+    const weeks = Array.isArray(p.weeks) ? p.weeks : [];
+    const totals = p.totals || {};
+    const radar = (p.radar && p.radar.skills) || [];
+
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+
+    /* 背景（与训练卡同款） */
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, '#121729'); g.addColorStop(1, '#05070f');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const rg = ctx.createRadialGradient(W - 60, 40, 0, W - 60, 40, 420);
+    rg.addColorStop(0, 'rgba(123,108,255,.22)'); rg.addColorStop(1, 'rgba(123,108,255,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, 520);
+
+    /* 头部 */
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.font = f(500, 15, true);
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.fillText('XGY VOLLEYBALL · SEASON CARD', PAD, 86);
+    ctx.font = f(800, 40); ctx.fillStyle = '#ffffff';
+    ctx.fillText(p.team || '信工院排球队', PAD, 136);
+    ctx.font = f(500, 21); ctx.fillStyle = 'rgba(255,255,255,.62)';
+    ctx.fillText(p.range || '', PAD, 176);
+
+    /* 大数字：整体出勤率 */
+    ctx.font = f(800, 76);
+    ctx.fillStyle = '#d9ff4a';
+    ctx.fillText(totals.rate == null ? '—' : totals.rate + '%', PAD, 268);
+    ctx.font = f(600, 19); ctx.fillStyle = 'rgba(255,255,255,.6)';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${totals.sessions || 0} 次训练 · ${totals.players || 0} 名队员 · ${totals.logs || 0} 条技能记录`, W - PAD, 262);
+    ctx.textAlign = 'left';
+
+    /* ── 01 出勤折线 ── */
+    title(ctx, 322, 'ATTENDANCE / 01', '每周出勤率');
+    const cx0 = PAD, cw = W - PAD * 2, cy0 = 396, ch = 170;
+    const shown = weeks.slice(-16);
+    const withRate = shown.filter((x) => x.rate != null);
+    if (!withRate.length) {
+      emptyHint(ctx, cy0 + ch / 2, '还没有登记过考勤');
+    } else {
+      const x = (i) => shown.length === 1 ? cx0 + cw / 2 : cx0 + (cw * i) / (shown.length - 1);
+      const y = (r) => cy0 + ch - (ch * r) / 100;
+      // 网格线
+      [0, 50, 100].forEach((r) => {
+        ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(cx0, y(r)); ctx.lineTo(cx0 + cw, y(r)); ctx.stroke();
+        ctx.font = f(500, 13, true); ctx.fillStyle = 'rgba(255,255,255,.35)';
+        ctx.fillText(String(r), cx0 - 24, y(r) + 4);
+      });
+      // 折线 + 点
+      ctx.strokeStyle = '#d9ff4a'; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      let started = false;
+      shown.forEach((wk, i) => {
+        if (wk.rate == null) return;
+        const px = x(i), py = y(wk.rate);
+        if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+      shown.forEach((wk, i) => {
+        if (wk.rate == null) return;
+        ctx.beginPath(); ctx.arc(x(i), y(wk.rate), 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#d9ff4a'; ctx.fill();
+        ctx.fillStyle = '#0b0d16'; ctx.font = f(800, 11);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(wk.rate), x(i), y(wk.rate) + 1);
+      });
+      ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+      // x 轴标签（最多 8 个，避免挤）
+      const step = Math.max(1, Math.ceil(shown.length / 8));
+      ctx.font = f(500, 14, true); ctx.fillStyle = 'rgba(255,255,255,.4)';
+      ctx.textAlign = 'center';
+      shown.forEach((wk, i) => { if (i % step === 0 || i === shown.length - 1) ctx.fillText(wk.label, x(i), cy0 + ch + 26); });
+      ctx.textAlign = 'left';
+    }
+
+    /* ── 02 位置热力 ── */
+    title(ctx, 648, 'LINEUP / 02', '位置完整度热力');
+    const hy0 = 716, rowH = 26, cellW = Math.min(34, (cw - 90) / Math.max(1, shown.length));
+    if (!shown.length || !weeks.some((wk) => (wk.positions || []).length)) {
+      emptyHint(ctx, hy0 + 30, '还没有可以统计的训练');
+    } else {
+      ctx.font = f(500, 16);
+      POS_ORDER.forEach((pos, r) => {
+        const yy = hy0 + r * rowH;
+        ctx.fillStyle = 'rgba(255,255,255,.75)';
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(pos, cx0, yy + rowH / 2 - 4);
+        shown.forEach((wk, i) => {
+          const on = (wk.positions || []).includes(pos);
+          ctx.fillStyle = on ? 'rgba(217,255,74,.9)' : 'rgba(255,255,255,.08)';
+          rr(ctx, cx0 + 80 + i * (cellW + 4), yy - 2, cellW, rowH - 8, 4);
+          ctx.fill();
+        });
+      });
+      ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+      ctx.font = f(500, 14); ctx.fillStyle = 'rgba(255,255,255,.4)';
+      ctx.fillText('亮 = 该位置本周至少到过一次', cx0, hy0 + POS_ORDER.length * rowH + 16);
+    }
+
+    /* ── 03 全队六维雷达 ── */
+    title(ctx, 932, 'TEAM RADAR / 03', '全队六维 · 起点 vs 现在');
+    // 图例画在标题行右侧（雷达下方是页脚的地盘，别挤）
+    ctx.font = f(500, 15);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.fillRect(W - PAD - 158, 955, 14, 4);
+    ctx.fillText('起点', W - PAD - 138, 962);
+    ctx.fillStyle = '#d9ff4a';
+    ctx.fillRect(W - PAD - 74, 955, 14, 4);
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.fillText('现在', W - PAD - 54, 962);
+    ctx.textBaseline = 'alphabetic';
+    const rcx = W / 2, rcy = 1118, rr0 = 104, n = radar.length;
+    if (!n || !radar.some((s) => s.start !== s.now)) {
+      emptyHint(ctx, rcy, '还没有技能调整记录');
+    } else {
+      const ang = (i) => -Math.PI / 2 + (i * 2 * Math.PI) / n;
+      const pt = (i, v) => [rcx + Math.cos(ang(i)) * rr0 * (v / 10), rcy + Math.sin(ang(i)) * rr0 * (v / 10)];
+      // 骨架
+      for (let ring = 1; ring <= 5; ring++) {
+        ctx.beginPath();
+        for (let i = 0; i <= n; i++) {
+          const [px, py] = pt(i % n, ring * 2);
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.lineWidth = 1; ctx.stroke();
+      }
+      for (let i = 0; i < n; i++) {
+        const [px, py] = pt(i, 10);
+        ctx.beginPath(); ctx.moveTo(rcx, rcy); ctx.lineTo(px, py);
+        ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.stroke();
+        const [lx, ly] = pt(i, 13.2);
+        ctx.font = f(600, 17); ctx.fillStyle = 'rgba(255,255,255,.8)';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(radar[i].label, lx, ly);
+      }
+      ctx.textBaseline = 'alphabetic';
+      const poly = (key, stroke, fill) => {
+        ctx.beginPath();
+        radar.forEach((s, i) => {
+          const [px, py] = pt(i, Math.max(0.2, s[key]));
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        });
+        ctx.closePath();
+        ctx.fillStyle = fill; ctx.fill();
+        ctx.strokeStyle = stroke; ctx.lineWidth = 2.5; ctx.stroke();
+      };
+      poly('start', 'rgba(255,255,255,.4)', 'rgba(255,255,255,.08)');
+      poly('now', '#d9ff4a', 'rgba(217,255,74,.18)');
+    }
+
+    /* 页脚 */
+    ctx.textAlign = 'center';
+    ctx.font = f(500, 14, true);
+    ctx.fillStyle = 'rgba(255,255,255,.3)';
+    ctx.fillText('GENERATED BY CAPTAIN · 信工院排球队', W / 2, H - 46);
+
+    const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+    return { dataURL: cv.toDataURL('image/png'), blob, canvas: cv };
+  }
+
+  window.XGYSeason = { render: renderSeason };
+})();

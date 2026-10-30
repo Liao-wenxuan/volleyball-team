@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-29 · r9'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-30 · r10'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -1535,8 +1535,58 @@
     $('#attGrid').innerHTML = html;
   }
 
+  /* ══════════ 阵容完整度：排球特有的领域指标 ══════════
+   * 出勤率回答「来了多少人」，这个回答「缺谁、还能练什么」。
+   * 判据：本周至少到过一次（出勤/迟到）就算在；请假/缺席/未登记不算。 */
+  const POS_CONSEQ = {
+    '主攻': '四号位强攻和一传反轮练不了',
+    '副攻': '拦网配合和三号位快攻练不了',
+    '二传': '进攻组织整个跑不起来',
+    '接应': '二号位进攻和右路防守练不了',
+    '自由人': '防守轮转和垫球串联练不了'
+  };
+
+  function lineupIntegrity(monday) {
+    const active = getSessions(monday).filter((s) => s.status !== 'cancelled');
+    const came = new Set();
+    active.forEach((s) => db.players.forEach((p) => {
+      const st = s.attendance[p.id];
+      if (st === 'present' || st === 'late') came.add(p.position);
+    }));
+    return {
+      sessions: active.length,
+      on: POSITIONS.filter((x) => came.has(x)),
+      missing: POSITIONS.filter((x) => !came.has(x))
+    };
+  }
+
+  function renderLineup(li) {
+    const grid = $('#lineupGrid');
+    const note = $('#lineupNote');
+    if (!grid || !note) return;
+    if (!db.players.length || !li.sessions) {
+      grid.innerHTML = POSITIONS.map((x) => `<span class="lu-chip dim">${x}</span>`).join('');
+      note.innerHTML = `<p class="lu-mut">${db.players.length ? '本周还没有训练或还没人登记' : '先添加队员'}</p>`;
+      return;
+    }
+    const posOf = {};
+    db.players.forEach((p) => { (posOf[p.position] = posOf[p.position] || []).push(p); });
+    grid.innerHTML = POSITIONS.map((x) => {
+      const ok = li.on.includes(x);
+      const names = (posOf[x] || []).filter((p) => li.on.includes(x)).map((p) => p.name);
+      const title = ok ? `${x}：${names.join('、') || '—'} 本周到过` : `${x}：本周没人到过`;
+      return `<span class="lu-chip ${ok ? 'on' : 'off'}" title="${esc(title)}">${ok ? '✓' : '✕'} ${x}</span>`;
+    }).join('');
+    if (!li.missing.length) {
+      note.innerHTML = `<p class="lu-ok">五个位置都到过，战术课想怎么排就怎么排。</p>`;
+    } else {
+      note.innerHTML = li.missing.map((x) => `<p class="lu-bad"><b>缺${x}</b> · ${POS_CONSEQ[x]}</p>`).join('');
+    }
+  }
+
   function renderAttSide(stats) {
     paintDonut(stats);
+    renderLineup(lineupIntegrity(state.weekMonday));
     const list = $('#sessionList');
     if (!stats.sessions.length) list.innerHTML = miniEmpty('本周没有训练。');
     else list.innerHTML = stats.sessions.map((s) => {
@@ -2128,6 +2178,72 @@
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast('已保存到下载目录，去微信里发给大家吧');
+    };
+  }
+
+  /* ══════════ 赛季卡：一学期一张的总结图 ══════════ */
+  function seasonPayload() {
+    const keys = Object.keys(db.weeks).filter((k) => Array.isArray(db.weeks[k]) && db.weeks[k].length).sort();
+    let attSum = 0, attMarked = 0, activeTotal = 0, logCount = 0;
+    const weeks = keys.map((k) => {
+      const monday = parseKey(k);
+      const active = db.weeks[k].filter((s) => s.status !== 'cancelled');
+      let on = 0, marked = 0;
+      const camePos = new Set();
+      active.forEach((s) => db.players.forEach((p) => {
+        const st = (s.attendance || {})[p.id];
+        if (!st) return;
+        marked += 1;
+        if (st === 'present' || st === 'late') { on += 1; camePos.add(p.position); }
+      }));
+      attSum += on; attMarked += marked; activeTotal += active.length;
+      const d = parseKey(k);
+      return {
+        label: `${d.getMonth() + 1}.${d.getDate()}`,
+        rate: marked ? Math.round((on / marked) * 100) : null,
+        positions: POSITIONS.filter((x) => camePos.has(x))
+      };
+    });
+    logCount = (db.skillLogs || []).length;
+    // 全队六维：起点 = 每人每项最早记录的 before 的均值；现在 = 当前分均值
+    const radar = { skills: SKILLS.map((sk) => {
+      let s0 = 0, s1 = 0;
+      db.players.forEach((p) => { s0 += skillStart(p, sk.key); s1 += Number(p.skills[sk.key] ?? 5); });
+      const n = Math.max(1, db.players.length);
+      return { label: sk.label, start: +(s0 / n).toFixed(1), now: +(s1 / n).toFixed(1) };
+    }) };
+    const range = weeks.length
+      ? `${weeks[0].label} – ${parseKey(keys[keys.length - 1]).getMonth() + 1}.${parseKey(keys[keys.length - 1]).getDate()}`
+      : '';
+    return {
+      team: '信工院排球队',
+      range,
+      totals: { sessions: activeTotal, rate: attMarked ? Math.round((attSum / attMarked) * 100) : null, players: db.players.length, logs: logCount },
+      weeks,
+      radar
+    };
+  }
+
+  async function openSeasonCard() {
+    if (!db.players.length) { toast('先添加队员', 'warn'); return; }
+    if (!hasAnyAttendance()) { toast('还没有登记过考勤，先记几周再来看总结', 'warn'); return; }
+    const card = await window.XGYSeason.render(seasonPayload());
+    openModal('赛季卡', `<div class="card-wrap">
+      <p class="share-hint">一学期一张的总结图：每周出勤、位置完整度热力、全队六维进步。<b>在你自己设备上生成</b>，不经过任何服务器。</p>
+      <img class="card-preview" src="${card.dataURL}" alt="赛季卡预览">
+      <div class="share-foot"><button type="button" class="btn btn-primary" id="cardSave2">保存图片</button><button type="button" class="btn btn-ghost" id="cardClose2">关闭</button></div>
+    </div>`, { mid: true });
+    $('#cardClose2').onclick = closeModal;
+    $('#cardSave2').onclick = () => {
+      const url = URL.createObjectURL(card.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `赛季卡-${dateKey(new Date())}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast('赛季卡已保存，学期末发群里正好');
     };
   }
 
@@ -3168,6 +3284,7 @@
     $('#attAddBtnPage').onclick = () => openSessionModal(null, state.weekMonday, { isNew: true });
     $('#allPresent').onclick = setAllPresent;
     $('#attCardBtn').onclick = openWeekCard;
+    $('#attSeasonBtn').onclick = openSeasonCard;
     $('#attRcptBtn').onclick = () => openReceiptModal();
     $('#attGrid').addEventListener('click', (e) => {
       const head = e.target.closest('.att-session-head');
