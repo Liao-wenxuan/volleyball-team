@@ -112,8 +112,9 @@ try {
   await sleep(300);
   await evalJS(`document.querySelector('#menuImport').click(); 'x'`);
   await sleep(400);
-  const chooser = await evalJS(`({ pick: !!document.querySelector('#impPickFile'), paste: !!document.querySelector('#impPickPaste') })`);
-  check('入口先让你选「文件 / 粘贴」', chooser.pick && chooser.paste);
+  // r12 起入口是 label[for] 原生触发 + 三条通路（文件 / 链接 / 粘贴）
+  const chooser = await evalJS(`({ lab: !!document.querySelector('label[for="importFile"]'), link: !!document.querySelector('#impPickLink'), paste: !!document.querySelector('#impPickPaste') })`);
+  check('入口先让你选「文件 / 链接 / 粘贴」', chooser.lab && chooser.link && chooser.paste);
 
   /* ── 2. 选文件（模拟平板选择器交出文件）── */
   const doc = await send('DOM.getDocument', { depth: -1 });

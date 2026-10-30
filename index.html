@@ -628,8 +628,9 @@
 
 <div class="toast-stack" id="toasts" aria-live="polite"></div>
 <!-- 不能写 accept=".json"：iPadOS/部分 Android 的文档选择器按 UTI 过滤，
-     .json 认不出来会把备份文件变灰点不动；也不能用 hidden（display:none），
-     部分 iOS 版本对这种输入框不弹选择器。类型校验交给 app.js。 -->
+     .json 认不出来会把备份文件变灰点不动；类型校验交给 app.js。
+     也不能靠 JS 去 click 一个移出屏幕的 input——安卓 PWA 独立窗口会直接吞掉，
+     表现就是「点了完全没反应」。所以入口用 <label for> 原生触发，这个元素只做兜底。 -->
 <input type="file" id="importFile" class="file-ghost" tabindex="-1" aria-hidden="true">
 
 <script src="cloud.js"></script>

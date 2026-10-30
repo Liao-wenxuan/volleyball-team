@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-30 · r11'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-30 · r12'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -2101,7 +2101,7 @@
     <div class="settings-section">
       <h4>数据管理</h4>
       <p class="settings-desc">所有数据只保存在这台电脑的浏览器里。换电脑、清缓存或重装系统前，先导出 JSON 备份。</p>
-      <div class="settings-actions"><button class="btn btn-ghost" data-action="export">导出 JSON</button><button class="btn btn-ghost" data-action="import">导入 JSON</button><button class="btn btn-ghost" data-action="paste-import">粘贴导入</button><button class="btn btn-danger-ghost" data-action="clear-data">清空所有数据</button></div>
+      <div class="settings-actions"><button class="btn btn-ghost" data-action="export">导出 JSON</button><button class="btn btn-ghost" data-action="link-export">导出为链接</button><button class="btn btn-ghost" data-action="import">导入备份</button><button class="btn btn-ghost" data-action="paste-import">粘贴导入</button><button class="btn btn-danger-ghost" data-action="clear-data">清空所有数据</button></div>
     </div>`;
     openModal('设置', body, { mid: true });
     $('#templateForm').onsubmit = (e) => {
@@ -2130,7 +2130,126 @@
     toast('备份已导出');
   }
 
-  function importData() { $('#importFile').click(); }
+  function importData() { openImportChooser(); }
+
+  /* ══════════ 导入链接：把备份压进 URL 的 #backup=，跨设备搬数据不用选文件 ══════════
+     安卓的 PWA 独立窗口对 <input type=file> 支持很不稳定，而且从微信里拿到的文件
+     还得先存到「文件」App 再翻半天。一条链接点开就能导入，两头都得救。 */
+  function b64FromBytes(u8) {
+    let bin = '';
+    for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function bytesFromB64(s) {
+    const b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4 ? '='.repeat(4 - (b64.length % 4)) : '';
+    const bin = atob(b64 + pad);
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
+  // z = deflate-raw 压缩，p = 明文（老浏览器没有 CompressionStream 时兜底）
+  async function packBackup(obj) {
+    const text = JSON.stringify(obj);
+    if (typeof CompressionStream === 'function') {
+      const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+      const buf = await new Response(stream).arrayBuffer();
+      return 'z' + b64FromBytes(new Uint8Array(buf));
+    }
+    return 'p' + b64FromBytes(new TextEncoder().encode(text));
+  }
+  async function unpackBackup(payload) {
+    const tag = String(payload || '')[0];
+    const bytes = bytesFromB64(String(payload).slice(1));
+    let text;
+    if (tag === 'z') {
+      if (typeof DecompressionStream !== 'function') throw new Error('这台设备解不了压缩数据');
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      text = await new Response(stream).text();
+    } else if (tag === 'p') {
+      text = new TextDecoder().decode(bytes);
+    } else {
+      throw new Error('链接格式不认识');
+    }
+    return JSON.parse(text);
+  }
+
+  async function openLinkExport() {
+    toast('正在生成链接…');
+    try {
+      const payload = await packBackup({ ...db, savedAt: Date.now() });
+      const link = location.href.split('#')[0] + '#backup=' + payload;
+      const long = link.length > 8000;
+      openModal('生成导入链接', `<div class="imp-wrap">
+        <p class="imp-lead">在平板上打开这条链接，会直接弹出导入窗口，<b>不用再传文件</b>。发给自己的微信「文件传输助手」最顺手。</p>
+        <textarea class="imp-ta imp-ta-link" id="lnkOut" rows="4" readonly>${esc(link)}</textarea>
+        <p class="imp-note">${link.length} 字符${long ? ' · <b>偏长了</b>，聊天软件可能截断，建议改用「导出 JSON」传文件' : ''}</p>
+        <div class="form-foot">
+          <button type="button" class="btn btn-primary" id="lnkCopy">复制链接</button>
+          <button type="button" class="btn btn-ghost" id="lnkClose">关闭</button>
+        </div>
+      </div>`, { mid: true });
+      $('#lnkClose').onclick = closeModal;
+      $('#lnkCopy').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(link);
+          toast('链接已复制，发到平板打开就行');
+        } catch (e) {
+          const t = $('#lnkOut');
+          t.focus(); t.select();
+          toast('自动复制失败，已帮你选中，长按复制', 'warn');
+        }
+      };
+    } catch (e) {
+      toast(`生成链接失败：${e && e.message ? e.message : '未知错误'}`, 'warn');
+    }
+  }
+
+  function openLinkImport() {
+    openModal('用链接导入', `<div class="imp-wrap">
+      <p class="imp-lead">把对方发来的<b>导入链接</b>粘到这里。链接里已经带着数据，不用再要文件。</p>
+      <textarea class="imp-ta" id="lnkIn" rows="4" placeholder="https://liao-wenxuan.github.io/volleyball-team/#backup=..."></textarea>
+      <div class="form-foot">
+        <button type="button" class="btn btn-ghost" id="lnkClip">读剪贴板</button>
+        <button type="button" class="btn btn-primary" id="lnkGo">解析并导入</button>
+        <button type="button" class="btn btn-ghost" id="lnkCancel">取消</button>
+      </div>
+    </div>`, { mid: true });
+    const ta = $('#lnkIn');
+    $('#lnkCancel').onclick = closeModal;
+    $('#lnkClip').onclick = async () => {
+      try {
+        const t = await navigator.clipboard.readText();
+        if (!t) { toast('剪贴板是空的', 'warn'); return; }
+        ta.value = t;
+        toast('已从剪贴板读入');
+      } catch (e) {
+        toast('读不了剪贴板，长按输入框手动粘贴', 'warn');
+      }
+    };
+    $('#lnkGo').onclick = () => doLinkImport(ta.value);
+  }
+
+  async function doLinkImport(text) {
+    const m = String(text || '').match(/[#&?]backup=([A-Za-z0-9\-_]+)/);
+    if (!m) { toast('这段内容里没找到备份数据', 'warn'); return; }
+    toast('正在解析…');
+    try {
+      const obj = await unpackBackup(m[1]);
+      openImportDialog(obj, '导入链接');
+    } catch (e) {
+      toast('链接读不出来，转发时可能被截断了', 'warn');
+    }
+  }
+
+  // 页面带着 #backup= 打开时，直接进导入流程
+  async function bootBackupHash() {
+    const m = location.hash.match(/^#backup=(.+)$/);
+    if (!m) return;
+    // 先清 hash：确认导入后要 reload，不清掉会反复弹窗
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* file:// 下可能失败 */ }
+    await doLinkImport('#backup=' + m[1]);
+  }
 
   /* ══════════ 训练卡：一次训练一张可转发的图 ══════════ */
   function nextSessionAfter(s) {
@@ -2802,19 +2921,19 @@
     };
   }
 
-  /* 平板友好：文件选择器认不出 .json 时，粘贴整段内容也能导入 */
+  /* 单元格：备份的三条通路——选文件 / 用链接 / 粘贴。选文件优先用 label 原生触发 */
   function openImportChooser() {
     openModal('导入备份', `<div class="imp-wrap">
-      <p class="imp-lead">备份在「文件」App 里就直接选；如果在微信/QQ 里收到，先「用其他应用打开 → 存储到文件」，或者在这里粘贴内容。</p>
+      <p class="imp-lead">备份在手机/平板的「文件」里就直接选；在微信、QQ 里收到的话，让对方发<b>导入链接</b>给你最快。</p>
       <div class="imp-choice">
-        <button type="button" class="btn btn-primary" id="impPickFile">选择备份文件</button>
+        <label class="btn btn-primary imp-file" for="importFile">选择备份文件</label>
+        <button type="button" class="btn btn-ghost" id="impPickLink">用链接导入</button>
         <button type="button" class="btn btn-ghost" id="impPickPaste">粘贴备份内容</button>
       </div>
-      <p class="imp-note">两种入口后面都会让你选「按队员合并」还是「完全覆盖」，不会一按就覆盖。</p>
+      <p class="imp-note">三个入口后面都会先让你选「按队员合并」还是「完全覆盖」，不会一按就覆盖。</p>
     </div>`, { mid: true });
-    // 先触发文件选择（保留用户手势），再关弹窗：iOS 上晚一步调 click() 会没反应
-    $('#impPickFile').onclick = () => { $('#importFile').click(); closeModal(); };
-    $('#impPickPaste').onclick = () => openPasteImport();
+    if ($('#impPickLink')) $('#impPickLink').onclick = () => openLinkImport();
+    if ($('#impPickPaste')) $('#impPickPaste').onclick = () => openPasteImport();
   }
 
   function openPasteImport() {
@@ -3379,6 +3498,7 @@
         else if (action === 'add-session') openSessionModal(null, targetMonday, { isNew: true });
         else if (action === 'reset-week') resetWeek(targetMonday);
         else if (action === 'export') exportData();
+        else if (action === 'link-export') openLinkExport();
         else if (action === 'import') openImportChooser();
         else if (action === 'paste-import') openPasteImport();
         else if (action === 'clear-data') clearAllData();
@@ -4056,4 +4176,6 @@ ${aiContext()}`;
   }
 
   init();
+  // 带 #backup= 打开链接时直接进导入流程（要在 init 之后，db 已经读进来了）
+  bootBackupHash();
 })();
