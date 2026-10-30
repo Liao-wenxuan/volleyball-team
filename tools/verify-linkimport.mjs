@@ -83,7 +83,9 @@ const pick = await evalJS(`(() => {
     inputLeft: cs ? cs.left : '',
     inputPos: cs ? cs.position : '',
     hiddenInput: !!document.querySelector('input[type=file][hidden]'),
-    hasJsClickBtn: !!document.querySelector('#impPickFile')
+    hasJsClickBtn: !!document.querySelector('#impPickFile'),
+    tip: /灰色点不动/.test(document.body.textContent || ''),
+    tip: /灰色点不动/.test(document.body.textContent || '')
   };
 })()`);
 check('入口是 <label for="importFile">（原生触发，安卓内核不拦）', pick.isLabel && pick.tag === 'LABEL', pick.text);
@@ -91,6 +93,8 @@ check('label 有实际尺寸（不是 0 宽的空壳）', pick.width > 100, pick
 check('文件 input 留在视口内（不用 left:-9999px）', pick.inputPos === 'fixed' && parseFloat(pick.inputLeft) >= 0, `${pick.inputPos} left=${pick.inputLeft}`);
 check('没有 display:none 的隐藏 input', !pick.hiddenInput);
 check('旧的 JS click 按钮已移除', !pick.hasJsClickBtn);
+check('写明「灰文件改 .txt」的兜底提示', pick.tip);
+check('写明「灰文件改 .txt」的兜底提示', pick.tip);
 
 {
   const shot = await send('Page.captureScreenshot', { format: 'png' });
@@ -204,6 +208,25 @@ const bad = await evalJS(`(() => ({
   toast: [...document.querySelectorAll('#toasts .toast')].map(t => t.textContent.trim()).join(' | ')
 }))()`);
 check('坏链接只提示不崩溃', bad.alive && /读不出来|没找到/.test(bad.toast), bad.toast.slice(0, 40));
+
+/* ══════════ 六、.txt 改名能不能导（安卓文件管理器只肯显示文本文件） ══════════ */
+console.log('\n【6】.txt 后缀的备份');
+const txtPath = path.join(ROOT, 'preview', 'xgy-backup-test.txt');
+writeFileSync(txtPath, seed, 'utf8');
+await evalJS(`document.querySelector('#userChip').click(); 'x'`);
+await sleep(400);
+await evalJS(`document.querySelector('[data-action="import"]').click(); 'x'`);
+await sleep(400);
+const doc2 = await send('DOM.getDocument', { depth: -1 });
+const q2 = await send('DOM.querySelector', { nodeId: doc2.result.root.nodeId, selector: '#importFile' });
+await send('DOM.setFileInputFiles', { files: [txtPath], nodeId: q2.result.nodeId });
+await sleep(1000);
+const txtOk = await evalJS(`(() => {
+  const b = ((document.querySelector('#modalBody') || {}).textContent || '').replace(/\\s+/g, ' ');
+  return { open: !!document.querySelector('#impGo'), matched: /匹配 10/.test(b), tip: /灰色点不动/.test(document.body.textContent || '') };
+})()`);
+check('.txt 后缀的备份能正常识别（改名办法可用）', txtOk.open === true, txtOk.matched ? '匹配 10 人' : '');
+
 
 console.log(`\n${failed ? `✗ ${failed} 项失败` : '✓ 全部通过'}`);
 ws.close();

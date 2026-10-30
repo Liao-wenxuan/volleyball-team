@@ -186,8 +186,8 @@
         "block": 4,
         "defense": 7
       },
-      "createdAt": 1793332003582,
-      "updatedAt": 1793332003582
+      "createdAt": 1793332676471,
+      "updatedAt": 1793332676471
     }
   ],
   "weeks": {
@@ -401,8 +401,8 @@
           "p9": "present",
           "p10": "present"
         },
-        "createdAt": 1793332003582,
-        "updatedAt": 1793332003582
+        "createdAt": 1793332676471,
+        "updatedAt": 1793332676471
       }
     ]
   },
@@ -867,7 +867,7 @@
       "delta": 2,
       "source": "training",
       "date": "2026-10-29",
-      "at": 1793332003582
+      "at": 1793332676471
     }
   ],
   "formation": {
@@ -965,5 +965,5 @@
     }
   ],
   "aiChat": [],
-  "savedAt": 1793332003580
+  "savedAt": 1793332676470
 }

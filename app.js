@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-30 · r12'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-30 · r13'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -2930,7 +2930,8 @@
         <button type="button" class="btn btn-ghost" id="impPickLink">用链接导入</button>
         <button type="button" class="btn btn-ghost" id="impPickPaste">粘贴备份内容</button>
       </div>
-      <p class="imp-note">三个入口后面都会先让你选「按队员合并」还是「完全覆盖」，不会一按就覆盖。</p>
+      <p class="imp-note">三个入口后面都会先让你选「按队员合并」还是「完全覆盖」，不会一按就覆盖。<br>
+      文件在选择器里是<b>灰色点不动</b>或<b>根本翻不到</b>？把文件名改成 <b>.txt</b> 再选，或者让队长生成导入链接发你。</p>
     </div>`, { mid: true });
     if ($('#impPickLink')) $('#impPickLink').onclick = () => openLinkImport();
     if ($('#impPickPaste')) $('#impPickPaste').onclick = () => openPasteImport();
@@ -2938,7 +2939,7 @@
 
   function openPasteImport() {
     openModal('粘贴备份导入', `<div class="imp-wrap">
-      <p class="imp-lead">把备份文件用文本方式打开、全选复制，粘到这里。iPad 上文件选择器常常不让选 .json，这是绕过去的办法。</p>
+      <p class="imp-lead">把备份文件用文本方式打开、全选复制，粘到这里。平板上文件选择器常常翻不到 .json，这是绕过去的办法。</p>
       <textarea class="imp-ta" id="impText" rows="8" placeholder='{"version":2,"players":[...]}'></textarea>
       <div class="form-foot">
         <button type="button" class="btn btn-ghost" id="impClip">读剪贴板</button>
@@ -2979,12 +2980,15 @@
 
   async function handleImportFile(file) {
     if (!file) return;
+    const name = file.name || '这个文件';
     try {
       const text = (await readFileText(file)).replace(/^\uFEFF/, '');
       const raw = JSON.parse(text);
-      openImportDialog(raw, file.name || '备份文件');
+      openImportDialog(raw, name);
     } catch (e) {
-      toast('导入失败：文件不是有效的 JSON', 'warn');
+      // 分开说，别一律「不是有效的 JSON」让人摸不着头脑
+      if (e instanceof SyntaxError) toast(`${name} 里读不出备份数据（不是备份文件，或转发时被截断）`, 'warn');
+      else toast(`${name} 打不开，换「用链接导入」试试`, 'warn');
     } finally {
       $('#importFile').value = '';
     }
