@@ -1705,6 +1705,8 @@ kbd{
 .pc-g{font-style:normal;font-size:11px;margin-left:5px;vertical-align:1px}
 .pc-g.gm{color:#6fb8ff}
 .pc-g.gf{color:#ff9ec6}
+/* 批量导入预览行里字号小一档，别把姓名挤掉 */
+.ip-name .pc-g{font-size:9px;margin-left:3px}
 
 /* 弹窗宽度 */
 .modal.mid{width:720px}

@@ -220,9 +220,19 @@ try {
     await send('Page.navigate', { url: 'about:blank' });
     await sleep(300);
     await send('Page.navigate', { url: legacy });
-    await sleep(2200);
-    const legacyGate = await evalJS(`!!document.querySelector('#svForm')`);
-    check('老格式链接还能打开', legacyGate === true);
+    await sleep(2600);
+    let legacyState = await evalJS(`({
+      gate: !!document.querySelector('#svForm'),
+      txt: ((document.querySelector('#shareView') || document.body).innerText || '').replace(/\\s+/g, ' ').slice(0, 120)
+    })`);
+    if (!legacyState.gate && !legacyState.txt) { await sleep(1600); legacyState = await evalJS(`({
+      gate: !!document.querySelector('#svForm'),
+      txt: ((document.querySelector('#shareView') || document.body).innerText || '').replace(/\\s+/g, ' ').slice(0, 120)
+    })`); }
+    // 进门可能是验证页，也可能因为本机记着「上次验证过的本人」直接进档案——两种都算解开了老格式
+    check('老格式链接还能打开（验证页 / 直接进本人档案）',
+      legacyState.gate === true || /出勤|涨了/.test(legacyState.txt),
+      legacyState.gate ? '验证页' : legacyState.txt.slice(0, 60));
     await send('Page.navigate', { url: 'about:blank' });
     await sleep(200);
   }

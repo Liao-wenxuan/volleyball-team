@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-31 · r14'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-31 · r15'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -1089,6 +1089,7 @@
         <div class="field"><label>年级</label><select name="grade">${GRADES.map((g) => `<option ${p && p.grade === g ? 'selected' : ''}>${g}</option>`).join('')}</select></div>
         <div class="field full"><label>身高 (cm)</label><input name="height" type="number" min="140" max="230" required value="${p ? p.height : ''}" placeholder="185"></div>
       </div>
+      <div class="form-note">号码只要求<b>同一个性别里不重复</b>——男队和女队可以穿同一个号（比如男生 4 号、女生也 4 号）。</div>
       ${p ? `<div class="form-note">技能点在成长计划里调整，编辑资料不会改动技能。</div>`
         : `<div class="form-section-title"><span>初始技能点</span><button type="button" class="btn-mini" id="fillFive">全部 5.0</button></div>${skillInputsHTML(null)}<div class="form-note">0–10 分，步进 0.5。之后每次训练或比赛后到成长页加减。</div>`}
       <div class="form-foot"><button type="button" class="btn btn-ghost" data-close-modal>取消</button><button type="submit" class="btn btn-primary">${p ? '保存资料' : '加入球队'}</button></div>
@@ -1106,13 +1107,20 @@
       const name = String(fd.get('name') || '').trim();
       const number = Number(fd.get('number'));
       const height = Number(fd.get('height'));
+      const gender = String(fd.get('gender') || '');
       if (!name) { toast('姓名不能为空', 'warn'); return; }
       if (!Number.isInteger(number) || number < 0 || number > 99) { toast('号码需要 0–99 的整数', 'warn'); return; }
       if (!height || height < 140 || height > 230) { toast('身高需要在 140–230cm 之间', 'warn'); return; }
-      const dup = db.players.find((x) => x.number === number && x.id !== (p && p.id));
-      if (dup) { toast(`号码 ${number} 已经被 ${dup.name} 使用`, 'warn'); return; }
+      // 号码只在同性别内唯一：男队女队分头排号，可以撞号
+      const dup = db.players.find((x) => x.number === number && (x.gender || '') === gender && x.id !== (p && p.id));
+      if (dup) {
+        toast(gender
+          ? `${gender}队里 ${number} 号已经是 ${dup.name} 了，换一个号`
+          : `${number} 号已经被 ${dup.name} 用了——填上性别就能和异性同号`, 'warn');
+        return;
+      }
       if (p) {
-        const payload = { name, number, height, position: String(fd.get('position')), grade: String(fd.get('grade')), gender: String(fd.get('gender') || '') };
+        const payload = { name, number, height, position: String(fd.get('position')), grade: String(fd.get('grade')), gender };
         if (CloudOn()) {
           try {
             const resp = await window.XGYCloud.push.playerUpdate(p.id, payload);
@@ -1131,7 +1139,7 @@
           const v = Number(fd.get(`skill_${s.key}`));
           skills[s.key] = clamp(roundHalf(Number.isFinite(v) ? v : 5), 0, 10);
         });
-        const payload = { name, number, height, position: String(fd.get('position')), grade: String(fd.get('grade')), gender: String(fd.get('gender') || ''), skills };
+        const payload = { name, number, height, position: String(fd.get('position')), grade: String(fd.get('grade')), gender, skills };
         let np;
         if (CloudOn()) {
           try {
@@ -1174,7 +1182,8 @@
     { key: 'number', label: '号码', aliases: ['号码', '球衣号', '号', 'number'] },
     { key: 'position', label: '位置', aliases: ['位置', '场上位置', '司职', 'position'] },
     { key: 'grade', label: '年级', aliases: ['年级', '年级/班级', 'grade'] },
-    { key: 'height', label: '身高', aliases: ['身高', '身高(cm)', '身高cm', 'height'] }
+    { key: 'height', label: '身高', aliases: ['身高', '身高(cm)', '身高cm', 'height'] },
+    { key: 'gender', label: '性别', aliases: ['性别', '男女', 'gender'] }
   ];
 
   function splitRow(line) {
@@ -1250,7 +1259,13 @@
       IMPORT_FIELDS.forEach((f, i) => { cols[f.key] = i; });
     }
 
-    const used = new Set(db.players.map((p) => p.number));
+    // 号码查重也按性别分队：同一号码男队女队各一件，不算撞号
+    const used = new Map(); // 号码 -> 穿过这个号的性别集合
+    db.players.forEach((p) => {
+      const set = used.get(p.number) || new Set();
+      set.add(p.gender || '');
+      used.set(p.number, set);
+    });
     const rows = [];
     lines.slice(header ? 1 : 0).forEach((rawLine) => {
       // 接龙里的序号：「1. 张三 …」「2、张三 …」，整行层面先剥掉
@@ -1264,31 +1279,46 @@
         number: normalizeImportNumber(pick('number')),
         position: normalizeImportPosition(pick('position')),
         grade: normalizeImportGrade(pick('grade')),
-        height: normalizeImportHeight(pick('height'))
+        height: normalizeImportHeight(pick('height')),
+        gender: siGender(pick('gender'))
       };
       const issues = [];
       if (!raw.name) issues.push({ level: 'err', text: '缺姓名' });
       if (!Number.isFinite(raw.number) || raw.number < 0 || raw.number > 99) issues.push({ level: 'err', text: '号码无效' });
-      else if (used.has(raw.number)) issues.push({ level: 'err', text: `号码 ${raw.number} 重复` });
+      else {
+        const holders = used.get(raw.number);
+        if (holders && holders.has(raw.gender)) {
+          issues.push({ level: 'err', text: `号码 ${raw.number} 重复` + (raw.gender ? `（${raw.gender}队内）` : '') });
+        } else if (holders && !raw.gender && holders.size) {
+          // 这行没写性别，而号码已被 (可能的) 异性占用——可能是合法的男女同号，交给队长判断
+          const who = [...holders].filter(Boolean).join('/') || '性别未填的人';
+          issues.push({ level: 'warn', text: `${raw.number} 号已被${who}占用，同性则需换号` });
+        }
+      }
       if (!Number.isFinite(raw.height) || raw.height < 140 || raw.height > 230) issues.push({ level: 'err', text: '身高异常' });
       if (!raw.position) { raw.position = '主攻'; issues.push({ level: 'warn', text: '位置未知，按主攻' }); }
       if (!raw.grade) { raw.grade = '大一'; issues.push({ level: 'warn', text: '年级未知，按大一' }); }
-      if (Number.isFinite(raw.number)) used.add(raw.number);
+      if (Number.isFinite(raw.number)) {
+        const set = used.get(raw.number) || new Set();
+        set.add(raw.gender);
+        used.set(raw.number, set);
+      }
       rows.push({ raw, issues, on: issues.every((i) => i.level !== 'err') });
     });
     return { rows, header };
   }
 
   function openBulkImport() {
-    const sample = '姓名\t号码\t位置\t年级\t身高\n张辰\t1\t主攻\t大三\t188\n李睿\t7\t二传\t大二\t182';
+    const sample = '姓名\t号码\t位置\t年级\t身高\t性别\n张辰\t1\t主攻\t大三\t188\t男\n乔奕博\t4\t副攻\t大二\t175\t男\n张佳\t4\t主攻\t大二\t161\t女';
     const body = `<div class="import-wrap">
       <div class="import-help">
         从 Excel / 腾讯文档 / 金山表格整块复制，直接粘贴进来就行；也认逗号、空格分隔的接龙文本（如 <code>1. 张辰 1号 主攻 大三 188</code>）。
-        带表头会自动识别列，没表头按 <b>姓名 号码 位置 年级 身高</b> 顺序读。
+        带表头会自动识别列，没表头按 <b>姓名 号码 位置 年级 身高 性别</b> 顺序读（性别可以不填）。<br>
+        号码只查<b>同性别</b>的重复：男队和女队可以穿同一个号。
       </div>
-      <textarea id="importText" class="import-input" rows="7" spellcheck="false" placeholder="姓名	号码	位置	年级	身高
-张辰	1	主攻	大三	188
-李睿	7	二传	大二	182"></textarea>
+      <textarea id="importText" class="import-input" rows="7" spellcheck="false" placeholder="姓名	号码	位置	年级	身高	性别
+张辰	1	主攻	大三	188	男
+张佳	1	主攻	大二	178	女"></textarea>
       <div class="import-actions-row">
         <button type="button" class="btn-mini" id="importTpl">复制收集模板</button>
         <button type="button" class="btn-mini" id="importSample">填入示例</button>
@@ -1323,7 +1353,7 @@
         ${parsed.rows.map((r, i) => `<div class="ip-row${r.on ? '' : ' off'}">
             <label class="ip-check"><input type="checkbox" data-i="${i}" ${r.on ? 'checked' : ''} ${r.issues.some((x) => x.level === 'err') ? 'disabled' : ''}></label>
             <span class="ip-num">${Number.isFinite(r.raw.number) ? pad2(r.raw.number) : '—'}</span>
-            <span class="ip-name">${esc(r.raw.name || '（无名）')}</span>
+            <span class="ip-name">${esc(r.raw.name || '（无名）')}${r.raw.gender ? `<i class="pc-g ${r.raw.gender === '男' ? 'gm' : 'gf'}">${r.raw.gender === '男' ? '♂' : '♀'}</i>` : ''}</span>
             <span class="ip-pos">${esc(r.raw.position)}</span>
             <span class="ip-grade">${esc(r.raw.grade)}</span>
             <span class="ip-h">${Number.isFinite(r.raw.height) ? r.raw.height + 'cm' : '—'}</span>
@@ -1353,8 +1383,8 @@
     ta.addEventListener('input', repaint);
     ta.addEventListener('paste', () => setTimeout(repaint, 0));
     $('#importTpl').onclick = () => {
-      const tpl = '姓名\t号码\t位置\t年级\t身高\n'
-        + '（每个人复制上一行，改成自己的，接在下面，别删第一行）\n\n'
+      const tpl = '姓名\t号码\t位置\t年级\t身高\t性别\n'
+        + '（每个人复制上一行，改成自己的，接在下面，别删第一行；性别填男/女，不填也行）\n\n'
         + '位置填：主攻 / 副攻 / 二传 / 接应 / 自由人\n';
       copyText(tpl) ? toast('收集模板已复制，发到群里让大家接龙')
         : toast('复制失败，手动选中模板文字复制', 'warn');
@@ -1372,7 +1402,7 @@
       for (const r of picked) {
         const payload = {
           name: r.raw.name, number: r.raw.number, position: r.raw.position,
-          grade: r.raw.grade, height: r.raw.height,
+          grade: r.raw.grade, height: r.raw.height, gender: r.raw.gender || '',
           skills: SKILLS.reduce((o, s) => { o[s.key] = 5; return o; }, {})
         };
         try {
@@ -1418,7 +1448,9 @@
     return Number.isFinite(n) ? Math.round(n) : 0;
   }
   function siGender(v) {
-    const s = String(v || '');
+    const s = String(v || '').trim();
+    if (/^(m|male|boy|♂)$/i.test(s)) return '男';
+    if (/^(f|female|girl|♀)$/i.test(s)) return '女';
     return /男/.test(s) ? '男' : /女/.test(s) ? '女' : '';
   }
   function siParseCSVLine(line) {
@@ -1457,7 +1489,6 @@
     const header = siMapHeader(rows[0]);
     if (header.name === undefined) throw new Error('第一行没认出「姓名」列——确认导出的是收集表原样，别删表头');
     const warns = [];
-    const seen = {};
     const out = [];
     rows.slice(1).forEach((row, idx) => {
       const name = String(row[header.name] || '').trim();
@@ -1484,13 +1515,42 @@
         item.grade = '大一';
       }
       if (!item.number) warns.push(`第 ${lineNo} 行：${item.name} 没填号码，先按 0 记（还没领球衣的话之后补）`);
-      else if (seen[item.number]) warns.push(`${item.number} 号有两个人：${seen[item.number]} 和 ${item.name}——导入后到人员页改一个`);
-      else seen[item.number] = item.name;
       if (!item.height) warns.push(`第 ${lineNo} 行：${item.name} 没填身高`);
       out.push(item);
     });
     if (!out.length) throw new Error('表格里没读出任何队员（姓名列全是空的？）');
     return { players: out, warns };
+  }
+  /* 号码查重只查「同性别」：男队女队分头排号，男 4 号和女 4 号是两件球衣。
+     性别没填的人先归到「未填」这一组里互相查，所以补完性别警告会自己消失。 */
+  function siDupWarns(list) {
+    const seen = new Map();
+    const out = [];
+    list.forEach((item) => {
+      if (!item.number) return;
+      const key = `${item.number}|${item.gender || ''}`;
+      const prev = seen.get(key);
+      if (!prev) { seen.set(key, item.name); return; }
+      out.push(item.gender
+        ? `${item.number} 号在${item.gender}队里重了：${prev} 和 ${item.name}——同性别不能同号，到人员页改一个`
+        : `${item.number} 号撞了：${prev} 和 ${item.name}（两边性别都没填，先按同队算）——点出性别就能各穿各的`);
+    });
+    return out;
+  }
+  /* 表里的人要「新增」时，跟库里已有的同性别队员撞号也要提醒（异性撞号不管）。 */
+  function siNewConflicts(plan) {
+    const out = [];
+    plan.forEach((row) => {
+      if (row.target) return;
+      const it = row.item;
+      if (!it.number) return;
+      const hit = db.players.find((p) => p.number === it.number && (p.gender || '') === (it.gender || ''));
+      if (hit) {
+        out.push(`${it.name} 要新增 ${it.number} 号，可库里 ${hit.name} 已经是这个号了`
+          + (it.gender ? `（同是${it.gender}队）` : '（两边性别都没填，先按同队算）') + '——改号，或者点名性别把人归类');
+      }
+    });
+    return out;
   }
   // 性别显示与切换（男女混编，收集表里没这列就当场点）
   const siGenderNext = (g) => (g === '女' ? '男' : g === '男' ? '' : '女');
@@ -1504,7 +1564,7 @@
         <button type="button" class="btn btn-ghost" id="siPaste">粘贴表格内容</button>
       </div>
       <p class="imp-note">按「姓名」认人：表里的人会更新资料，新名字会加进来，没出现的人不动。考勤和技能记录不碰。<br>
-      收集表里没有性别列也没关系，下一步可以逐个点。</p>
+      号码只在<b>同性别</b>里查重，男队女队可以穿同一个号。收集表里没有性别列也没关系，下一步可以逐个点。</p>
     </div>`, { mid: true });
     if ($('#siPaste')) $('#siPaste').onclick = () => openSheetPaste();
   }
@@ -1542,7 +1602,13 @@
       const same = db.players.filter((p) => p.name === item.name);
       let target = null;
       if (same.length === 1) target = same[0];
-      else if (same.length > 1) target = same.find((p) => item.number && p.number === item.number) || null;
+      else if (same.length > 1) {
+        // 同名不止一个（男女两队都可能有人重名）：先看号码，再拿性别对齐
+        target = same.find((p) => item.number && p.number === item.number && (!item.gender || !p.gender || p.gender === item.gender))
+          || same.find((p) => item.number && p.number === item.number)
+          || same.find((p) => item.gender && p.gender === item.gender)
+          || null;
+      }
       return { item, target: target ? target.id : null };
     });
     const upd = plan.filter((r) => r.target).length;
@@ -1550,7 +1616,7 @@
     const kept = db.players.length - upd;
     const body = `<div class="imp-wrap">
       <p class="imp-lead">来源表格里读出 <b>${plan.length}</b> 人：<b>更新 ${upd}</b> · 新增 ${add} · 本机另有 ${kept} 人不在这个表里（保留不动）。</p>
-      ${extracted.warns.length ? `<div class="si-warns">${extracted.warns.map((w) => `<p>⚠ ${esc(w)}</p>`).join('')}</div>` : ''}
+      <div class="si-warns" id="siWarns" hidden></div>
       <div class="si-table">
         <div class="si-tr si-th"><span>姓名</span><span>号码</span><span>位置</span><span>年级</span><span>身高</span><span>性别</span><span>动作</span></div>
         ${plan.map((r, i) => `
@@ -1570,12 +1636,21 @@
       </div>
     </div>`;
     openModal('确认导入', body, { wide: true });
+    const paintWarns = () => {
+      const all = extracted.warns.concat(siDupWarns(list), siNewConflicts(plan));
+      const box = $('#siWarns');
+      if (!box) return;
+      box.innerHTML = all.map((w) => `<p>⚠ ${esc(w)}</p>`).join('');
+      box.hidden = all.length === 0;
+    };
+    paintWarns();
     $$('.si-g').forEach((btn) => {
       btn.onclick = () => {
         const r = plan[Number(btn.dataset.i)];
         r.item.gender = siGenderNext(r.item.gender);
         btn.textContent = siGenderLabel(r.item.gender);
         btn.className = `si-g g${r.item.gender === '男' ? 'm' : r.item.gender === '女' ? 'f' : ''}`;
+        paintWarns(); // 补完性别，同号但不同队的警告会自己消掉
       };
     });
     $('#siBack').onclick = () => openSheetImport();

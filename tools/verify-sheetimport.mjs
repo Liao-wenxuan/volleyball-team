@@ -90,7 +90,9 @@ const pv = await evalJS(`(() => {
 check('预览弹出，读出 18 人', pv.open && pv.count === 18, `${pv.count} 行`);
 check('18 人全部标记「新增」', pv.newCount === 18, `${pv.newCount} 新增`);
 check('脏数据警告出现（重号 / 没号码）', pv.warns.length >= 2, pv.warns.length + ' 条');
-check('警告里点名了 4 号撞号', pv.warns.some(w => w.includes('4 号') && w.includes('两个人')), pv.warns.find(w => w.includes('4 号')) || '');
+check('警告里点名了 4 号撞号（表里没性别列，先算同队）',
+  pv.warns.some(w => w.includes('4 号') && w.includes('乔奕博') && w.includes('张佳')),
+  pv.warns.find(w => w.includes('4 号')) || '');
 {
   const shot = await send('Page.captureScreenshot', { format: 'png' });
   writeFileSync(path.join(ROOT, 'preview', 's9-sheet-import.png'), Buffer.from(shot.result.data, 'base64'));
@@ -154,8 +156,36 @@ await sleep(500);
 const cardOk = await evalJS(`({ g: document.querySelectorAll('.pc-g').length, f: document.querySelectorAll('.pc-g.gf').length, m: document.querySelectorAll('.pc-g.gm').length })`);
 check('队员卡显示性别标记（男蓝女粉）', cardOk.g > 0 && cardOk.f > 0 && cardOk.m > 0, `♂${cardOk.m} ♀${cardOk.f}`);
 
-/* ── 4. 坏文件容错 ── */
-console.log('\n【4】容错');
+/* ── 4. 号码查重按性别分队：男队女队可以同号 ── */
+console.log('\n【4】号码按性别查重');
+await evalJS(`document.querySelector('[data-action="sheet-import"]').click(); 'x'`);
+await sleep(400);
+await evalJS(`document.querySelector('#siPaste').click(); 'x'`);
+await sleep(400);
+await evalJS(`document.querySelector('#siText').value = ${JSON.stringify('姓名\t号码\t位置\t性别\t年级\t身高\n男甲\t50\t主攻\t男\t大一\t180\n女甲\t50\t主攻\t女\t大一\t175\n男乙\t50\t副攻\t男\t大一\t185')}; 'x'`);
+await evalJS(`document.querySelector('#siGo').click(); 'x'`);
+await sleep(900);
+const dupPv = await evalJS(`({
+  w: [...document.querySelectorAll('#siWarns p')].map(p => p.textContent.trim()),
+  g: [...document.querySelectorAll('.si-g')].map(b => b.textContent.trim())
+})`);
+check('同性别撞号报警（男甲 / 男乙 都是 50 号）',
+  dupPv.w.some(x => x.includes('50 号') && x.includes('男队') && x.includes('男甲') && x.includes('男乙')),
+  dupPv.w.find(x => x.includes('50')) || '');
+check('男女同号不报警（女甲 50 号没被点名）',
+  !dupPv.w.some(x => x.includes('女甲')), dupPv.w.filter(x => x.includes('女甲')).join('|'));
+// 把「男乙」点成女：冲突应当跟着性别换组，而不是死盯着号码
+await evalJS(`(() => { const b = document.querySelectorAll('.si-g')[2]; b.click(); b.click(); })(); 'x'`);
+await sleep(300);
+const dupPv2 = await evalJS(`[...document.querySelectorAll('#siWarns p')].map(p => p.textContent.trim())`);
+check('改性别后警告按新分组重算（50 号变成女队冲突）',
+  dupPv2.some(x => x.includes('50 号') && x.includes('女队') && x.includes('女甲')),
+  dupPv2.find(x => x.includes('50')) || '');
+await evalJS(`document.querySelector('#modalClose').click(); 'x'`);
+await sleep(300);
+
+/* ── 5. 坏文件容错 ── */
+console.log('\n【5】容错');
 const badPath = path.join(ROOT, 'preview', 'not-a-sheet.png');
 writeFileSync(badPath, Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex'));
 await evalJS(`document.querySelector('[data-action="sheet-import"]').click(); 'x'`);
@@ -164,6 +194,63 @@ await pickFile('#sheetFile', badPath);
 await sleep(900);
 const bad = await evalJS(`(() => ({ alive: !!document.querySelector('#sheetFile'), toast: [...document.querySelectorAll('#toasts .toast')].map(t => t.textContent.trim()).join('|') }))()`);
 check('选了非表格文件只提示不崩', bad.alive && /表格|解析|备份/i.test(bad.toast), bad.toast.slice(0, 50));
+
+/* ── 6. 新增队员表单：号码只在同性别内查重 ── */
+console.log('\n【6】新增队员的号码校验');
+await evalJS(`document.querySelector('.nav-item[data-page="roster"]').click(); 'x'`);
+await sleep(400);
+const fillPlayer = (num, gender) => evalJS(`(() => {
+  const f = document.querySelector('#playerForm');
+  if (!f) return 'no-form';
+  f.querySelector('[name=name]').value = '查重测试';
+  f.querySelector('[name=number]').value = '${num}';
+  f.querySelector('[name=gender]').value = '${gender}';
+  f.querySelector('[name=height]').value = '180';
+  f.requestSubmit();
+  return 'ok';
+})()`);
+await evalJS(`document.querySelector('#addPlayerBtn').click(); 'x'`);
+await sleep(400);
+await fillPlayer(25, '男'); // 库里宋智宇是 25 号男
+await sleep(600);
+const t1 = await evalJS(`[...document.querySelectorAll('#toasts .toast')].map(t => t.textContent.trim()).join(' | ')`);
+const n1 = (await dbNow()).players.length;
+check('同性别撞号被拦住（25 号男已有宋智宇）', /25 号/.test(t1) && n1 === 29, `${t1.slice(0, 48)} / ${n1} 人`);
+await fillPlayer(25, '女'); // 换个性别：男女可以同号
+await sleep(1000);
+const d6 = await dbNow();
+const girl = (d6.players || []).find(p => p.name === '查重测试');
+check('换个性别就能穿同一个号（新增成功）',
+  (d6.players || []).length === 30 && girl && girl.number === 25 && girl.gender === '女',
+  `人数 ${(d6.players || []).length} / ${girl ? girl.number + '#' + girl.gender : '没建上'}`);
+
+/* ── 7. 粘贴接龙文本（老入口）：号码同样按性别查重 ── */
+console.log('\n【7】粘贴接龙文本');
+const typeBulk = (text) => evalJS(`(() => {
+  const t = document.querySelector('#importText');
+  t.value = ${JSON.stringify(text)};
+  t.dispatchEvent(new Event('input'));
+  return 'ok';
+})()`);
+await evalJS(`document.querySelector('#bulkImportBtn').click(); 'x'`);
+await sleep(400);
+await typeBulk('姓名\t号码\t位置\t年级\t身高\t性别\n男丙\t60\t主攻\t大一\t180\t男\n女丙\t60\t主攻\t大一\t175\t女');
+await sleep(400);
+const bk1 = await evalJS(`({
+  ok: [...document.querySelectorAll('.ip-row')].filter(r => !r.className.includes('off')).length,
+  errs: [...document.querySelectorAll('.ip-tag.err')].map(e => e.textContent.trim()),
+  hint: (document.querySelector('#importHint') || {}).textContent || ''
+})`);
+check('男女同号两行都放行（60 号一男一女）', bk1.ok === 2 && bk1.errs.length === 0, `${bk1.ok} 行可导入 / ${bk1.errs.join(',') || '无报错'}`);
+await typeBulk('姓名\t号码\t位置\t年级\t身高\t性别\n男戊\t61\t主攻\t大一\t180\t男\n男己\t61\t副攻\t大一\t182\t男');
+await sleep(400);
+const bk2 = await evalJS(`({
+  ok: [...document.querySelectorAll('.ip-row')].filter(r => !r.className.includes('off')).length,
+  errs: [...document.querySelectorAll('.ip-tag.err')].map(e => e.textContent.trim())
+})`);
+check('同性别同号仍然报错（61 号两个男）', bk2.ok === 1 && bk2.errs.some(e => e.includes('61') && e.includes('男队')), `${bk2.ok} 行可导入 / ${bk2.errs.join(',')}`);
+await evalJS(`document.querySelector('#modalClose').click(); 'x'`);
+await sleep(300);
 
 console.log(`\n${failed ? `✗ ${failed} 项失败` : '✓ 全部通过'}`);
 ws.close(); edge.kill(); server.close();
