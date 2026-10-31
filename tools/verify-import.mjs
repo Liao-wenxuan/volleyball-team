@@ -98,23 +98,32 @@ try {
   };
   await loadA();
 
-  /* ── 0. 平板相关：输入框不能被 display:none，也不能带 accept ── */
-  const inputProbe = await evalJS(`(() => {
-    const el = document.querySelector('#importFile');
-    if (!el) return null;
-    return { display: getComputedStyle(el).display, accept: el.getAttribute('accept'), tag: el.tagName };
-  })()`);
-  check('文件输入框没有 accept 过滤（iPad 才不会灰掉 .json）', inputProbe && inputProbe.accept === null);
-  check('文件输入框不是 display:none（iOS 才会弹选择器）', inputProbe && inputProbe.display !== 'none', inputProbe && inputProbe.display);
+  /* ── 0. 平板相关断言挪到弹窗打开后（输入框现在跟着弹窗走）── */
 
   /* ── 1. 菜单「导入备份」→ 先弹选择框 ── */
   await evalJS(`document.querySelector('#avatarBtn').click(); 'x'`);
   await sleep(300);
   await evalJS(`document.querySelector('#menuImport').click(); 'x'`);
   await sleep(400);
-  // r12 起入口是 label[for] 原生触发 + 三条通路（文件 / 链接 / 粘贴）
-  const chooser = await evalJS(`({ lab: !!document.querySelector('label[for="importFile"]'), link: !!document.querySelector('#impPickLink'), paste: !!document.querySelector('#impPickPaste') })`);
+  // r17 起入口是「label 里塞一个透明铺满的 input」，点到的就是 input 本体
+  const chooser = await evalJS(`({ lab: !!document.querySelector('label.imp-file > input#importFile'), link: !!document.querySelector('#impPickLink'), paste: !!document.querySelector('#impPickPaste') })`);
   check('入口先让你选「文件 / 链接 / 粘贴」', chooser.lab && chooser.link && chooser.paste);
+  const inputProbe = await evalJS(`(() => {
+    const el = document.querySelector('#importFile');
+    if (!el) return null;
+    const lab = el.closest('label.imp-file');
+    const lbox = lab ? lab.getBoundingClientRect() : null;
+    const hit = lbox ? document.elementFromPoint(lbox.left + lbox.width / 2, lbox.top + lbox.height / 2) : null;
+    return {
+      display: getComputedStyle(el).display,
+      accept: el.getAttribute('accept'),
+      covered: !!hit && hit.id === 'importFile',
+      w: Math.round(el.getBoundingClientRect().width)
+    };
+  })()`);
+  check('文件输入框没有 accept 过滤（iPad 才不会灰掉 .json）', inputProbe && inputProbe.accept === null);
+  check('文件输入框不是 display:none（iOS 才会弹选择器）', inputProbe && inputProbe.display !== 'none', inputProbe && inputProbe.display);
+  check('文件输入框铺满按钮（手指点到的就是 input 本体）', inputProbe && inputProbe.covered, inputProbe && `${inputProbe.w}px`);
 
   /* ── 2. 选文件（模拟平板选择器交出文件）── */
   const doc = await send('DOM.getDocument', { depth: -1 });

@@ -71,36 +71,30 @@ await sleep(400);
 await evalJS(`document.querySelector('[data-action="import"]').click(); 'x'`);
 await sleep(500);
 const pick = await evalJS(`(() => {
-  const lab = document.querySelector('label[for="importFile"]');
+  const lab = document.querySelector('label.imp-file');
   const inp = document.querySelector('#importFile');
   const cs = inp ? getComputedStyle(inp) : null;
-  const r = lab ? lab.getBoundingClientRect() : null;
+  const lr = lab ? lab.getBoundingClientRect() : null;
+  const hit = lr ? document.elementFromPoint(lr.left + lr.width / 2, lr.top + lr.height / 2) : null;
   return {
     isLabel: !!lab,
-    tag: lab ? lab.tagName : '',
     text: lab ? lab.textContent.trim() : '',
-    width: r ? Math.round(r.width) : 0,
-    inputLeft: cs ? cs.left : '',
+    width: lr ? Math.round(lr.width) : 0,
+    inside: !!(lab && inp && lab.contains(inp)),
+    cover: !!hit && hit.id === 'importFile',
     inputPos: cs ? cs.position : '',
     hiddenInput: !!document.querySelector('input[type=file][hidden]'),
     hasJsClickBtn: !!document.querySelector('#impPickFile'),
-    tip: /灰色点不动/.test(document.body.textContent || ''),
     tip: /灰色点不动/.test(document.body.textContent || '')
   };
 })()`);
-check('入口是 <label for="importFile">（原生触发，安卓内核不拦）', pick.isLabel && pick.tag === 'LABEL', pick.text);
+check('入口是 <label> 里塞 input（点到的就是 input 本体，不靠代理激活）', pick.isLabel && pick.inside, pick.text);
 check('label 有实际尺寸（不是 0 宽的空壳）', pick.width > 100, pick.width + 'px');
-check('文件 input 留在视口内（不用 left:-9999px）', pick.inputPos === 'fixed' && parseFloat(pick.inputLeft) >= 0, `${pick.inputPos} left=${pick.inputLeft}`);
+check('input 透明铺满按钮（点按钮中心命中 input）', pick.cover && pick.inputPos === 'absolute', pick.inputPos);
 check('没有 display:none 的隐藏 input', !pick.hiddenInput);
 check('旧的 JS click 按钮已移除', !pick.hasJsClickBtn);
 check('写明「灰文件改 .txt」的兜底提示', pick.tip);
-check('写明「灰文件改 .txt」的兜底提示', pick.tip);
 
-{
-  const shot = await send('Page.captureScreenshot', { format: 'png' });
-  writeFileSync(path.join(ROOT, 'preview', 's7-import-chooser.png'), Buffer.from(shot.result.data, 'base64'));
-  console.log('· 截图 s7-import-chooser.png');
-}
 {
   const shot = await send('Page.captureScreenshot', { format: 'png' });
   writeFileSync(path.join(ROOT, 'preview', 's7-import-chooser.png'), Buffer.from(shot.result.data, 'base64'));

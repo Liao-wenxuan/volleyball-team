@@ -628,13 +628,13 @@
 </div>
 
 <div class="toast-stack" id="toasts" aria-live="polite"></div>
-<!-- 不能写 accept=".json"：iPadOS/部分 Android 的文档选择器按 UTI 过滤，
-     .json 认不出来会把备份文件变灰点不动；类型校验交给 app.js。
-     也不能靠 JS 去 click 一个移出屏幕的 input——安卓 PWA 独立窗口会直接吞掉，
-     表现就是「点了完全没反应」。所以入口用 <label for> 原生触发，这个元素只做兜底。 -->
-<input type="file" id="importFile" class="file-ghost" tabindex="-1" aria-hidden="true">
-<!-- 收集表 xlsx 导入用：同样不用 accept（安卓选择器按 MIME 过滤会坑）、不用 hidden（PWA 吞点击） -->
-<input type="file" id="sheetFile" class="file-ghost" tabindex="-1" aria-hidden="true">
+<!-- 文件选择框的坑（2026-10-31 r17 重写）：
+     ① 不能写 accept=".json"/.xlsx：iPadOS 和部分安卓的文档选择器按 MIME/UTI 过滤，
+        认不出来会把文件变灰点不动。类型校验交给 app.js。
+     ② 不能 JS 去 click 一个移出屏幕的 input：安卓 PWA 独立窗口直接吞掉，表现是「点了没反应」。
+     ③ 也不能只靠 <label for> 去激活离屏 input：同一套在桌面好好的，到了平板上
+        仍然可能一声不响。现在把 input 直接铺在按钮里（opacity:0 盖满整块），
+        用户手指点到的就是 input 本体，不经过任何代理层。见 app.js 的 fileHitHTML()。 -->
 
 <script src="cloud.js"></script>
 <script src="qr.js"></script>

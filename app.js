@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-31 · r16'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-31 · r17'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -1559,12 +1559,13 @@
     openModal('从表格导入队员', `<div class="imp-wrap">
       <p class="imp-lead">直接选收集表导出的 <b>xlsx</b>；微信里打不开的话，用腾讯文档 / WPS 打开、<b>全选复制</b>，粘到下面也一样。</p>
       <div class="imp-choice">
-        <label class="btn btn-primary imp-file" for="sheetFile">选择表格文件（.xlsx / .csv）</label>
+        ${fileHitHTML('sheetFile', '选择表格文件（.xlsx / .csv）')}
         <button type="button" class="btn btn-ghost" id="siPaste">粘贴表格内容</button>
       </div>
       <p class="imp-note">按「姓名」认人：表里的人会更新资料，新名字会加进来，没出现的人不动。考勤和技能记录不碰。<br>
       号码只在<b>同性别</b>里查重，男队女队可以穿同一个号。收集表里没有性别列也没关系，下一步可以逐个点。</p>
     </div>`, { mid: true });
+    bindFileHit('sheetFile', handleSheetFile);
     if ($('#siPaste')) $('#siPaste').onclick = () => openSheetPaste();
   }
 
@@ -1712,8 +1713,6 @@
       openSheetPreview(siExtract(rows));
     } catch (e) {
       toast(e && e.message ? `${name}：${e.message}` : `${name} 解析失败`, 'warn');
-    } finally {
-      $('#sheetFile').value = '';
     }
   }
 
@@ -3249,18 +3248,19 @@
     };
   }
 
-  /* 单元格：备份的三条通路——选文件 / 用链接 / 粘贴。选文件优先用 label 原生触发 */
+  /* 单元格：备份的三条通路——选文件 / 用链接 / 粘贴。选文件是 input 铺满按钮 */
   function openImportChooser() {
     openModal('导入备份', `<div class="imp-wrap">
       <p class="imp-lead">备份在手机/平板的「文件」里就直接选；在微信、QQ 里收到的话，让对方发<b>导入链接</b>给你最快。</p>
       <div class="imp-choice">
-        <label class="btn btn-primary imp-file" for="importFile">选择备份文件</label>
+        ${fileHitHTML('importFile', '选择备份文件')}
         <button type="button" class="btn btn-ghost" id="impPickLink">用链接导入</button>
         <button type="button" class="btn btn-ghost" id="impPickPaste">粘贴备份内容</button>
       </div>
       <p class="imp-note">三个入口后面都会先让你选「按队员合并」还是「完全覆盖」，不会一按就覆盖。<br>
       文件在选择器里是<b>灰色点不动</b>或<b>根本翻不到</b>？把文件名改成 <b>.txt</b> 再选，或者让队长生成导入链接发你。</p>
     </div>`, { mid: true });
+    bindFileHit('importFile', handleImportFile);
     if ($('#impPickLink')) $('#impPickLink').onclick = () => openLinkImport();
     if ($('#impPickPaste')) $('#impPickPaste').onclick = () => openPasteImport();
   }
@@ -3306,6 +3306,24 @@
     });
   }
 
+  /* 文件选择按钮：把 <input type=file> 直接铺满整块按钮（opacity:0 盖在上面），
+     用户手指点到的就是 input 本体。安卓 PWA 里「JS click 离屏 input」会被吞、
+     「label for 激活离屏 input」也时灵时不灵（桌面能弹、平板没反应），
+     所以这一版不依赖任何代理层，也不带 accept（选择器按 MIME 过滤会把文件变灰）。 */
+  function fileHitHTML(id, text, cls) {
+    return `<label class="btn ${cls || 'btn-primary'} imp-file"><span>${text}</span>`
+      + `<input type="file" id="${id}" class="file-hit" aria-label="${text}"></label>`;
+  }
+  function bindFileHit(id, onPick) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', () => {
+      const f = el.files && el.files[0];
+      el.value = ''; // 先清空：同一个文件改完内容再选一次也要能触发 change
+      if (f) onPick(f);
+    });
+  }
+
   async function handleImportFile(file) {
     if (!file) return;
     const name = file.name || '这个文件';
@@ -3317,8 +3335,6 @@
       // 分开说，别一律「不是有效的 JSON」让人摸不着头脑
       if (e instanceof SyntaxError) toast(`${name} 里读不出备份数据（不是备份文件，或转发时被截断）`, 'warn');
       else toast(`${name} 打不开，换「用链接导入」试试`, 'warn');
-    } finally {
-      $('#importFile').value = '';
     }
   }
 
@@ -3998,9 +4014,6 @@
       const row = e.target.closest('[data-open-player]');
       if (row) openPlayer(row.dataset.openPlayer);
     });
-
-    $('#importFile').addEventListener('change', (e) => handleImportFile(e.target.files[0]));
-    $('#sheetFile').addEventListener('change', (e) => handleSheetFile(e.target.files[0]));
 
     $$('.card-spot').forEach((card) => {
       card.addEventListener('pointermove', (e) => {

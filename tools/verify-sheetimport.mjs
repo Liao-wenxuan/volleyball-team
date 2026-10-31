@@ -67,12 +67,22 @@ await evalJS(`document.querySelector('.nav-item[data-page="roster"]').click(); '
 await sleep(400);
 await evalJS(`document.querySelector('[data-action="sheet-import"]').click(); 'x'`);
 await sleep(500);
-const entry = await evalJS(`(() => ({
-  lab: !!document.querySelector('label[for="sheetFile"]'),
-  input: !!document.querySelector('#sheetFile'),
-  paste: !!document.querySelector('#siPaste')
-}))()`);
-check('入口弹窗：label for 原生触发 + 粘贴兜底', entry.lab && entry.input && entry.paste);
+const entry = await evalJS(`(() => {
+  const inp = document.querySelector('#sheetFile');
+  const lab = inp ? inp.closest('label.imp-file') : null;
+  const lr = lab ? lab.getBoundingClientRect() : null;
+  // 点按钮正中心，命中的必须是 input 本体——这才是「铺满」
+  const hit = lr ? document.elementFromPoint(lr.left + lr.width / 2, lr.top + lr.height / 2) : null;
+  return {
+    lab: !!lab,
+    input: !!inp,
+    cover: !!hit && hit.id === 'sheetFile',
+    accept: inp ? inp.getAttribute('accept') : 'missing',
+    paste: !!document.querySelector('#siPaste')
+  };
+})()`);
+check('入口：透明 input 铺满按钮 + 粘贴兜底', entry.lab && entry.input && entry.cover && entry.paste);
+check('xlsx 输入框不带 accept（安卓选择器不按 MIME 过滤）', entry.accept === null);
 
 await pickFile('#sheetFile', SAMPLE);
 await sleep(1200);
