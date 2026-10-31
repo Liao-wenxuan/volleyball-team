@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-31 · r18'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-31 · r19'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -1568,10 +1568,12 @@
         <button type="button" class="btn ${pasteCls}" id="siPaste">粘贴表格内容</button>
         ${app ? '<button type="button" class="btn btn-ghost" id="siCopyLink">复制本页链接（到浏览器打开）</button>' : ''}
       </div>
+      <p class="imp-hint" id="fileStuck" hidden>点了没弹出文件选择器？<b id="fileRetry">换一种方式打开</b>；或者把表格先另存到平板的「下载 / 文档」目录再来选。<br>
+      还有一条最稳的：<b id="fileCopyLink">复制本页链接</b>，用 Chrome / Edge 打开导入——数据存在同一个地方，回到这个 App 就能看到。</p>
       <p class="imp-note">按「姓名」认人：表里的人会更新资料，新名字会加进来，没出现的人不动。考勤和技能记录不碰。<br>
       号码只在<b>同性别</b>里查重，男队女队可以穿同一个号。收集表里没有性别列也没关系，下一步可以逐个点。</p>
     </div>`, { mid: true });
-    bindFileHit('sheetFile', handleSheetFile);
+    bindFileHit('sheetFile', handleSheetFile, 'fileStuck');
     bindCopyLink();
     if ($('#siPaste')) $('#siPaste').onclick = () => openSheetPaste();
   }
@@ -3270,10 +3272,12 @@
         <button type="button" class="btn ${pasteCls}" id="impPickPaste">粘贴备份内容</button>
         ${app ? '<button type="button" class="btn btn-ghost" id="siCopyLink">复制本页链接（到浏览器打开）</button>' : ''}
       </div>
+      <p class="imp-hint" id="fileStuck" hidden>点了没弹出文件选择器？<b id="fileRetry">换一种方式打开</b>；或者把备份文件先另存到平板的「下载 / 文档」目录再来选。<br>
+      还有一条最稳的：<b id="fileCopyLink">复制本页链接</b>，用 Chrome / Edge 打开导入——数据存在同一个地方，回到这个 App 就能看到。</p>
       <p class="imp-note">三个入口后面都会先让你选「按队员合并」还是「完全覆盖」，不会一按就覆盖。<br>
       文件在选择器里是<b>灰色点不动</b>或<b>根本翻不到</b>？把文件名改成 <b>.txt</b> 再选，或者让队长生成导入链接发你。</p>
     </div>`, { mid: true });
-    bindFileHit('importFile', handleImportFile);
+    bindFileHit('importFile', handleImportFile, 'fileStuck');
     bindCopyLink();
     if ($('#impPickLink')) $('#impPickLink').onclick = () => openLinkImport();
     if ($('#impPickPaste')) $('#impPickPaste').onclick = () => openPasteImport();
@@ -3341,14 +3345,54 @@
     return `<label class="btn ${cls || 'btn-primary'} imp-file"><span>${text}</span>`
       + `<input type="file" id="${id}" class="file-hit" aria-label="${text}"></label>`;
   }
-  function bindFileHit(id, onPick) {
+  function bindFileHit(id, onPick, stuckId) {
     const el = document.getElementById(id);
     if (!el) return;
+    const stuck = stuckId ? document.getElementById(stuckId) : null;
+    let timer = 0;
+    const disarm = () => { clearTimeout(timer); if (stuck) stuck.hidden = true; };
+    /* 点了之后 2.6 秒还没离开页面 = 系统选择器压根没弹起来（安卓 PWA / 内置浏览器的通病）。
+       这时候别让人对着按钮发呆，直接把「换一种方式」和「文件先存下载目录」摆出来。 */
+    el.addEventListener('click', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (document.visibilityState !== 'visible') return; // 选择器确实开过，页面被切走了
+        if (stuck) stuck.hidden = false;
+      }, 2600);
+    });
     el.addEventListener('change', () => {
+      disarm();
       const f = el.files && el.files[0];
       el.value = ''; // 先清空：同一个文件改完内容再选一次也要能触发 change
       if (f) onPick(f);
     });
+    const retry = stuck ? document.getElementById('fileRetry') : null;
+    if (retry) {
+      retry.addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        if (!window.showOpenFilePicker) { toast('这台设备只能用「粘贴」，或把文件另存到「下载」再选', 'warn'); return; }
+        try {
+          const [h] = await window.showOpenFilePicker({ multiple: false }); // 不过滤类型：过滤会把文件变灰
+          const f = await h.getFile();
+          disarm();
+          if (f) onPick(f);
+        } catch (err) {
+          if (err && err.name === 'AbortError') return;
+          toast('这个方式也不通，用「粘贴」最快', 'warn');
+        }
+      });
+    }
+    /* PWA 的 origin 和浏览器网页是同一个，localStorage 共享——
+       在 Chrome / Edge 里导入完，回到这个 App 数据就在，等于绕开了 PWA 的文件选择 */
+    const copyLink = stuck ? document.getElementById('fileCopyLink') : null;
+    if (copyLink) {
+      copyLink.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const url = location.href.split('#')[0];
+        if (copyText(url)) toast('链接已复制。用装这个 App 的那个浏览器打开导入，数据才通用');
+        else toast('复制失败，手动记下这个网址', 'warn');
+      });
+    }
   }
   /* 内置浏览器里唯一的出路：把链接弄到系统浏览器去 */
   function bindCopyLink() {

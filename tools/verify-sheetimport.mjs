@@ -287,6 +287,27 @@ check('点粘贴能进到粘贴框', await evalJS(`!!document.querySelector('#si
 await send('Emulation.setUserAgentOverride', { userAgent: '' });
 await sleep(200);
 
+/* ── 9. 点了却没弹选择器：2.6 秒后自己把兜底方案顶出来 ── */
+console.log('\n【9】点了没反应的兜底');
+await evalJS(`document.querySelector('#modalClose').click(); 'x'`);
+await sleep(300);
+await evalJS(`document.querySelector('[data-action="sheet-import"]').click(); 'x'`);
+await sleep(400);
+const beforeStuck = await evalJS(`document.querySelector('#fileStuck').hidden`);
+await evalJS(`document.querySelector('#sheetFile').click(); 'x'`); // headless 没有系统选择器，change 不会来
+await sleep(3000);
+const stuck = await evalJS(`({
+  hidden: document.querySelector('#fileStuck').hidden,
+  hasRetry: !!document.querySelector('#fileRetry'),
+  hasCopy: !!document.querySelector('#fileCopyLink'),
+  text: (document.querySelector('#fileStuck').textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 40)
+})`);
+check('点完 2.6 秒没反应会自己冒提示', beforeStuck === true && stuck.hidden === false, stuck.text);
+check('提示里有「换一种方式打开」的重试入口', stuck.hasRetry === true);
+check('提示里有「用浏览器打开本页导入」的出口', stuck.hasCopy === true);
+await evalJS(`document.querySelector('#modalClose').click(); 'x'`);
+await sleep(200);
+
 console.log(`\n${failed ? `✗ ${failed} 项失败` : '✓ 全部通过'}`);
 ws.close(); edge.kill(); server.close();
 setTimeout(() => process.exit(failed ? 1 : 0), 300);
