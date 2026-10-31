@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-31 · r15'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-31 · r16'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -1537,20 +1537,19 @@
     });
     return out;
   }
-  /* 表里的人要「新增」时，跟库里已有的同性别队员撞号也要提醒（异性撞号不管）。 */
+  /* 表里的人要「新增」时，跟库里已有的同性别队员撞号也要提醒（异性撞号不管）。
+     人多时合成一条，别让警告区刷成一面墙。 */
   function siNewConflicts(plan) {
-    const out = [];
+    const hits = [];
     plan.forEach((row) => {
       if (row.target) return;
       const it = row.item;
       if (!it.number) return;
       const hit = db.players.find((p) => p.number === it.number && (p.gender || '') === (it.gender || ''));
-      if (hit) {
-        out.push(`${it.name} 要新增 ${it.number} 号，可库里 ${hit.name} 已经是这个号了`
-          + (it.gender ? `（同是${it.gender}队）` : '（两边性别都没填，先按同队算）') + '——改号，或者点名性别把人归类');
-      }
+      if (hit) hits.push(`${it.number} 号 ${it.name}↔${hit.name}`);
     });
-    return out;
+    if (!hits.length) return [];
+    return [`有 ${hits.length} 人和库里队员撞号（同性别才算冲突）：${hits.join('、')}——改号，或给两边点出性别`];
   }
   // 性别显示与切换（男女混编，收集表里没这列就当场点）
   const siGenderNext = (g) => (g === '女' ? '男' : g === '男' ? '' : '女');
