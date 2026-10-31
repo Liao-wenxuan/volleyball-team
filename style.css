@@ -1679,6 +1679,10 @@ kbd{
 .imp-choice{display:flex;flex-direction:column;gap:9px}
 .imp-choice .btn{width:100%;justify-content:center}
 .imp-note{font-size:10.5px;color:var(--muted);line-height:1.6}
+/* 内置浏览器（微信/QQ/钉钉）选不了文件时顶出来的说明条 */
+.imp-alert{margin:0;padding:9px 12px;border-radius:10px;font-size:11px;line-height:1.7;
+  color:#ffcf8e;background:rgba(255,187,85,.08);border:1px solid rgba(255,187,85,.25)}
+.imp-alert b{color:#ffb350}
 .imp-ta{width:100%;min-height:150px;resize:vertical;padding:11px 13px;border-radius:12px;
   border:1px solid var(--ov080);background:var(--ov030);color:var(--text);font:12px/1.5 ui-monospace,Consolas,monospace}
 .imp-ta:focus{outline:none;border-color:rgba(var(--violet-rgb),.55)}

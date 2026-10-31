@@ -65,5 +65,11 @@ console.log('backup 入口 box:', await evalJS(`(() => {
   return JSON.stringify({ w: Math.round(lr.width), h: Math.round(lr.height),
     hit: (document.elementFromPoint(lr.left + lr.width / 2, lr.top + lr.height / 2) || {}).id });
 })()`));
+// 微信 UA：说明条 + 粘贴升主位
+await send('Emulation.setUserAgentOverride', { userAgent: 'Mozilla/5.0 (Linux; Android 13; SM-X700) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 MicroMessenger/8.0.50.2701 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64' });
+await evalJS(`document.querySelector('#modalClose').click(); 'x'`); await sleep(300);
+await evalJS(`document.querySelector('.nav-item[data-page="roster"]').click(); 'x'`); await sleep(400);
+await evalJS(`document.querySelector('[data-action="sheet-import"]').click(); 'x'`); await sleep(500);
+await shot('r18-wx-entry.png');
 ws.close(); edge.kill(); server.close();
 setTimeout(() => process.exit(0), 300);

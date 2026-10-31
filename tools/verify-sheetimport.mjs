@@ -262,6 +262,31 @@ check('同性别同号仍然报错（61 号两个男）', bk2.ok === 1 && bk2.er
 await evalJS(`document.querySelector('#modalClose').click(); 'x'`);
 await sleep(300);
 
+/* ── 8. 微信/QQ 内置浏览器：选不了文件就先把粘贴推上来 ── */
+console.log('\n【8】内置浏览器兜底');
+await send('Emulation.setUserAgentOverride', { userAgent: 'Mozilla/5.0 (Linux; Android 13; SM-X700) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 MicroMessenger/8.0.50.2701(0x2800323D) WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64' });
+await sleep(300);
+await evalJS(`document.querySelector('.nav-item[data-page="roster"]').click(); 'x'`);
+await sleep(400);
+await evalJS(`document.querySelector('[data-action="sheet-import"]').click(); 'x'`);
+await sleep(500);
+const wx = await evalJS(`({
+  alert: (document.querySelector('.imp-alert') || {}).textContent || '',
+  pastePrimary: /btn-primary/.test((document.querySelector('#siPaste') || {}).className || ''),
+  fileGhost: /btn-ghost/.test((document.querySelector('label.imp-file') || {}).className || ''),
+  copyLink: !!document.querySelector('#siCopyLink'),
+  pasteStillWorks: !!document.querySelector('#siPaste')
+})`);
+check('微信里先说明「选不了文件，不是页面坏了」', /微信里选不了文件/.test(wx.alert), wx.alert.replace(/\s+/g, ' ').slice(0, 46));
+check('微信里把「粘贴表格内容」升成主按钮', wx.pastePrimary && wx.fileGhost);
+check('微信里给「复制链接去浏览器」的出口', wx.copyLink);
+check('粘贴通路本身没被影响', wx.pasteStillWorks);
+await evalJS(`document.querySelector('#siPaste').click(); 'x'`);
+await sleep(400);
+check('点粘贴能进到粘贴框', await evalJS(`!!document.querySelector('#siText')`) === true);
+await send('Emulation.setUserAgentOverride', { userAgent: '' });
+await sleep(200);
+
 console.log(`\n${failed ? `✗ ${failed} 项失败` : '✓ 全部通过'}`);
 ws.close(); edge.kill(); server.close();
 setTimeout(() => process.exit(failed ? 1 : 0), 300);

@@ -1695,6 +1695,10 @@ kbd{
 .imp-choice{display:flex;flex-direction:column;gap:9px}
 .imp-choice .btn{width:100%;justify-content:center}
 .imp-note{font-size:10.5px;color:var(--muted);line-height:1.6}
+/* 内置浏览器（微信/QQ/钉钉）选不了文件时顶出来的说明条 */
+.imp-alert{margin:0;padding:9px 12px;border-radius:10px;font-size:11px;line-height:1.7;
+  color:#ffcf8e;background:rgba(255,187,85,.08);border:1px solid rgba(255,187,85,.25)}
+.imp-alert b{color:#ffb350}
 .imp-ta{width:100%;min-height:150px;resize:vertical;padding:11px 13px;border-radius:12px;
   border:1px solid var(--ov080);background:var(--ov030);color:var(--text);font:12px/1.5 ui-monospace,Consolas,monospace}
 .imp-ta:focus{outline:none;border-color:rgba(var(--violet-rgb),.55)}
@@ -5348,7 +5352,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-31 · r17'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-31 · r18'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -6887,16 +6891,23 @@ body.sv-mode > *:not(#shareView){display:none !important}
   const siGenderLabel = (g) => (g === '女' ? '♀ 女' : g === '男' ? '♂ 男' : '· 未填');
 
   function openSheetImport() {
+    const app = inAppBrowser();
+    const fileCls = app ? 'btn-ghost' : 'btn-primary'; // 内置浏览器里把「粘贴」推到主位
+    const pasteCls = app ? 'btn-primary' : 'btn-ghost';
     openModal('从表格导入队员', `<div class="imp-wrap">
+      ${app ? `<p class="imp-alert"><b>${app}里选不了文件。</b>点按钮会有反应、选择器就是不弹——这是${app}内核没这个能力，不是页面坏了。<br>
+        ① 用下面的<b>粘贴表格内容</b>；② 或者复制链接，到系统浏览器（Chrome / Edge / 夸克）里打开再选。</p>` : ''}
       <p class="imp-lead">直接选收集表导出的 <b>xlsx</b>；微信里打不开的话，用腾讯文档 / WPS 打开、<b>全选复制</b>，粘到下面也一样。</p>
       <div class="imp-choice">
-        ${fileHitHTML('sheetFile', '选择表格文件（.xlsx / .csv）')}
-        <button type="button" class="btn btn-ghost" id="siPaste">粘贴表格内容</button>
+        ${fileHitHTML('sheetFile', '选择表格文件（.xlsx / .csv）', fileCls)}
+        <button type="button" class="btn ${pasteCls}" id="siPaste">粘贴表格内容</button>
+        ${app ? '<button type="button" class="btn btn-ghost" id="siCopyLink">复制本页链接（到浏览器打开）</button>' : ''}
       </div>
       <p class="imp-note">按「姓名」认人：表里的人会更新资料，新名字会加进来，没出现的人不动。考勤和技能记录不碰。<br>
       号码只在<b>同性别</b>里查重，男队女队可以穿同一个号。收集表里没有性别列也没关系，下一步可以逐个点。</p>
     </div>`, { mid: true });
     bindFileHit('sheetFile', handleSheetFile);
+    bindCopyLink();
     if ($('#siPaste')) $('#siPaste').onclick = () => openSheetPaste();
   }
 
@@ -8581,17 +8592,24 @@ body.sv-mode > *:not(#shareView){display:none !important}
 
   /* 单元格：备份的三条通路——选文件 / 用链接 / 粘贴。选文件是 input 铺满按钮 */
   function openImportChooser() {
+    const app = inAppBrowser();
+    const fileCls = app ? 'btn-ghost' : 'btn-primary';
+    const pasteCls = app ? 'btn-primary' : 'btn-ghost';
     openModal('导入备份', `<div class="imp-wrap">
+      ${app ? `<p class="imp-alert"><b>${app}里选不了文件。</b>点按钮会有反应、选择器就是不弹——这是${app}内核没这个能力，不是页面坏了。<br>
+        用下面的<b>粘贴备份内容</b>，或者复制链接到系统浏览器（Chrome / Edge / 夸克）打开再选。</p>` : ''}
       <p class="imp-lead">备份在手机/平板的「文件」里就直接选；在微信、QQ 里收到的话，让对方发<b>导入链接</b>给你最快。</p>
       <div class="imp-choice">
-        ${fileHitHTML('importFile', '选择备份文件')}
+        ${fileHitHTML('importFile', '选择备份文件', fileCls)}
         <button type="button" class="btn btn-ghost" id="impPickLink">用链接导入</button>
-        <button type="button" class="btn btn-ghost" id="impPickPaste">粘贴备份内容</button>
+        <button type="button" class="btn ${pasteCls}" id="impPickPaste">粘贴备份内容</button>
+        ${app ? '<button type="button" class="btn btn-ghost" id="siCopyLink">复制本页链接（到浏览器打开）</button>' : ''}
       </div>
       <p class="imp-note">三个入口后面都会先让你选「按队员合并」还是「完全覆盖」，不会一按就覆盖。<br>
       文件在选择器里是<b>灰色点不动</b>或<b>根本翻不到</b>？把文件名改成 <b>.txt</b> 再选，或者让队长生成导入链接发你。</p>
     </div>`, { mid: true });
     bindFileHit('importFile', handleImportFile);
+    bindCopyLink();
     if ($('#impPickLink')) $('#impPickLink').onclick = () => openLinkImport();
     if ($('#impPickPaste')) $('#impPickPaste').onclick = () => openPasteImport();
   }
@@ -8637,10 +8655,23 @@ body.sv-mode > *:not(#shareView){display:none !important}
     });
   }
 
-  /* 文件选择按钮：把 <input type=file> 直接铺满整块按钮（opacity:0 盖在上面），
-     用户手指点到的就是 input 本体。安卓 PWA 里「JS click 离屏 input」会被吞、
-     「label for 激活离屏 input」也时灵时不灵（桌面能弹、平板没反应），
-     所以这一版不依赖任何代理层，也不带 accept（选择器按 MIME 过滤会把文件变灰）。 */
+  /* 文件选择这块踩过三代：
+     ① `<input hidden>` + `input.click()`：安卓 PWA 吞掉程序化 click，点了没反应；
+     ② `<label for>` 原生触发：桌面灵、PWA 里时灵时不灵；
+     ③ 现在：<input type=file> 用 opacity:0 铺满整块按钮，手指点到的就是 input 本体，
+        不依赖任何代理层，也不带 accept（选择器按 MIME 过滤会把文件变灰）。
+     还压着第四个坑：国内 App 的内置浏览器大多不实现 onShowFileChooser，
+     点 input 有触摸反馈、选择器就是不弹。这不是页面坏了，是宿主 WebView 没能力。 */
+  function inAppBrowser() {
+    const ua = navigator.userAgent || '';
+    if (/MicroMessenger/i.test(ua)) return '微信';
+    if (/wxwork/i.test(ua)) return '企业微信';
+    if (/\bQQ\/[\d.]+/.test(ua) && !/MQQBrowser/i.test(ua)) return 'QQ';
+    if (/DingTalk/i.test(ua)) return '钉钉';
+    if (/AlipayClient/i.test(ua)) return '支付宝';
+    if (/Weibo/i.test(ua)) return '微博';
+    return '';
+  }
   function fileHitHTML(id, text, cls) {
     return `<label class="btn ${cls || 'btn-primary'} imp-file"><span>${text}</span>`
       + `<input type="file" id="${id}" class="file-hit" aria-label="${text}"></label>`;
@@ -8653,6 +8684,16 @@ body.sv-mode > *:not(#shareView){display:none !important}
       el.value = ''; // 先清空：同一个文件改完内容再选一次也要能触发 change
       if (f) onPick(f);
     });
+  }
+  /* 内置浏览器里唯一的出路：把链接弄到系统浏览器去 */
+  function bindCopyLink() {
+    const btn = $('#siCopyLink');
+    if (!btn) return;
+    btn.onclick = () => {
+      const url = location.href.split('#')[0];
+      if (copyText(url)) toast('链接已复制，到系统浏览器里粘贴打开');
+      else toast('复制失败，长按地址栏手动复制', 'warn');
+    };
   }
 
   async function handleImportFile(file) {
