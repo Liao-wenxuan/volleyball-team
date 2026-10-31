@@ -7,6 +7,8 @@
 <meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%237b6cff'/%3E%3Crect%20x='12'%20y='12'%20width='40'%20height='40'%20rx='4'%20fill='none'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M12%2028h40'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M32%2012v40'%20stroke='%23fff'%20stroke-width='3'%20stroke-opacity='.55'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#05070f">
+
+
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1697,6 +1699,29 @@ kbd{
 /* 只读的导入链接：字小、能换行，长链接一眼看到头和尾 */
 .imp-ta-link{min-height:84px;font-size:10.5px;line-height:1.55;word-break:break-all;color:var(--text-2)}
 
+/* 收集表导入：警告区 + 预览表（平板上用，行高放宽）+ 性别切换 */
+.si-warns{margin-top:10px;padding:9px 12px;border-radius:12px;background:rgba(255,187,85,.08);
+  border:1px solid rgba(255,187,85,.25)}
+.si-warns p{font-size:10.5px;line-height:1.7;color:#ffcf8e}
+.si-table{margin-top:10px;border:1px solid var(--ov080);border-radius:12px;overflow:hidden;max-height:46vh;overflow-y:auto}
+.si-tr{display:grid;grid-template-columns:1.2fr .6fr .8fr .6fr .7fr .9fr .9fr;align-items:center;
+  padding:8px 12px;font-size:11px;border-bottom:1px solid var(--ov050);gap:4px}
+.si-tr:last-child{border-bottom:0}
+.si-th{background:var(--ov030);font-size:9.5px;color:var(--muted);letter-spacing:.06em;position:sticky;top:0}
+.si-tr span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.si-g{border:1px solid var(--ov080);background:var(--ov030);color:var(--muted);border-radius:8px;
+  padding:3px 9px;font:inherit;font-size:10px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.si-g.gm{color:#6fb8ff;border-color:rgba(111,184,255,.4)}
+.si-g.gf{color:#ff9ec6;border-color:rgba(255,158,198,.4)}
+.si-act{font-size:10px;text-align:right}
+.si-act.up{color:var(--muted)}
+.si-act.ad{color:#37e39b}
+
+/* 队员卡名字旁的性别标记 */
+.pc-g{font-style:normal;font-size:11px;margin-left:5px;vertical-align:1px}
+.pc-g.gm{color:#6fb8ff}
+.pc-g.gf{color:#ff9ec6}
+
 /* 弹窗宽度 */
 .modal.mid{width:720px}
 .modal.wide{width:min(980px,96vw)}
@@ -3003,6 +3028,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
       <div class="social-row" id="footerActions">
         <button class="social-btn" style="--brand:#37e39b" data-action="export" data-tip="导出 JSON 备份"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></span><span class="sb-txt">导出备份</span></button>
         <button class="social-btn" style="--brand:var(--violet)" data-action="template" data-tip="训练模板"><span class="sb-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="sb-txt">训练模板</span></button>
+        <button class="social-btn" style="--brand:#7b6cff" data-action="sheet-import" data-tip="收集表 xlsx 一键导入"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h10M4 19h7"/><path d="M17 13v6M14.5 16.5l2.5 2.5 2.5-2.5"/></svg></span><span class="sb-txt">表格导入</span></button>
         <button class="social-btn" style="--brand:var(--cyan)" data-action="add-player" data-tip="添加队员"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="sb-txt">添加队员</span></button>
         <button class="social-btn" style="--brand:#ffbb55" data-action="help" data-tip="使用说明"><span class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7v.5"/><path d="M12 17h.01"/></svg></span><span class="sb-txt">使用说明</span></button>
       </div>
@@ -3054,6 +3080,8 @@ body.sv-mode > *:not(#shareView){display:none !important}
      也不能靠 JS 去 click 一个移出屏幕的 input——安卓 PWA 独立窗口会直接吞掉，
      表现就是「点了完全没反应」。所以入口用 <label for> 原生触发，这个元素只做兜底。 -->
 <input type="file" id="importFile" class="file-ghost" tabindex="-1" aria-hidden="true">
+<!-- 收集表 xlsx 导入用：同样不用 accept（安卓选择器按 MIME 过滤会坑）、不用 hidden（PWA 吞点击） -->
+<input type="file" id="sheetFile" class="file-ghost" tabindex="-1" aria-hidden="true">
 
 <script>
 /* ═══════════════════════════════════════════════════════════════
@@ -3755,6 +3783,194 @@ body.sv-mode > *:not(#shareView){display:none !important}
   var api = { encode: encode, toCanvas: toCanvas, capacity: capacity };
   if (typeof window !== 'undefined') window.XGYQR = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})();
+
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   xlsx.js — 手写最小 .xlsx 读取器（零依赖，不外传任何数据）
+
+   为什么自己写：项目原则是不引第三方库（qr.js 同款理由）——离线可用、
+   数据不出设备、面试时能讲清楚每一行。xlsx 本质是 zip 包 + XML：
+     1. 解析 zip 中央目录，找到要的几个 XML
+     2. deflate-raw 解压（浏览器原生 DecompressionStream）
+     3. DOMParser 解析 XML，拼出行列
+   只读不写，只支持本项目要的「行列文本值」，样式/公式/合并单元格不碰。
+
+   用法：
+     const buf = await file.arrayBuffer();
+     const wb = await XGYXlsx.read(buf);        // { sheets: [{ name, rows }] }
+     // rows 是二维数组（0-based），空格子是 ''，数字是 number
+   ═══════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  /* ── zip：从 ArrayBuffer 里掏出指定文件 ── */
+  function u16(v, o) { return v.getUint16(o, true); }
+  function u32(v, o) { return v.getUint32(o, true); }
+
+  // 在尾部找 End of Central Directory（签名 0x06054b50），最多扫最后 64KB+22
+  function findEOCD(view) {
+    const min = Math.max(0, view.byteLength - (0xffff + 22));
+    for (let o = view.byteLength - 22; o >= min; o--) {
+      if (u32(view, o) === 0x06054b50) return o;
+    }
+    return -1;
+  }
+
+  async function inflateRaw(bytes) {
+    if (typeof DecompressionStream !== 'function') {
+      throw new Error('这台设备的浏览器太旧，解不了表格文件');
+    }
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
+  // 列出 zip 里所有条目：[{ name, method, data }]
+  async function zipEntries(buf) {
+    const view = new DataView(buf);
+    const eocd = findEOCD(view);
+    if (eocd < 0) throw new Error('不是有效的表格文件（zip 头不对）');
+    const count = u16(view, eocd + 10);
+    let ptr = u32(view, eocd + 16); // 中央目录起始偏移
+    const u8 = new Uint8Array(buf);
+    const out = [];
+    for (let i = 0; i < count; i++) {
+      if (u32(view, ptr) !== 0x02014b50) break; // 中央目录文件头
+      const method = u16(view, ptr + 10);
+      const compSize = u32(view, ptr + 20);
+      const nameLen = u16(view, ptr + 28);
+      const extraLen = u16(view, ptr + 30);
+      const cmtLen = u16(view, ptr + 32);
+      const localOff = u32(view, ptr + 42);
+      const name = new TextDecoder().decode(u8.subarray(ptr + 46, ptr + 46 + nameLen));
+      // local file header 里的名字/extra 长度可能与中央目录不同，按它自己的来
+      const lNameLen = u16(view, localOff + 26);
+      const lExtraLen = u16(view, localOff + 28);
+      const dataStart = localOff + 30 + lNameLen + lExtraLen;
+      const raw = u8.subarray(dataStart, dataStart + compSize);
+      let data;
+      if (method === 0) {
+        data = raw;
+      } else if (method === 8) {
+        try { data = await inflateRaw(raw); } catch (e) { data = null; }
+      } else {
+        data = null;
+      }
+      out.push({ name, data });
+      ptr += 46 + nameLen + extraLen + cmtLen;
+    }
+    return out;
+  }
+
+  /* ── XML 解析（浏览器自带 DOMParser，同步够用） ── */
+  function parseXML(text) {
+    return new DOMParser().parseFromString(text, 'text/xml');
+  }
+
+  // 'BC12' → 列号 54（0-based）；解析失败返回大数（当垃圾丢到行尾）
+  function colFromRef(ref) {
+    const m = /^([A-Z]+)/.exec(String(ref || ''));
+    if (!m) return 9999;
+    let n = 0;
+    for (let i = 0; i < m[1].length; i++) n = n * 26 + (m[1].charCodeAt(i) - 64);
+    return n - 1;
+  }
+
+  // sharedStrings：每个 <si> 拼接其中所有 <t>（富文本多段 run）
+  function readSharedStrings(xml) {
+    const arr = [];
+    const sis = xml.getElementsByTagName('si');
+    for (let i = 0; i < sis.length; i++) {
+      const ts = sis[i].getElementsByTagName('t');
+      let s = '';
+      for (let j = 0; j < ts.length; j++) s += ts[j].textContent || '';
+      arr.push(s);
+    }
+    return arr;
+  }
+
+  // sheet XML → 二维数组。按单元格 r 属性落位，跳过空格子
+  function readSheet(xml, shared) {
+    const rowsEl = xml.getElementsByTagName('row');
+    const rows = [];
+    for (let i = 0; i < rowsEl.length; i++) {
+      const rAttr = parseInt(rowsEl[i].getAttribute('r'), 10);
+      const ri = (isNaN(rAttr) ? rows.length : rAttr - 1);
+      const cs = rowsEl[i].getElementsByTagName('c');
+      for (let j = 0; j < cs.length; j++) {
+        const c = cs[j];
+        const col = colFromRef(c.getAttribute('r'));
+        const t = c.getAttribute('t');
+        let val = '';
+        if (t === 'inlineStr') {
+          const ts = c.getElementsByTagName('t');
+          for (let k = 0; k < ts.length; k++) val += ts[k].textContent || '';
+        } else {
+          const vEl = c.getElementsByTagName('v')[0];
+          if (!vEl) continue;
+          const raw = vEl.textContent || '';
+          if (t === 's') val = shared[parseInt(raw, 10)] ?? '';
+          else if (t === 'b') val = raw === '1' ? 'TRUE' : 'FALSE';
+          else if (t === 'e') val = '#ERR';
+          else {
+            const num = Number(raw);
+            // 整数就去掉小数尾巴（Excel 把 25 存成 25），别让号码变成 "25"
+            val = Number.isFinite(num) && /^-?\d+(\.0+)?$/.test(raw) ? String(Math.round(num)) : raw;
+          }
+        }
+        while (rows.length <= ri) rows.push([]);
+        rows[ri][col] = val;
+      }
+    }
+    // 补齐空洞
+    for (const r of rows) for (let k = 0; k < r.length; k++) if (r[k] === undefined) r[k] = '';
+    return rows;
+  }
+
+  /* ── 主入口 ── */
+  async function read(buf) {
+    const entries = await zipEntries(buf);
+    const byName = {};
+    entries.forEach((e) => { byName[e.name.replace(/^\//, '')] = e; });
+
+    const wbEntry = byName['xl/workbook.xml'];
+    if (!wbEntry || !wbEntry.data) throw new Error('表格里没有工作表数据');
+    const wb = parseXML(new TextDecoder().decode(wbEntry.data));
+
+    // rId → 文件路径
+    const rels = {};
+    const relEntry = byName['xl/_rels/workbook.xml.rels'];
+    if (relEntry && relEntry.data) {
+      const relXml = parseXML(new TextDecoder().decode(relEntry.data));
+      const rs = relXml.getElementsByTagName('Relationship');
+      for (let i = 0; i < rs.length; i++) {
+        rels[rs[i].getAttribute('Id')] = rs[i].getAttribute('Target');
+      }
+    }
+
+    let shared = [];
+    const ssEntry = byName['xl/sharedStrings.xml'];
+    if (ssEntry && ssEntry.data) shared = readSharedStrings(parseXML(new TextDecoder().decode(ssEntry.data)));
+
+    const sheets = [];
+    const shEls = wb.getElementsByTagName('sheet');
+    for (let i = 0; i < shEls.length; i++) {
+      const name = shEls[i].getAttribute('name') || `表${i + 1}`;
+      const rid = shEls[i].getAttribute('r:id') || shEls[i].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+      let target = rels[rid] || `worksheets/sheet${i + 1}.xml`;
+      if (target.startsWith('/')) target = target.slice(1);
+      else if (!target.startsWith('xl/')) target = 'xl/' + target;
+      const entry = byName[target];
+      if (!entry || !entry.data) { sheets.push({ name, rows: [] }); continue; }
+      const xml = parseXML(new TextDecoder().decode(entry.data));
+      sheets.push({ name, rows: readSheet(xml, shared) });
+    }
+    if (!sheets.length) throw new Error('表格里没有工作表');
+    return { sheets };
+  }
+
+  window.XGYXlsx = { read };
 })();
 
 </script>
@@ -5128,7 +5344,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-30 · r13'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-31 · r14'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -5283,6 +5499,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
       number: Number.isFinite(Number(p.number)) ? Number(p.number) : 0,
       position: POSITIONS.includes(p.position) ? p.position : '主攻',
       grade: GRADES.includes(p.grade) ? p.grade : '大一',
+      gender: p.gender === '男' || p.gender === '女' ? p.gender : '',
       height: Number.isFinite(Number(p.height)) ? Number(p.height) : 0,
       skills: normalizeSkills(p.skills),
       createdAt: Number(p.createdAt) || Date.now(),
@@ -6134,7 +6351,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     grid.hidden = list.length === 0;
     const empty = $('#rosterEmpty');
     if (list.length) empty.innerHTML = '';
-    else if (!db.players.length) empty.innerHTML = emptyState('🏐', '还没有队员', '有现成名单的话用「批量导入」，粘贴一段表格就全进来了；也可以一个个填。', '<button class="btn btn-primary" data-action="bulk-import">批量导入名单</button><button class="btn btn-ghost" data-action="add-player">添加第一名队员</button>');
+    else if (!db.players.length) empty.innerHTML = emptyState('🏐', '还没有队员', '收集表导出的 xlsx 直接一键导入；也可以粘贴接龙文本，或一个个填。', '<button class="btn btn-primary" data-action="sheet-import">从表格导入</button><button class="btn btn-ghost" data-action="bulk-import">粘贴接龙文本</button><button class="btn btn-ghost" data-action="add-player">添加第一名队员</button>');
     else empty.innerHTML = emptyState('🔍', '没有匹配的队员', '换个关键词或位置筛选试试。', '<button class="btn btn-ghost" data-action="clear-filter">清除筛选</button>');
 
     attachTilt(grid);
@@ -6150,7 +6367,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     }).join('');
     return `<article class="player-card card-spot" data-id="${p.id}" style="--a:${a};--b:${b};--i:${i}">
       <div class="pc-top"><div class="pc-avatar">${esc(p.name[0] || '?')}</div><div class="pc-num">${pad2(p.number)}</div></div>
-      <div class="pc-info"><h3 class="pc-name">${esc(p.name)}</h3><div class="pc-meta">${p.position} · ${p.grade} · ${p.height}cm</div></div>
+      <div class="pc-info"><h3 class="pc-name">${esc(p.name)}${p.gender ? `<i class="pc-g g${p.gender === "男" ? "m" : "f"}">${p.gender === "男" ? "♂" : "♀"}</i>` : ""}</h3><div class="pc-meta">${p.position} · ${p.grade} · ${p.height ? p.height + "cm" : "身高—"}</div></div>
       <div class="pc-score-row">
         <div class="pc-overall"><b>${ov.toFixed(1)}</b><span>综合</span></div>
         <div class="pc-strip">${strip}</div>
@@ -6195,6 +6412,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
         <div class="field"><label>姓名</label><input name="name" required maxlength="10" value="${p ? esc(p.name) : ''}" placeholder="例如：陈子昂"></div>
         <div class="field"><label>号码</label><input name="number" type="number" min="0" max="99" required value="${p ? p.number : ''}" placeholder="7"></div>
         <div class="field"><label>位置</label><select name="position">${POSITIONS.map((pos) => `<option ${((p && p.position) || o.position) === pos ? 'selected' : ''}>${pos}</option>`).join('')}</select></div>
+        <div class="field"><label>性别</label><select name="gender">${[['', '没填'], ['女', '女 ♀'], ['男', '男 ♂']].map(([v, t]) => `<option value="${v}" ${(p && p.gender) === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
         <div class="field"><label>年级</label><select name="grade">${GRADES.map((g) => `<option ${p && p.grade === g ? 'selected' : ''}>${g}</option>`).join('')}</select></div>
         <div class="field full"><label>身高 (cm)</label><input name="height" type="number" min="140" max="230" required value="${p ? p.height : ''}" placeholder="185"></div>
       </div>
@@ -6221,7 +6439,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
       const dup = db.players.find((x) => x.number === number && x.id !== (p && p.id));
       if (dup) { toast(`号码 ${number} 已经被 ${dup.name} 使用`, 'warn'); return; }
       if (p) {
-        const payload = { name, number, height, position: String(fd.get('position')), grade: String(fd.get('grade')) };
+        const payload = { name, number, height, position: String(fd.get('position')), grade: String(fd.get('grade')), gender: String(fd.get('gender') || '') };
         if (CloudOn()) {
           try {
             const resp = await window.XGYCloud.push.playerUpdate(p.id, payload);
@@ -6240,7 +6458,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
           const v = Number(fd.get(`skill_${s.key}`));
           skills[s.key] = clamp(roundHalf(Number.isFinite(v) ? v : 5), 0, 10);
         });
-        const payload = { name, number, height, position: String(fd.get('position')), grade: String(fd.get('grade')), skills };
+        const payload = { name, number, height, position: String(fd.get('position')), grade: String(fd.get('grade')), gender: String(fd.get('gender') || ''), skills };
         let np;
         if (CloudOn()) {
           try {
@@ -6500,6 +6718,258 @@ body.sv-mode > *:not(#shareView){display:none !important}
     ta.focus();
   }
 
+  /* ══════════ 从表格导入（收集表 xlsx/csv/粘贴），按姓名合并，支持性别列 ══════════
+     收集表是腾讯文档导出的 xlsx，列名带「（必填）（自动）」后缀；队友填的东西很野：
+     身高带 cm、号码写「无」、男女混编还有重号——全部在这里清洗，别指望队友。 */
+  const SI_COL = {
+    name: /姓名|名字/,
+    number: /号码|球衣|球服/,
+    position: /位置/,
+    grade: /年级/,
+    height: /身高/,
+    gender: /性别|男女/
+  };
+  function siNum(v) {
+    const s = String(v == null ? '' : v).trim();
+    if (!s || /^(无|暂无|待定|-|—|\/)$/.test(s)) return 0;
+    const m = /(\d{1,2})/.exec(s);
+    return m ? Number(m[1]) : 0;
+  }
+  function siHeight(v) {
+    const s = String(v == null ? '' : v).trim().toLowerCase();
+    if (!s) return 0;
+    const m = /([\d.]+)/.exec(s);
+    if (!m) return 0;
+    let n = Number(m[1]);
+    if (n > 0 && n < 3) n = Math.round(n * 100); // 「1.68」按米读
+    return Number.isFinite(n) ? Math.round(n) : 0;
+  }
+  function siGender(v) {
+    const s = String(v || '');
+    return /男/.test(s) ? '男' : /女/.test(s) ? '女' : '';
+  }
+  function siParseCSVLine(line) {
+    const out = [];
+    let cur = '', q = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (q) {
+        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') q = false;
+        else cur += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === ',') { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out;
+  }
+  function siTextRows(text) {
+    const lines = String(text || '').replace(/^\uFEFF/, '').replace(/\r/g, '').split('\n').filter((l) => l.trim());
+    if (!lines.length) return [];
+    const sep = lines[0].includes('\t') ? '\t' : ',';
+    return lines.map((l) => (sep === '\t' ? l.split('\t') : siParseCSVLine(l)).map((c) => c.trim()));
+  }
+  function siMapHeader(row) {
+    const map = {};
+    (row || []).forEach((h, i) => {
+      const s = String(h || '');
+      Object.keys(SI_COL).forEach((k) => { if (map[k] === undefined && SI_COL[k].test(s)) map[k] = i; });
+    });
+    return map;
+  }
+  // rows（二维数组）→ 清洗后的队员列表 + 警告
+  function siExtract(rows) {
+    if (!rows.length) throw new Error('表格是空的');
+    const header = siMapHeader(rows[0]);
+    if (header.name === undefined) throw new Error('第一行没认出「姓名」列——确认导出的是收集表原样，别删表头');
+    const warns = [];
+    const seen = {};
+    const out = [];
+    rows.slice(1).forEach((row, idx) => {
+      const name = String(row[header.name] || '').trim();
+      if (!name) return;
+      const lineNo = idx + 2;
+      const item = {
+        name: name.slice(0, 10),
+        number: header.number !== undefined ? siNum(row[header.number]) : 0,
+        position: header.position !== undefined ? String(row[header.position] || '').trim() : '',
+        grade: header.grade !== undefined ? String(row[header.grade] || '').trim() : '',
+        height: header.height !== undefined ? siHeight(row[header.height]) : 0,
+        gender: header.gender !== undefined ? siGender(row[header.gender]) : ''
+      };
+      const posHit = POSITIONS.find((p) => item.position.includes(p));
+      if (posHit) item.position = posHit;
+      else {
+        if (item.position) warns.push(`第 ${lineNo} 行：${item.name} 的位置「${item.position}」没认出来，先按主攻记`);
+        item.position = '主攻';
+      }
+      const gradeHit = GRADES.find((g) => item.grade.includes(g));
+      if (gradeHit) item.grade = gradeHit;
+      else {
+        if (item.grade) warns.push(`第 ${lineNo} 行：${item.name} 的年级「${item.grade}」没认出来，先按大一记`);
+        item.grade = '大一';
+      }
+      if (!item.number) warns.push(`第 ${lineNo} 行：${item.name} 没填号码，先按 0 记（还没领球衣的话之后补）`);
+      else if (seen[item.number]) warns.push(`${item.number} 号有两个人：${seen[item.number]} 和 ${item.name}——导入后到人员页改一个`);
+      else seen[item.number] = item.name;
+      if (!item.height) warns.push(`第 ${lineNo} 行：${item.name} 没填身高`);
+      out.push(item);
+    });
+    if (!out.length) throw new Error('表格里没读出任何队员（姓名列全是空的？）');
+    return { players: out, warns };
+  }
+  // 性别显示与切换（男女混编，收集表里没这列就当场点）
+  const siGenderNext = (g) => (g === '女' ? '男' : g === '男' ? '' : '女');
+  const siGenderLabel = (g) => (g === '女' ? '♀ 女' : g === '男' ? '♂ 男' : '· 未填');
+
+  function openSheetImport() {
+    openModal('从表格导入队员', `<div class="imp-wrap">
+      <p class="imp-lead">直接选收集表导出的 <b>xlsx</b>；微信里打不开的话，用腾讯文档 / WPS 打开、<b>全选复制</b>，粘到下面也一样。</p>
+      <div class="imp-choice">
+        <label class="btn btn-primary imp-file" for="sheetFile">选择表格文件（.xlsx / .csv）</label>
+        <button type="button" class="btn btn-ghost" id="siPaste">粘贴表格内容</button>
+      </div>
+      <p class="imp-note">按「姓名」认人：表里的人会更新资料，新名字会加进来，没出现的人不动。考勤和技能记录不碰。<br>
+      收集表里没有性别列也没关系，下一步可以逐个点。</p>
+    </div>`, { mid: true });
+    if ($('#siPaste')) $('#siPaste').onclick = () => openSheetPaste();
+  }
+
+  function openSheetPaste() {
+    openModal('粘贴表格内容', `<div class="imp-wrap">
+      <p class="imp-lead">在腾讯文档 / WPS / Excel 里<b>全选复制</b>（连表头一起），粘到这里。认 tab、逗号两种分隔。</p>
+      <textarea class="imp-ta" id="siText" rows="8" placeholder="姓名（必填）	球服号码（必填）	位置（必填）	年级（必填）	身高（必填）&#10;张辰	1	主攻	大三	188"></textarea>
+      <div class="form-foot">
+        <button type="button" class="btn btn-ghost" id="siClip">读剪贴板</button>
+        <button type="button" class="btn btn-primary" id="siGo">解析并预览</button>
+        <button type="button" class="btn btn-ghost" id="siCancel">取消</button>
+      </div>
+    </div>`, { mid: true });
+    const ta = $('#siText');
+    $('#siCancel').onclick = closeModal;
+    $('#siClip').onclick = async () => {
+      try {
+        const t = await navigator.clipboard.readText();
+        if (!t) { toast('剪贴板是空的', 'warn'); return; }
+        ta.value = t;
+        toast('已从剪贴板读入');
+      } catch (e) { toast('读不了剪贴板，长按输入框手动粘贴', 'warn'); }
+    };
+    $('#siGo').onclick = () => {
+      try { openSheetPreview(siExtract(siTextRows(ta.value))); }
+      catch (e) { toast(e && e.message ? e.message : '解析失败', 'warn'); }
+    };
+    setTimeout(() => ta.focus(), 60);
+  }
+
+  function openSheetPreview(extracted) {
+    const list = extracted.players;
+    const plan = list.map((item) => {
+      const same = db.players.filter((p) => p.name === item.name);
+      let target = null;
+      if (same.length === 1) target = same[0];
+      else if (same.length > 1) target = same.find((p) => item.number && p.number === item.number) || null;
+      return { item, target: target ? target.id : null };
+    });
+    const upd = plan.filter((r) => r.target).length;
+    const add = plan.length - upd;
+    const kept = db.players.length - upd;
+    const body = `<div class="imp-wrap">
+      <p class="imp-lead">来源表格里读出 <b>${plan.length}</b> 人：<b>更新 ${upd}</b> · 新增 ${add} · 本机另有 ${kept} 人不在这个表里（保留不动）。</p>
+      ${extracted.warns.length ? `<div class="si-warns">${extracted.warns.map((w) => `<p>⚠ ${esc(w)}</p>`).join('')}</div>` : ''}
+      <div class="si-table">
+        <div class="si-tr si-th"><span>姓名</span><span>号码</span><span>位置</span><span>年级</span><span>身高</span><span>性别</span><span>动作</span></div>
+        ${plan.map((r, i) => `
+          <div class="si-tr">
+            <span><b>${esc(r.item.name)}</b></span>
+            <span>${r.item.number || '—'}</span>
+            <span>${r.item.position}</span>
+            <span>${r.item.grade}</span>
+            <span>${r.item.height || '—'}</span>
+            <span><button type="button" class="si-g g${r.item.gender === '男' ? 'm' : r.item.gender === '女' ? 'f' : ''}" data-i="${i}">${siGenderLabel(r.item.gender)}</button></span>
+            <span class="si-act ${r.target ? 'up' : 'ad'}">${r.target ? `更新 ${esc((getPlayer(r.target) || {}).name || '')}` : '新增'}</span>
+          </div>`).join('')}
+      </div>
+      <div class="form-foot">
+        <button type="button" class="btn btn-ghost" id="siBack">上一步</button>
+        <button type="button" class="btn btn-primary" id="siCommit">确认导入（更新 ${upd} · 新增 ${add}）</button>
+      </div>
+    </div>`;
+    openModal('确认导入', body, { wide: true });
+    $$('.si-g').forEach((btn) => {
+      btn.onclick = () => {
+        const r = plan[Number(btn.dataset.i)];
+        r.item.gender = siGenderNext(r.item.gender);
+        btn.textContent = siGenderLabel(r.item.gender);
+        btn.className = `si-g g${r.item.gender === '男' ? 'm' : r.item.gender === '女' ? 'f' : ''}`;
+      };
+    });
+    $('#siBack').onclick = () => openSheetImport();
+    $('#siCommit').onclick = async () => {
+      const cloud = CloudOn();
+      const btn = $('#siCommit');
+      btn.disabled = true;
+      let done = 0, failed = 0, nUp = 0, nAdd = 0;
+      for (const row of plan) {
+        const it = row.item;
+        try {
+          if (row.target) {
+            const p = getPlayer(row.target);
+            const payload = {
+              name: it.name,
+              number: it.number || p.number,
+              position: it.position,
+              grade: it.grade,
+              height: it.height || p.height,
+              gender: it.gender || p.gender
+            };
+            if (cloud) Object.assign(p, normalizePlayer((await window.XGYCloud.push.playerUpdate(p.id, payload)).player));
+            else { Object.assign(p, payload); p.updatedAt = Date.now(); }
+            nUp += 1;
+          } else {
+            const payload = {
+              name: it.name, number: it.number, position: it.position, grade: it.grade,
+              height: it.height, gender: it.gender,
+              skills: SKILLS.reduce((o, s) => { o[s.key] = 5; return o; }, {})
+            };
+            const np = cloud
+              ? normalizePlayer((await window.XGYCloud.push.playerCreate(payload)).player)
+              : normalizePlayer({ id: uid('p'), ...payload, createdAt: Date.now(), updatedAt: Date.now() });
+            db.players.push(np);
+            nAdd += 1;
+          }
+          done += 1;
+        } catch (err) { failed += 1; }
+      }
+      save(); closeModal(); renderRoster(); renderDashboard(); renderSidebar(); renderActivity();
+      if (state.page !== 'roster') go('roster');
+      toast(failed ? `完成 ${done} 人，${failed} 人失败` : `已更新 ${nUp} 人、新增 ${nAdd} 人，技能和考勤没动`);
+    };
+  }
+
+  async function handleSheetFile(file) {
+    if (!file) return;
+    const name = file.name || '表格';
+    try {
+      let rows;
+      if (/\.csv$/i.test(name)) {
+        rows = siTextRows(await file.text());
+      } else {
+        if (typeof window.XGYXlsx === 'undefined') throw new Error('表格解析模块没加载');
+        const wb = await window.XGYXlsx.read(await file.arrayBuffer());
+        // 多个子表时选数据最多的那个（收集表通常只有一个）
+        const sh = wb.sheets.slice().sort((a, b) => b.rows.length - a.rows.length)[0];
+        rows = sh.rows;
+      }
+      openSheetPreview(siExtract(rows));
+    } catch (e) {
+      toast(e && e.message ? `${name}：${e.message}` : `${name} 解析失败`, 'warn');
+    } finally {
+      $('#sheetFile').value = '';
+    }
+  }
+
   function openPlayer(id) {
     const p = getPlayer(id);
     if (!p) return;
@@ -6515,7 +6985,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
           <span class="u-avatar" style="--a:${a};--b:${b}">${esc(p.name[0] || '?')}</span>
           <div>
             <h3>${esc(p.name)}</h3>
-            <p>${p.position} · ${p.grade} · ${p.height}cm</p>
+            <p>${p.position} · ${p.grade}${p.gender ? " · " + p.gender : ""} · ${p.height ? p.height + "cm" : "身高—"}</p>
             <div class="dr-tags"><span class="dr-tag v">${p.position}</span><span class="dr-tag">${p.number} 号</span><span class="dr-tag">${overall(p).toFixed(1)} 分</span></div>
           </div>
         </div>
@@ -8555,7 +9025,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
       { kind: '操作', icon: '⚙', title: '训练模板', sub: '修改固定训练时间与地点', run: openSettings },
       { kind: '设置', icon: '◐', title: '主题色', sub: '极光 / 深海 / 松林 / 落日 / 樱粉 / 石墨', run: openTheme },
       { kind: '操作', icon: '⤓', title: '导出备份', sub: '下载 JSON 数据文件', run: exportData },
-      ...db.players.map((p) => ({ kind: '队员', icon: String(p.number), title: p.name, sub: `${p.position} · ${p.grade} · ${p.height}cm`, run: () => openPlayer(p.id) }))
+      ...db.players.map((p) => ({ kind: '队员', icon: String(p.number), title: p.name, sub: `${p.position} · ${p.grade} · ${p.height ? p.height + "cm" : "身高—"}${p.gender ? " · " + p.gender : ""}`, run: () => openPlayer(p.id) }))
     ];
   }
 
@@ -8610,6 +9080,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
         const targetMonday = state.page === 'dashboard' ? getMonday(new Date()) : state.weekMonday;
         if (action === 'add-player') openPlayerForm(null, { position: a.dataset.position });
         else if (action === 'bulk-import') openBulkImport();
+        else if (action === 'sheet-import') openSheetImport();
         else if (action === 'add-session') openSessionModal(null, targetMonday, { isNew: true });
         else if (action === 'reset-week') resetWeek(targetMonday);
         else if (action === 'export') exportData();
@@ -8782,6 +9253,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     });
 
     $('#importFile').addEventListener('change', (e) => handleImportFile(e.target.files[0]));
+    $('#sheetFile').addEventListener('change', (e) => handleSheetFile(e.target.files[0]));
 
     $$('.card-spot').forEach((card) => {
       card.addEventListener('pointermove', (e) => {

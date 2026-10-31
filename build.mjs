@@ -9,11 +9,13 @@ const cloud = fs.readFileSync(path.join(dir, 'cloud.js'), 'utf8');
 const share = fs.readFileSync(path.join(dir, 'share.js'), 'utf8');
 const card = fs.readFileSync(path.join(dir, 'card.js'), 'utf8');
 const qr = fs.readFileSync(path.join(dir, 'qr.js'), 'utf8');
+const xlsx = fs.readFileSync(path.join(dir, 'xlsx.js'), 'utf8');
 
 const out = html
   .replace('<link rel="stylesheet" href="style.css">', () => `<style>\n${css}\n</style>`)
   .replace('<script src="cloud.js"></script>', () => `<script>\n${cloud}\n</script>`)
   .replace('<script src="qr.js"></script>', () => `<script>\n${qr}\n</script>`)
+  .replace('<script src="xlsx.js"></script>', () => `<script>\n${xlsx}\n</script>`)
   .replace('<script src="card.js"></script>', () => `<script>\n${card}\n</script>`)
   .replace('<script src="share.js"></script>', () => `<script>\n${share}\n</script>`)
   .replace('<script src="app.js"></script>', () => `<script>\n${js}\n</script>`)

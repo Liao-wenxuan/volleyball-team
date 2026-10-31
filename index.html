@@ -581,6 +581,7 @@
       <div class="social-row" id="footerActions">
         <button class="social-btn" style="--brand:#37e39b" data-action="export" data-tip="导出 JSON 备份"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></span><span class="sb-txt">导出备份</span></button>
         <button class="social-btn" style="--brand:var(--violet)" data-action="template" data-tip="训练模板"><span class="sb-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="sb-txt">训练模板</span></button>
+        <button class="social-btn" style="--brand:#7b6cff" data-action="sheet-import" data-tip="收集表 xlsx 一键导入"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h10M4 19h7"/><path d="M17 13v6M14.5 16.5l2.5 2.5 2.5-2.5"/></svg></span><span class="sb-txt">表格导入</span></button>
         <button class="social-btn" style="--brand:var(--cyan)" data-action="add-player" data-tip="添加队员"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="sb-txt">添加队员</span></button>
         <button class="social-btn" style="--brand:#ffbb55" data-action="help" data-tip="使用说明"><span class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7v.5"/><path d="M12 17h.01"/></svg></span><span class="sb-txt">使用说明</span></button>
       </div>
@@ -632,9 +633,12 @@
      也不能靠 JS 去 click 一个移出屏幕的 input——安卓 PWA 独立窗口会直接吞掉，
      表现就是「点了完全没反应」。所以入口用 <label for> 原生触发，这个元素只做兜底。 -->
 <input type="file" id="importFile" class="file-ghost" tabindex="-1" aria-hidden="true">
+<!-- 收集表 xlsx 导入用：同样不用 accept（安卓选择器按 MIME 过滤会坑）、不用 hidden（PWA 吞点击） -->
+<input type="file" id="sheetFile" class="file-ghost" tabindex="-1" aria-hidden="true">
 
 <script src="cloud.js"></script>
 <script src="qr.js"></script>
+<script src="xlsx.js"></script>
 <script src="card.js"></script>
 <script src="share.js"></script>
 <script src="app.js"></script>

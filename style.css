@@ -1683,6 +1683,29 @@ kbd{
 /* 只读的导入链接：字小、能换行，长链接一眼看到头和尾 */
 .imp-ta-link{min-height:84px;font-size:10.5px;line-height:1.55;word-break:break-all;color:var(--text-2)}
 
+/* 收集表导入：警告区 + 预览表（平板上用，行高放宽）+ 性别切换 */
+.si-warns{margin-top:10px;padding:9px 12px;border-radius:12px;background:rgba(255,187,85,.08);
+  border:1px solid rgba(255,187,85,.25)}
+.si-warns p{font-size:10.5px;line-height:1.7;color:#ffcf8e}
+.si-table{margin-top:10px;border:1px solid var(--ov080);border-radius:12px;overflow:hidden;max-height:46vh;overflow-y:auto}
+.si-tr{display:grid;grid-template-columns:1.2fr .6fr .8fr .6fr .7fr .9fr .9fr;align-items:center;
+  padding:8px 12px;font-size:11px;border-bottom:1px solid var(--ov050);gap:4px}
+.si-tr:last-child{border-bottom:0}
+.si-th{background:var(--ov030);font-size:9.5px;color:var(--muted);letter-spacing:.06em;position:sticky;top:0}
+.si-tr span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.si-g{border:1px solid var(--ov080);background:var(--ov030);color:var(--muted);border-radius:8px;
+  padding:3px 9px;font:inherit;font-size:10px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.si-g.gm{color:#6fb8ff;border-color:rgba(111,184,255,.4)}
+.si-g.gf{color:#ff9ec6;border-color:rgba(255,158,198,.4)}
+.si-act{font-size:10px;text-align:right}
+.si-act.up{color:var(--muted)}
+.si-act.ad{color:#37e39b}
+
+/* 队员卡名字旁的性别标记 */
+.pc-g{font-style:normal;font-size:11px;margin-left:5px;vertical-align:1px}
+.pc-g.gm{color:#6fb8ff}
+.pc-g.gf{color:#ff9ec6}
+
 /* 弹窗宽度 */
 .modal.mid{width:720px}
 .modal.wide{width:min(980px,96vw)}
