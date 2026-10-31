@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-31 · r20'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-31 · r21'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -2523,10 +2523,15 @@
       const payload = await packBackup({ ...db, savedAt: Date.now() });
       const link = location.href.split('#')[0] + '#backup=' + payload;
       const long = link.length > 8000;
-      openModal('生成导入链接', `<div class="imp-wrap">
-        <p class="imp-lead">在平板上打开这条链接，会直接弹出导入窗口，<b>不用再传文件</b>。发给自己的微信「文件传输助手」最顺手。</p>
+      openModal('发给另一台设备', `<div class="imp-wrap">
+        <p class="imp-lead">这条链接里已经带着全部数据，对方<b>不用再要文件</b>。</p>
         <textarea class="imp-ta imp-ta-link" id="lnkOut" rows="4" readonly>${esc(link)}</textarea>
-        <p class="imp-note">${link.length} 字符${long ? ' · <b>偏长了</b>，聊天软件可能截断，建议改用「导出 JSON」传文件' : ''}</p>
+        <p class="imp-note">${link.length} 字符${long ? ' · <b>偏长了</b>，聊天软件可能截断，建议改用「导出备份」传文件' : ''}</p>
+        <div class="imp-steps">
+          <p><b>1.</b> 复制这条链接，发到自己的微信「文件传输助手」。</p>
+          <p><b>2.</b> 在另一台设备上<b>长按这条链接 → 复制</b>。<b>不要直接点开</b>——点开会跑进微信自带的浏览器，数据进不了这个 App。</p>
+          <p><b>3.</b> 打开这个 App → 头像 → 导入备份 → <b>用链接导入</b> → 粘贴 → 解析。</p>
+        </div>
         <div class="form-foot">
           <button type="button" class="btn btn-primary" id="lnkCopy">复制链接</button>
           <button type="button" class="btn btn-ghost" id="lnkClose">关闭</button>
@@ -2536,7 +2541,7 @@
       $('#lnkCopy').onclick = async () => {
         try {
           await navigator.clipboard.writeText(link);
-          toast('链接已复制，发到平板打开就行');
+          toast('链接已复制，发到微信文件传输助手');
         } catch (e) {
           const t = $('#lnkOut');
           t.focus(); t.select();
@@ -3993,6 +3998,7 @@
     $('#menuTheme').onclick = () => { closePopovers(); openTheme(); };
     $('#menuShare').onclick = () => { closePopovers(); openShareModal(); };
     $('#menuExport').onclick = () => { closePopovers(); exportData(); };
+    $('#menuLinkShare').onclick = () => { closePopovers(); openLinkExport(); };
     $('#menuImport').onclick = () => { closePopovers(); openImportChooser(); };
     $('#menuClear').onclick = () => { closePopovers(); clearAllData(); };
     $('#menuAbout').onclick = () => { closePopovers(); openHelp(); };

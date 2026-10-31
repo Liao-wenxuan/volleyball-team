@@ -1683,6 +1683,11 @@ kbd{
 .imp-alert{margin:0;padding:9px 12px;border-radius:10px;font-size:11px;line-height:1.7;
   color:#ffcf8e;background:rgba(255,187,85,.08);border:1px solid rgba(255,187,85,.25)}
 .imp-alert b{color:#ffb350}
+/* 「发给另一台设备」里的三步操作清单 */
+.imp-steps{display:flex;flex-direction:column;gap:5px;padding:9px 12px;border-radius:10px;
+  background:var(--ov030);border:1px solid var(--ov080)}
+.imp-steps p{font-size:10.5px;line-height:1.75;color:var(--text-2)}
+.imp-steps b{color:#fff}
 /* 点了文件按钮却没弹选择器时，2.6 秒后顶出来的兜底提示 */
 .imp-hint{margin:0;padding:8px 11px;border-radius:9px;font-size:10.5px;line-height:1.7;
   color:#ffcf8e;background:rgba(255,187,85,.07);border:1px dashed rgba(255,187,85,.32)}

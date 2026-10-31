@@ -1699,6 +1699,11 @@ kbd{
 .imp-alert{margin:0;padding:9px 12px;border-radius:10px;font-size:11px;line-height:1.7;
   color:#ffcf8e;background:rgba(255,187,85,.08);border:1px solid rgba(255,187,85,.25)}
 .imp-alert b{color:#ffb350}
+/* 「发给另一台设备」里的三步操作清单 */
+.imp-steps{display:flex;flex-direction:column;gap:5px;padding:9px 12px;border-radius:10px;
+  background:var(--ov030);border:1px solid var(--ov080)}
+.imp-steps p{font-size:10.5px;line-height:1.75;color:var(--text-2)}
+.imp-steps b{color:#fff}
 /* 点了文件按钮却没弹选择器时，2.6 秒后顶出来的兜底提示 */
 .imp-hint{margin:0;padding:8px 11px;border-radius:9px;font-size:10.5px;line-height:1.7;
   color:#ffcf8e;background:rgba(255,187,85,.07);border:1px dashed rgba(255,187,85,.32)}
@@ -2580,6 +2585,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
             <button id="menuTheme"><span class="up-ico"><svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><circle cx="12" cy="16.5" r="3"/></svg></span><span>主题色</span><i>›</i></button>
             <button id="menuShare"><span class="up-ico"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span><span>分享队伍动态</span><i>›</i></button>
             <button id="menuExport"><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></span><span>导出备份</span><i>›</i></button>
+            <button id="menuLinkShare"><span class="up-ico"><svg viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="9" height="7" rx="1.6"/><rect x="12.5" y="12.5" width="9" height="7" rx="1.6"/><path d="M11 11l2 1.5"/></svg></span><span>发给另一台设备</span><i>›</i></button>
             <button id="menuImport"><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M12 21V9M7 14l5-5 5 5"/><path d="M4 3h16"/></svg></span><span>导入备份</span><i>›</i></button>
             <button class="danger" id="menuClear"><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/></svg></span><span>清空所有数据</span><i>›</i></button>
           </div>
@@ -5356,7 +5362,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-31 · r20'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-31 · r21'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -7862,10 +7868,15 @@ body.sv-mode > *:not(#shareView){display:none !important}
       const payload = await packBackup({ ...db, savedAt: Date.now() });
       const link = location.href.split('#')[0] + '#backup=' + payload;
       const long = link.length > 8000;
-      openModal('生成导入链接', `<div class="imp-wrap">
-        <p class="imp-lead">在平板上打开这条链接，会直接弹出导入窗口，<b>不用再传文件</b>。发给自己的微信「文件传输助手」最顺手。</p>
+      openModal('发给另一台设备', `<div class="imp-wrap">
+        <p class="imp-lead">这条链接里已经带着全部数据，对方<b>不用再要文件</b>。</p>
         <textarea class="imp-ta imp-ta-link" id="lnkOut" rows="4" readonly>${esc(link)}</textarea>
-        <p class="imp-note">${link.length} 字符${long ? ' · <b>偏长了</b>，聊天软件可能截断，建议改用「导出 JSON」传文件' : ''}</p>
+        <p class="imp-note">${link.length} 字符${long ? ' · <b>偏长了</b>，聊天软件可能截断，建议改用「导出备份」传文件' : ''}</p>
+        <div class="imp-steps">
+          <p><b>1.</b> 复制这条链接，发到自己的微信「文件传输助手」。</p>
+          <p><b>2.</b> 在另一台设备上<b>长按这条链接 → 复制</b>。<b>不要直接点开</b>——点开会跑进微信自带的浏览器，数据进不了这个 App。</p>
+          <p><b>3.</b> 打开这个 App → 头像 → 导入备份 → <b>用链接导入</b> → 粘贴 → 解析。</p>
+        </div>
         <div class="form-foot">
           <button type="button" class="btn btn-primary" id="lnkCopy">复制链接</button>
           <button type="button" class="btn btn-ghost" id="lnkClose">关闭</button>
@@ -7875,7 +7886,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
       $('#lnkCopy').onclick = async () => {
         try {
           await navigator.clipboard.writeText(link);
-          toast('链接已复制，发到平板打开就行');
+          toast('链接已复制，发到微信文件传输助手');
         } catch (e) {
           const t = $('#lnkOut');
           t.focus(); t.select();
@@ -9332,6 +9343,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     $('#menuTheme').onclick = () => { closePopovers(); openTheme(); };
     $('#menuShare').onclick = () => { closePopovers(); openShareModal(); };
     $('#menuExport').onclick = () => { closePopovers(); exportData(); };
+    $('#menuLinkShare').onclick = () => { closePopovers(); openLinkExport(); };
     $('#menuImport').onclick = () => { closePopovers(); openImportChooser(); };
     $('#menuClear').onclick = () => { closePopovers(); clearAllData(); };
     $('#menuAbout').onclick = () => { closePopovers(); openHelp(); };
