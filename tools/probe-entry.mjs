@@ -71,5 +71,12 @@ await evalJS(`document.querySelector('#modalClose').click(); 'x'`); await sleep(
 await evalJS(`document.querySelector('.nav-item[data-page="roster"]').click(); 'x'`); await sleep(400);
 await evalJS(`document.querySelector('[data-action="sheet-import"]').click(); 'x'`); await sleep(500);
 await shot('r18-wx-entry.png');
+// 普通浏览器（PWA 场景）：点一下不选文件，等 3 秒看兜底提示
+await send('Emulation.setUserAgentOverride', { userAgent: '' });
+await evalJS(`document.querySelector('#modalClose').click(); 'x'`); await sleep(300);
+await evalJS(`document.querySelector('[data-action="sheet-import"]').click(); 'x'`); await sleep(500);
+await evalJS(`document.querySelector('#sheetFile').click(); 'x'`);
+await sleep(3000);
+await shot('r19-stuck-tip.png');
 ws.close(); edge.kill(); server.close();
 setTimeout(() => process.exit(0), 300);

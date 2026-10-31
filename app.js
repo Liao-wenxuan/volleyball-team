@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-31 · r19'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-10-31 · r20'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -1590,18 +1590,25 @@
     </div>`, { mid: true });
     const ta = $('#siText');
     $('#siCancel').onclick = closeModal;
+    /* 粘完自动解析：从腾讯文档复制过来就该直接看见预览，不用再点一次「解析并预览」 */
+    const tryGo = (auto) => {
+      let rows;
+      try { rows = siTextRows(ta.value); }
+      catch (e) { if (!auto) toast(e && e.message ? e.message : '解析失败', 'warn'); return false; }
+      if (rows.length < 2) { if (!auto) toast('至少要有表头 + 一行数据', 'warn'); return false; }
+      try { openSheetPreview(siExtract(rows)); return true; }
+      catch (e) { if (!auto) toast(e && e.message ? e.message : '解析失败', 'warn'); return false; }
+    };
     $('#siClip').onclick = async () => {
       try {
         const t = await navigator.clipboard.readText();
         if (!t) { toast('剪贴板是空的', 'warn'); return; }
         ta.value = t;
-        toast('已从剪贴板读入');
+        if (!tryGo(true)) toast('已从剪贴板读入，点「解析并预览」看看');
       } catch (e) { toast('读不了剪贴板，长按输入框手动粘贴', 'warn'); }
     };
-    $('#siGo').onclick = () => {
-      try { openSheetPreview(siExtract(siTextRows(ta.value))); }
-      catch (e) { toast(e && e.message ? e.message : '解析失败', 'warn'); }
-    };
+    $('#siGo').onclick = () => tryGo(false);
+    ta.addEventListener('paste', () => setTimeout(() => tryGo(true), 60));
     setTimeout(() => ta.focus(), 60);
   }
 
@@ -3285,7 +3292,7 @@
 
   function openPasteImport() {
     openModal('粘贴备份导入', `<div class="imp-wrap">
-      <p class="imp-lead">把备份文件用文本方式打开、全选复制，粘到这里。平板上文件选择器常常翻不到 .json，这是绕过去的办法。</p>
+      <p class="imp-lead">把备份文件用文本方式打开、全选复制，粘到这里——<b>粘完会自动解析</b>，不用再点按钮。平板上文件选择器常常翻不到 .json，这是绕过去的办法。</p>
       <textarea class="imp-ta" id="impText" rows="8" placeholder='{"version":2,"players":[...]}'></textarea>
       <div class="form-foot">
         <button type="button" class="btn btn-ghost" id="impClip">读剪贴板</button>
@@ -3295,23 +3302,37 @@
     </div>`, { mid: true });
     const ta = $('#impText');
     $('#impPasteCancel').onclick = closeModal;
+    /* 粘完就自动试一次，成了直接进预览（用户从微信里复制一大段 JSON，
+       本来就不该再让他找「解析」按钮）。失败不吵，保留手动按钮。 */
+    const doParse = (auto) => {
+      const t = String(ta.value || '').trim().replace(/^\uFEFF/, '');
+      if (!t) { if (!auto) toast('先把备份内容粘进来', 'warn'); return false; }
+      let raw;
+      try { raw = JSON.parse(t); }
+      catch (e) {
+        if (auto) return false;
+        // 微信/QQ 单条消息有长度上限，长备份会被悄悄截断
+        const looksCut = /^[\s{[]/.test(t) && !/[\s}\]]$/.test(t);
+        toast(looksCut
+          ? '内容像是被截断了（末尾没闭合）——改用「导出为链接」，或者在浏览器里导入文件'
+          : '这不是有效的 JSON，检查有没有粘漏', 'warn');
+        return false;
+      }
+      openImportDialog(raw, '粘贴的内容');
+      return true;
+    };
     $('#impClip').onclick = async () => {
       try {
         const t = await navigator.clipboard.readText();
         if (!t) { toast('剪贴板是空的', 'warn'); return; }
         ta.value = t;
-        toast('已从剪贴板读入');
+        if (!doParse(true)) toast('已从剪贴板读入，点「解析」看看');
       } catch (e) {
         toast('读不了剪贴板，长按输入框手动粘贴', 'warn');
       }
     };
-    $('#impParse').onclick = () => {
-      const t = String(ta.value || '').trim().replace(/^\uFEFF/, '');
-      if (!t) { toast('先把备份内容粘进来', 'warn'); return; }
-      let raw;
-      try { raw = JSON.parse(t); } catch (e) { toast('这不是有效的 JSON，检查有没有粘漏', 'warn'); return; }
-      openImportDialog(raw, '粘贴的内容');
-    };
+    $('#impParse').onclick = () => doParse(false);
+    ta.addEventListener('paste', () => setTimeout(() => doParse(true), 60));
   }
 
   function readFileText(file) {

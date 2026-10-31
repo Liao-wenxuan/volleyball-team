@@ -134,10 +134,9 @@ await evalJS(`document.querySelector('[data-action="sheet-import"]').click(); 'x
 await sleep(400);
 await evalJS(`document.querySelector('#siPaste').click(); 'x'`);
 await sleep(400);
-// 粘贴路径顺带验证性别列识别
-await evalJS(`document.querySelector('#siText').value = ${JSON.stringify('姓名（必填）\t球服号码（必填）\t位置（必填）\t性别\t年级（必填）\t身高（必填）\n宋智宇\t25\t自由人\t男\t大三\t177\n周雨欣\t66\t接应\t女\t大一\t169\n新面孔\t88\t副攻\t男\t大一\t180')}; 'x'`);
-await evalJS(`document.querySelector('#siGo').click(); 'x'`);
-await sleep(900);
+// 粘贴路径顺带验证性别列识别 + 粘完自动解析（r20：不再点「解析并预览」）
+await evalJS(`(() => { const t = document.querySelector('#siText'); t.value = ${JSON.stringify('姓名（必填）\t球服号码（必填）\t位置（必填）\t性别\t年级（必填）\t身高（必填）\n宋智宇\t25\t自由人\t男\t大三\t177\n周雨欣\t66\t接应\t女\t大一\t169\n新面孔\t88\t副攻\t男\t大一\t180')}; t.dispatchEvent(new Event('paste')); })(); 'x'`);
+await sleep(800);
 const pv2 = await evalJS(`(() => {
   const rows = [...document.querySelectorAll('.si-tr')].slice(1);
   const acts = [...document.querySelectorAll('.si-act')].map(e => e.textContent.trim());

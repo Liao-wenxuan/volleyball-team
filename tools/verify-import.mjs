@@ -226,14 +226,14 @@ try {
   await sleep(400);
   const pasteOpen = await evalJS(`!!document.querySelector('#impText')`);
   check('粘贴入口能打开', pasteOpen === true);
-  await evalJS(`document.querySelector('#impText').value = ${JSON.stringify(JSON.stringify(B))}; 'x'`);
-  await evalJS(`document.querySelector('#impParse').click(); 'x'`);
-  await sleep(600);
+  // r20：粘完自动解析，不用再找「解析」按钮
+  await evalJS(`(() => { const t = document.querySelector('#impText'); t.value = ${JSON.stringify(JSON.stringify(B))}; t.dispatchEvent(new Event('paste')); })(); 'x'`);
+  await sleep(700);
   const pasteDlg = await evalJS(`(() => ({
     go: !!document.querySelector('#impGo'),
     lead: (document.querySelector('.imp-lead') || {}).textContent || ''
   }))()`);
-  check('粘贴的 JSON 能解析进导入弹窗', pasteDlg.go === true, pasteDlg.lead.replace(/\s+/g, ' ').slice(0, 40));
+  check('粘贴完自动解析进导入弹窗', pasteDlg.go === true, pasteDlg.lead.replace(/\s+/g, ' ').slice(0, 40));
 
   console.log(failed ? `\n${failed} 项失败` : '\n全部通过');
 } catch (e) {
