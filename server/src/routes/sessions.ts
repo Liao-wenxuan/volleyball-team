@@ -6,7 +6,9 @@ import { requireAuth, requireRole, type AuthedRequest } from '../auth';
 import { STATES, ensureWeek, getSession } from '../repo';
 
 const router = Router();
-router.use(requireAuth);
+// 这个路由挂在 /api 根上，不能 router.use(requireAuth)：那会把所有 /api/* 都拦成 401，
+// 连「接口不存在」的 404 都到不了。只对真正的会话路径生效。
+router.use(['/weeks', '/sessions'], requireAuth);
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -29,7 +31,7 @@ const createSchema = z.object({
 /** 加练：模板以外的临时训练 */
 router.post(
   '/sessions',
-  requireRole('owner', 'editor'),
+  requireRole('admin', 'coach'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(createSchema, req.body);
@@ -55,7 +57,7 @@ const patchSchema = z.object({
 /** 改某一次训练：时间、地点、取消（只影响这一周，不动模板） */
 router.patch(
   '/sessions/:id',
-  requireRole('owner', 'editor'),
+  requireRole('admin', 'coach'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(patchSchema, req.body);
@@ -78,7 +80,7 @@ router.patch(
   })
 );
 
-router.delete('/sessions/:id', requireRole('owner', 'editor'), (req, res) => {
+router.delete('/sessions/:id', requireRole('admin', 'coach'), (req, res) => {
   const r = req as unknown as AuthedRequest;
   const info = db.prepare('DELETE FROM sessions WHERE team_id = ? AND id = ?').run(r.teamId, req.params.id);
   if (info.changes === 0) throw new HttpError(404, '训练不存在', 'not_found');
@@ -95,7 +97,7 @@ const attSchema = z.object({ state: z.enum([...STATES] as [string, ...string[]])
  */
 router.put(
   '/sessions/:id/attendance/:playerId',
-  requireRole('owner', 'editor'),
+  requireRole('admin', 'coach'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(attSchema, req.body);
@@ -117,7 +119,7 @@ router.put(
 );
 
 /** 清除一个人的考勤（考勤格循环回「未登记」时调用） */
-router.delete('/sessions/:id/attendance/:playerId', requireRole('owner', 'editor'), (req, res) => {
+router.delete('/sessions/:id/attendance/:playerId', requireRole('admin', 'coach'), (req, res) => {
   const r = req as unknown as AuthedRequest;
   const session = getSession(r.teamId, req.params.id);
   if (!session) throw new HttpError(404, '训练不存在', 'not_found');

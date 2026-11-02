@@ -38,7 +38,7 @@ const batchSchema = z.object({
  */
 router.post(
   '/batch',
-  requireRole('owner', 'editor'),
+  requireRole('admin', 'coach'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(batchSchema, req.body);
@@ -67,7 +67,7 @@ const oneSchema = z.object({
 
 router.post(
   '/players/:id',
-  requireRole('owner', 'editor'),
+  requireRole('admin', 'coach'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(oneSchema, req.body);

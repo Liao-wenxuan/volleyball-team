@@ -40,7 +40,7 @@ router.get('/', (req, res) => {
 
 router.post(
   '/',
-  requireRole('owner', 'editor'),
+  requireRole('admin', 'coach'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(createSchema, req.body);
@@ -73,7 +73,7 @@ router.post(
 
 router.patch(
   '/:id',
-  requireRole('owner', 'editor'),
+  requireRole('admin', 'coach'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(patchSchema, req.body);
@@ -119,7 +119,7 @@ router.patch(
   })
 );
 
-router.delete('/:id', requireRole('owner', 'editor'), (req, res) => {
+router.delete('/:id', requireRole('admin', 'coach'), (req, res) => {
   const r = req as unknown as AuthedRequest;
   const info = db.prepare('DELETE FROM players WHERE team_id = ? AND id = ?').run(r.teamId, req.params.id);
   if (info.changes === 0) throw new HttpError(404, '队员不存在', 'not_found');

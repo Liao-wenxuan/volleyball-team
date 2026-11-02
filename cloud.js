@@ -34,11 +34,11 @@
   let hooks = null; // app.js 注入：toast/openModal/closeModal/confirm/getDB/save/renderAll/applyServerState/applyWeek/currentMondayKey
   let user = null;  // { id, email, name }
   let team = null;  // { id, name }
-  let role = null;  // 'owner' | 'editor' | 'viewer'
+  let role = null;  // 'admin' 管理 | 'coach' 教练 | 'player' 队员
   let syncingWeeks = new Set();
   let lastViewerWarn = 0;
 
-  const ROLE_LABEL = { owner: '队长', editor: '管理员', viewer: '队员' };
+  const ROLE_LABEL = { admin: '管理员', coach: '教练', player: '队员' };
 
   function base() {
     return (localStorage.getItem(LS.base) || DEFAULT_BASE).replace(/\/+$/, '');
@@ -50,10 +50,10 @@
     return !!token() && !!user;
   }
   function isViewer() {
-    return enabled() && role === 'viewer';
+    return enabled() && role === 'player';
   }
   function canManage() {
-    return enabled() && (role === 'owner' || role === 'editor');
+    return enabled() && (role === 'admin' || role === 'coach');
   }
 
   async function api(path, opts) {
@@ -90,16 +90,19 @@
       user = null; team = null; role = null;
     }
     if (!token()) { user = null; team = null; role = null; }
+    // 角色枚举换过代（owner/editor/viewer → admin/coach/player）：
+    // 本地存着旧值的浏览器先按无权限处理，attach 里的 pullCore 会用服务器返回的值纠正
+    if (role && !['admin', 'coach', 'player'].includes(role)) role = null;
   }
 
   function saveSession(payload) {
     localStorage.setItem(LS.token, payload.token);
     localStorage.setItem(LS.user, JSON.stringify(payload.user));
     localStorage.setItem(LS.team, JSON.stringify(payload.team));
-    localStorage.setItem(LS.role, payload.role || 'owner');
+    localStorage.setItem(LS.role, payload.role || 'player');
     user = payload.user;
     team = payload.team;
-    role = payload.role || 'owner';
+    role = payload.role || 'player';
     paintBodyClass();
   }
 
@@ -213,27 +216,83 @@
     document.documentElement.classList.add('gate-pass');
   }
 
-  /* 登录/注册的唯一实现：门禁页和顶栏弹窗都调这里，避免两套逻辑走偏 */
-  async function runAuth(mode, vals) {
+  /* 登录的唯一实现：门禁页和顶栏弹窗都调这里，避免两套逻辑走偏。
+     没有注册 —— 账号由管理端发放，新人拿到的是初始密码。 */
+  async function runAuth(vals) {
     const b = String(vals.base || '').trim().replace(/\/+$/, '');
     if (!/^https?:\/\//.test(b)) throw new Error('服务器地址需要以 http(s):// 开头');
     localStorage.setItem(LS.base, b);
 
-    const payload = { email: vals.email, password: vals.password };
-    if (mode === 'register') {
-      payload.name = vals.name || '教练';
-      const invite = String(vals.inviteCode || '').trim().toUpperCase();
-      if (invite) payload.inviteCode = invite;
-      else payload.teamName = vals.teamName || '我的排球队';
-    }
-
-    const data = await api(`/api/auth/${mode}`, { method: 'POST', body: payload });
+    const data = await api('/api/auth/login', {
+      method: 'POST',
+      body: { username: vals.username, password: vals.password }
+    });
     saveSession(data);
     localStorage.removeItem(LS.skip);
+    paintBodyClass();
+    paintCloudUI();
+    // 首登必须先改密：数据等密码换成自己的再拉
+    if (data.mustChangePassword) return data;
+    await finishLogin();
+    return data;
+  }
+
+  async function finishLogin() {
     await pullCore();
     await syncWeek(currentMondayKey(), true);
     paintCloudUI();
-    return data;
+    hideGate();
+    hooks.renderAll();
+  }
+
+  /* ── 首登强制改密：直接在门禁卡片里换屏，没有「稍后再说」 ── */
+  let pendingPassword = '';
+
+  function showForcePassword(password) {
+    pendingPassword = password;
+    const login = document.getElementById('gateLoginPane');
+    const pw = document.getElementById('gatePwPane');
+    if (!login || !pw) return;
+    login.hidden = true;
+    pw.hidden = false;
+    const sub = document.getElementById('gateSub');
+    if (sub) sub.textContent = '第一次登录，先设个自己的密码';
+    const inp = document.querySelector('#pwGateForm [name=newPassword]');
+    if (inp) inp.focus();
+  }
+
+  function bindForcePassword() {
+    const form = document.getElementById('pwGateForm');
+    if (!form) return;
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const err = document.getElementById('pwGateErr');
+      const btn = document.getElementById('pwGateSubmit');
+      const np = String(fd.get('newPassword') || '');
+      if (np !== String(fd.get('again') || '')) {
+        err.hidden = false;
+        err.textContent = '两次输入的新密码不一样';
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = '保存中…';
+      err.hidden = true;
+      try {
+        await api('/api/auth/password', {
+          method: 'POST',
+          body: { oldPassword: pendingPassword, newPassword: np }
+        });
+        pendingPassword = '';
+        await finishLogin();
+        hooks.toast('密码已设置，欢迎回来');
+      } catch (ex) {
+        err.hidden = false;
+        err.textContent = ex.message;
+        btn.disabled = false;
+        btn.textContent = '保存并进入';
+      }
+    };
   }
 
   function bindGate() {
@@ -244,47 +303,38 @@
     const baseInput = form.querySelector('[name=base]');
     if (baseInput) baseInput.value = base();
 
-    let mode = 'login';
-    g.querySelectorAll('[data-gate-tab]').forEach((tab) => {
-      tab.onclick = () => {
-        mode = tab.dataset.gateTab;
-        g.querySelectorAll('[data-gate-tab]').forEach((t) => t.classList.toggle('on', t === tab));
-        g.querySelectorAll('.gate-reg').forEach((el) => { el.hidden = mode !== 'register'; });
-        document.getElementById('gateSubmit').textContent = mode === 'register' ? '注册并进入' : '登录';
-        document.getElementById('gateErr').hidden = true;
-        const pw = form.querySelector('[name=password]');
-        if (pw) pw.setAttribute('autocomplete', mode === 'register' ? 'new-password' : 'current-password');
-      };
-    });
-
     form.onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
       const btn = document.getElementById('gateSubmit');
       const err = document.getElementById('gateErr');
-      const idle = mode === 'register' ? '注册并进入' : '登录';
       btn.disabled = true;
-      btn.textContent = '连接中…';
+      btn.textContent = '登录中…';
       err.hidden = true;
       try {
-        const data = await runAuth(mode, {
+        const password = String(fd.get('password') || '');
+        const data = await runAuth({
           base: fd.get('base'),
-          email: String(fd.get('email') || '').trim(),
-          password: String(fd.get('password') || ''),
-          name: String(fd.get('name') || '').trim(),
-          teamName: String(fd.get('teamName') || '').trim(),
-          inviteCode: String(fd.get('inviteCode') || '').trim()
+          username: String(fd.get('username') || '').trim().toLowerCase(),
+          password
         });
+        btn.disabled = false;
+        btn.textContent = '登录';
+        if (data.mustChangePassword) {
+          showForcePassword(password);
+          return;
+        }
         hideGate();
-        hooks.renderAll();
-        hooks.toast(`已连接云端：${data.team.name}（${ROLE_LABEL[data.role] || data.role}）`);
+        hooks.toast(`已登录：${data.team.name}（${ROLE_LABEL[data.role] || data.role}）`);
       } catch (ex) {
         err.hidden = false;
         err.textContent = ex.message;
         btn.disabled = false;
-        btn.textContent = idle;
+        btn.textContent = '登录';
       }
     };
+
+    bindForcePassword();
 
     const skip = document.getElementById('gateSkip');
     if (skip) {
@@ -297,7 +347,7 @@
     }
   }
 
-  /* ── 登录 / 注册弹窗 ── */
+  /* ── 登录弹窗（本机模式下想连云端时用） ── */
   function openLogin() {
     if (!hooks) return;
     if (enabled()) {
@@ -306,58 +356,44 @@
     }
 
     const body = `<div class="cloud-auth">
-      <div class="cloud-tabs">
-        <button type="button" class="cloud-tab on" data-tab="login">登录</button>
-        <button type="button" class="cloud-tab" data-tab="register">注册</button>
-      </div>
       <form id="cloudForm"><div class="form-grid">
-        ${field('服务器', `<input name="base" value="${escHtml(base())}" placeholder="https://your-app.example.com" required>`)}
-        <div class="field full cloud-reg" hidden><label>你的名字</label><input name="name" maxlength="20" placeholder="教练"></div>
-        <div class="field full cloud-reg" hidden><label>球队名 <small>（有邀请码可不填）</small></label><input name="teamName" maxlength="30" placeholder="信工院排球队"></div>
-        <div class="field full cloud-reg" hidden><label>邀请码 <small>（选填，队员凭码加入已有球队）</small></label><input name="inviteCode" maxlength="6" placeholder="6 位邀请码" style="text-transform:uppercase"></div>
-        ${field('邮箱', '<input name="email" type="email" required placeholder="you@example.com">')}
-        ${field('密码', '<input name="password" type="password" required minlength="6" placeholder="至少 6 位">')}
+        ${field('服务器', `<input name="base" value="${escHtml(base())}" placeholder="https://vb.bscjs.top" required>`)}
+        ${field('用户名', '<input name="username" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="学号或姓名拼音">')}
+        ${field('密码', '<input name="password" type="password" required autocomplete="current-password">')}
       </div>
-      <p class="form-note">云端模式会把队员、考勤、技能、阵型同步到服务器，多台设备（电脑/平板）都能看到同一份数据。凭邀请码注册的队员是只读身份。不登录则仍是本机模式。</p>
+      <p class="form-note">账号由球队管理员发放。还没有账号？找管理员要一个。</p>
       <div class="form-foot"><button type="submit" class="btn btn-primary" id="cloudSubmit">登录并同步</button></div>
       </form>
     </div>`;
-    hooks.openModal('连接云端', body, { mid: true });
+    hooks.openModal('登录云端', body, { mid: true });
 
-    let mode = 'login';
     const form = document.getElementById('cloudForm');
-    document.querySelectorAll('.cloud-tab').forEach((tab) => {
-      tab.onclick = () => {
-        mode = tab.dataset.tab;
-        document.querySelectorAll('.cloud-tab').forEach((t) => t.classList.toggle('on', t === tab));
-        document.querySelectorAll('.cloud-reg').forEach((el) => { el.hidden = mode !== 'register'; });
-        document.getElementById('cloudSubmit').textContent = mode === 'register' ? '注册并同步' : '登录并同步';
-      };
-    });
-
     form.onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
       const btn = document.getElementById('cloudSubmit');
       btn.disabled = true;
-      btn.textContent = '连接中…';
+      btn.textContent = '登录中…';
       try {
-        const data = await runAuth(mode, {
+        const password = String(fd.get('password') || '');
+        const data = await runAuth({
           base: fd.get('base'),
-          email: String(fd.get('email') || '').trim(),
-          password: String(fd.get('password') || ''),
-          name: String(fd.get('name') || '').trim(),
-          teamName: String(fd.get('teamName') || '').trim(),
-          inviteCode: String(fd.get('inviteCode') || '').trim()
+          username: String(fd.get('username') || '').trim().toLowerCase(),
+          password
         });
         hooks.closeModal();
+        if (data.mustChangePassword) {
+          showGate();
+          showForcePassword(password);
+          return;
+        }
         hideGate();
         hooks.renderAll();
-        hooks.toast(`已连接云端：${data.team.name}（${ROLE_LABEL[data.role] || data.role}）`);
+        hooks.toast(`已登录：${data.team.name}（${ROLE_LABEL[data.role] || data.role}）`);
       } catch (err) {
         hooks.toast(err.message, 'warn');
         btn.disabled = false;
-        btn.textContent = mode === 'register' ? '注册并同步' : '登录并同步';
+        btn.textContent = '登录并同步';
       }
     };
   }
@@ -365,13 +401,16 @@
   /* ── 账号弹窗（已登录） ── */
   function openAccount() {
     const roleBadge = `<span class="cloud-role-badge r-${role}">${ROLE_LABEL[role] || role}</span>`;
-    const manageBtn = canManage() ? '<button type="button" class="btn btn-ghost" id="cloudMembers">成员管理</button>' : '';
+    const manageBtn = canManage()
+      ? '<button type="button" class="btn btn-ghost" id="cloudAccounts">账号管理</button>'
+      : '';
+    const initial = (user.name || user.username || '?').slice(0, 1);
     const body = `<div class="cloud-account">
       <div class="cloud-id">
-        <span class="u-avatar xl" style="--a:var(--cyan);--b:var(--violet)">${(user.name || user.email)[0] || '云'}</span>
-        <div><h3>${escHtml(user.name)} ${roleBadge}</h3><p>${escHtml(user.email)} · ${escHtml(team ? team.name : '')}</p></div>
+        <span class="u-avatar xl" style="--a:var(--cyan);--b:var(--violet)">${escHtml(initial)}</span>
+        <div><h3>${escHtml(user.name)} ${roleBadge}</h3><p>@${escHtml(user.username || '')} · ${escHtml(team ? team.name : '')}</p></div>
       </div>
-      <p class="form-note">当前为云端模式：数据实时同步到 ${escHtml(base())}。${isViewer() ? '你的身份是队员（只读），如需编辑请联系管理员。' : ''}退出登录后回到本机数据（本机数据不会被删除）。</p>
+      <p class="form-note">当前为云端模式：数据实时同步到 ${escHtml(base())}。${isViewer() ? '你是队员身份（只读），只能看自己的数据。' : ''}退出登录后回到本机数据（本机数据不会被删除）。</p>
       <div class="form-foot">
         <button type="button" class="btn btn-ghost" id="cloudTeams">切换球队</button>
         <button type="button" class="btn btn-ghost" id="cloudPassword">修改密码</button>
@@ -382,7 +421,7 @@
         <button type="button" class="btn btn-danger-ghost" id="cloudLogout">退出登录</button>
       </div>
     </div>`;
-    hooks.openModal('云端同步', body, { mid: true });
+    hooks.openModal('账号', body, { mid: true });
     document.getElementById('cloudLogout').onclick = () => { hooks.closeModal(); logout(); hooks.renderAll(); };
     document.getElementById('cloudResync').onclick = async (e) => {
       e.target.disabled = true;
@@ -399,8 +438,8 @@
     };
     document.getElementById('cloudPassword').onclick = openPassword;
     document.getElementById('cloudTeams').onclick = openTeams;
-    const m = document.getElementById('cloudMembers');
-    if (m) m.onclick = openMembers;
+    const m = document.getElementById('cloudAccounts');
+    if (m) m.onclick = openAccounts;
   }
 
   /* ── 切换球队 ── */
@@ -422,12 +461,7 @@
     const body = `<div class="cloud-account">
       <div class="cloud-section">我加入的球队</div>
       ${rows || '<p class="form-note">还没有加入任何球队。</p>'}
-      <div class="cloud-section">凭邀请码加入</div>
-      <div class="join-row">
-        <input name="joinCode" maxlength="6" placeholder="6 位邀请码" style="text-transform:uppercase">
-        <button type="button" class="btn btn-primary btn-sm" id="joinBtn">加入</button>
-      </div>
-      <p class="form-note">向目标球队的管理员要一个邀请码，输入后立即加入（队员为只读身份）。</p>
+      <p class="form-note">需要加入别的球队？找那边管理员要一个账号，用那个账号登录即可。</p>
       <div class="form-foot"><button type="button" class="btn btn-ghost" id="teamsBack">返回</button></div>
     </div>`;
     hooks.openModal('切换球队', body, { mid: true });
@@ -445,21 +479,6 @@
         }
       };
     });
-    document.getElementById('joinBtn').onclick = async () => {
-      const input = document.querySelector('.join-row input');
-      const code = String(input.value || '').trim().toUpperCase();
-      if (code.length !== 6) { hooks.toast('邀请码是 6 位', 'warn'); return; }
-      const btn = document.getElementById('joinBtn');
-      btn.disabled = true;
-      try {
-        const r = await api('/api/team/join', { method: 'POST', body: { code } });
-        hooks.toast(`已加入 ${r.team.name}（${ROLE_LABEL[r.role] || r.role}）`);
-        openTeams();
-      } catch (e) {
-        hooks.toast(e.message, 'warn');
-        btn.disabled = false;
-      }
-    };
   }
 
   /* ── 修改密码 ── */
@@ -496,104 +515,169 @@
     };
   }
 
-  /* ── 成员管理（owner / editor） ── */
-  function fmtDate(ts) {
-    const d = new Date(ts);
-    const p = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  /* ── 账号管理（admin 全部 / coach 只管队员） ──
+   * 没有注册，所以这里是新人进入系统的唯一通道：
+   * 建号 → 一次性展示初始密码 → 对方首登强制改密。 */
+  function showSecret(title, username, pwd) {
+    const body = `<div class="cloud-account">
+      <p class="form-note">把下面这组账号密码发给对方（微信直接粘）。密码只显示这一次，关掉就查不到了，忘了只能重置。</p>
+      <div class="secret-box">
+        <div><small>用户名</small><b>${escHtml(username)}</b></div>
+        <div><small>初始密码</small><b class="mono">${escHtml(pwd)}</b></div>
+      </div>
+      <div class="form-foot">
+        <button type="button" class="btn btn-primary" id="copySecret">复制账号密码</button>
+        <button type="button" class="btn btn-ghost" id="secretDone">完成</button>
+      </div>
+    </div>`;
+    hooks.openModal(title, body, { mid: true });
+    document.getElementById('copySecret').onclick = async () => {
+      const text = `【排球队管理】\n用户名：${username}\n初始密码：${pwd}\n登录地址：${location.origin}\n首次登录会让你改密码。`;
+      try {
+        await navigator.clipboard.writeText(text);
+        hooks.toast('已复制，直接粘到微信里');
+      } catch (e) {
+        hooks.toast('复制失败，请手动记下', 'warn');
+      }
+    };
+    document.getElementById('secretDone').onclick = openAccounts;
   }
 
-  async function openMembers() {
+  async function openAccounts() {
     if (!canManage()) return;
-    let members = [];
-    let invites = [];
+    let accounts = [];
+    let freePlayers = [];
     try {
-      const [m, inv] = await Promise.all([api('/api/team/members'), api('/api/team/invites')]);
-      members = m.members;
-      invites = inv.invites || [];
+      const [a, p] = await Promise.all([api('/api/accounts'), api('/api/accounts/candidates')]);
+      accounts = a.accounts;
+      freePlayers = p.players || [];
     } catch (e) {
       hooks.toast(e.message, 'warn');
       return;
     }
 
-    const amOwner = role === 'owner';
-    const activeInvites = invites.filter((i) => !i.revoked && i.expiresAt > Date.now());
-
-    const memberRows = members.map((m) => {
+    const amAdmin = role === 'admin';
+    const rows = accounts.map((m) => {
       const isSelf = m.id === user.id;
-      const isOwner = m.role === 'owner';
-      const controls = [];
-      if (amOwner && !isSelf && !isOwner) {
-        controls.push(`<select class="role-sel" data-uid="${m.id}">
-          <option value="viewer" ${m.role === 'viewer' ? 'selected' : ''}>队员（只读）</option>
-          <option value="editor" ${m.role === 'editor' ? 'selected' : ''}>管理员</option>
+      const ops = [];
+      if (amAdmin && !isSelf && m.role !== 'admin') {
+        ops.push(`<select class="role-sel" data-uid="${m.id}">
+          <option value="coach" ${m.role === 'coach' ? 'selected' : ''}>教练</option>
+          <option value="player" ${m.role === 'player' ? 'selected' : ''}>队员</option>
         </select>`);
-        controls.push(`<button type="button" class="btn btn-danger-ghost btn-sm" data-kick="${m.id}" data-name="${escHtml(m.name)}">移除</button>`);
-      } else if (isSelf && !isOwner) {
-        controls.push(`<button type="button" class="btn btn-danger-ghost btn-sm" data-leave="1">退队</button>`);
       }
-      return `<div class="member-row">
-        <div class="m-main"><b>${escHtml(m.name)}${isSelf ? '<small>（我）</small>' : ''}</b><small>${escHtml(m.email)} · ${fmtDate(m.joinedAt)}加入</small></div>
+      const canTouch = amAdmin || m.role === 'player';
+      if (!isSelf && canTouch) {
+        ops.push(`<button type="button" class="btn btn-ghost btn-sm" data-reset="${m.id}" data-name="${escHtml(m.name)}">重置密码</button>`);
+        ops.push(`<button type="button" class="btn btn-danger-ghost btn-sm" data-toggle="${m.id}" data-status="${m.status}" data-name="${escHtml(m.name)}">${m.status === 'disabled' ? '启用' : '停用'}</button>`);
+      }
+      const sub = [
+        '@' + m.username,
+        m.role === 'player' && m.playerName ? `球员：${m.playerName}${m.playerNumber ? ' · ' + m.playerNumber + ' 号' : ''}` : '',
+        m.status === 'disabled' ? '已停用' : '',
+        m.mustChangePassword ? '待首次改密' : ''
+      ].filter(Boolean).map(escHtml).join(' · ');
+      return `<div class="member-row ${m.status === 'disabled' ? 'row-off' : ''}">
+        <div class="m-main"><b>${escHtml(m.name)}${isSelf ? '<small>（我）</small>' : ''}</b><small>${sub}</small></div>
         <div class="m-ops">
-          <span class="cloud-role-badge r-${m.role}">${ROLE_LABEL[m.role]}</span>
-          ${controls.join('')}
+          <span class="cloud-role-badge r-${m.role}">${ROLE_LABEL[m.role] || m.role}</span>
+          ${ops.join('')}
         </div>
       </div>`;
     }).join('');
 
-    const inviteRows = activeInvites.map((i) => `
-      <div class="member-row">
-        <div class="m-main"><b class="invite-code">${i.code}</b><small>${fmtDate(i.expiresAt)} 过期</small></div>
-        <div class="m-ops">
-          <button type="button" class="btn btn-ghost btn-sm" data-copy="${i.code}">复制</button>
-          <button type="button" class="btn btn-danger-ghost btn-sm" data-revoke="${i.code}">撤销</button>
-        </div>
-      </div>`).join('');
+    const roleOpts = amAdmin
+      ? '<option value="coach">教练 · 平板全读写</option><option value="player">队员 · 手机只读</option>'
+      : '<option value="player">队员 · 手机只读</option>';
 
     const body = `<div class="cloud-account">
-      <div class="cloud-section">球队成员（${members.length}）</div>
-      ${memberRows}
-      <div class="cloud-section">邀请码
-        <button type="button" class="btn btn-primary btn-sm" id="genInvite">生成新邀请码</button>
+      <div class="cloud-section">账号（${accounts.length}）</div>
+      ${rows || '<p class="form-note">还没有其他账号。</p>'}
+      <div class="cloud-section">发放新账号</div>
+      <form id="accForm"><div class="form-grid">
+        ${field('用户名', '<input name="username" required autocapitalize="none" spellcheck="false" placeholder="学号或姓名拼音">')}
+        ${field('姓名', '<input name="name" required maxlength="20" placeholder="张辰">')}
+        <div class="field full"><label>身份</label><select name="role">${roleOpts}</select></div>
+        <div class="field full"><label>对应球员 <small>（队员必选，队员端靠它知道「我是谁」）</small></label>
+          <select name="playerId"><option value="">选择球员…</option>
+          ${freePlayers.map((p) => `<option value="${p.id}">${escHtml(p.name)}${p.number ? ' · ' + p.number + ' 号' : ''}</option>`).join('')}
+          </select>
+        </div>
       </div>
-      ${inviteRows || '<p class="form-note">还没有有效邀请码。生成一个发给队员，注册时填码即可入队（只读身份）。</p>'}
-      <p class="form-note">已登录的队员也可以凭码加入第二支球队（「切换球队」页有入口说明）。</p>
-      <div class="form-foot"><button type="button" class="btn btn-ghost" id="membersBack">返回</button></div>
+      <p class="gate-err" id="accErr" hidden></p>
+      <div class="form-foot"><button type="submit" class="btn btn-primary" id="accCreate">生成账号</button></div>
+      </form>
+      <div class="form-foot"><button type="button" class="btn btn-ghost" id="accountsBack">返回</button></div>
     </div>`;
-    hooks.openModal('成员管理', body, { mid: true });
-    document.getElementById('membersBack').onclick = openAccount;
+    hooks.openModal('账号管理', body, { mid: true });
+    document.getElementById('accountsBack').onclick = openAccount;
 
-    document.getElementById('genInvite').onclick = async (e) => {
-      e.target.disabled = true;
+    // 只有队员才需要选球员
+    const roleSel = document.querySelector('#accForm [name=role]');
+    const playerWrap = document.querySelector('#accForm [name=playerId]').closest('.field');
+    const syncPlayerField = () => { playerWrap.hidden = roleSel.value !== 'player'; };
+    roleSel.onchange = syncPlayerField;
+    syncPlayerField();
+
+    const form = document.getElementById('accForm');
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const err = document.getElementById('accErr');
+      const btn = document.getElementById('accCreate');
+      const payload = {
+        username: String(fd.get('username') || '').trim().toLowerCase(),
+        name: String(fd.get('name') || '').trim(),
+        role: String(fd.get('role') || 'player')
+      };
+      if (payload.role === 'player') payload.playerId = String(fd.get('playerId') || '');
+      btn.disabled = true;
+      btn.textContent = '生成中…';
+      err.hidden = true;
       try {
-        const r = await api('/api/team/invites', { method: 'POST' });
-        hooks.toast(`已生成邀请码 ${r.code}，7 天内有效`);
-        openMembers();
-      } catch (err) {
-        hooks.toast(err.message, 'warn');
-        e.target.disabled = false;
+        const r = await api('/api/accounts', { method: 'POST', body: payload });
+        showSecret('账号已生成', r.account.username, r.initialPassword);
+        if (payload.role === 'player' && payload.playerId && hooks.renderAll) hooks.renderAll();
+      } catch (ex) {
+        err.hidden = false;
+        err.textContent = ex.message;
+        btn.disabled = false;
+        btn.textContent = '生成账号';
       }
     };
 
-    document.querySelectorAll('[data-copy]').forEach((btn) => {
+    document.querySelectorAll('[data-reset]').forEach((btn) => {
       btn.onclick = async () => {
+        const ok = await hooks.confirm({
+          title: '重置密码',
+          message: `给「${btn.dataset.name}」生成一个新的初始密码？旧密码立即失效，对方下次登录要重新设密码。`,
+          ok: '重置'
+        });
+        if (!ok) return;
         try {
-          await navigator.clipboard.writeText(btn.dataset.copy);
-          hooks.toast(`已复制 ${btn.dataset.copy}`);
-        } catch (e) {
-          hooks.toast('复制失败，请手动记下邀请码', 'warn');
+          const r = await api(`/api/accounts/${btn.dataset.reset}/reset-password`, { method: 'POST' });
+          showSecret('新密码已生成', accounts.find((a) => a.id === btn.dataset.reset).username, r.initialPassword);
+        } catch (err) {
+          hooks.toast(err.message, 'warn');
         }
       };
     });
 
-    document.querySelectorAll('[data-revoke]').forEach((btn) => {
+    document.querySelectorAll('[data-toggle]').forEach((btn) => {
       btn.onclick = async () => {
-        const ok = await hooks.confirm({ title: '撤销邀请码', message: `撤销后 ${btn.dataset.revoke} 将立即失效，已用它注册的成员不受影响。`, ok: '撤销' });
+        const to = btn.dataset.status === 'disabled' ? 'active' : 'disabled';
+        const ok = await hooks.confirm({
+          title: to === 'disabled' ? '停用账号' : '启用账号',
+          message: to === 'disabled'
+            ? `停用后「${btn.dataset.name}」将无法登录，历史考勤数据保留。`
+            : `重新允许「${btn.dataset.name}」登录？`,
+          ok: to === 'disabled' ? '停用' : '启用'
+        });
         if (!ok) return;
         try {
-          await api(`/api/team/invites/${btn.dataset.revoke}`, { method: 'DELETE' });
-          hooks.toast('已撤销');
-          openMembers();
+          await api(`/api/accounts/${btn.dataset.toggle}`, { method: 'PATCH', body: { status: to } });
+          hooks.toast(to === 'disabled' ? '已停用' : '已启用');
+          openAccounts();
         } catch (err) {
           hooks.toast(err.message, 'warn');
         }
@@ -603,43 +687,14 @@
     document.querySelectorAll('.role-sel').forEach((sel) => {
       sel.onchange = async () => {
         try {
-          await api(`/api/team/members/${sel.dataset.uid}`, { method: 'PATCH', body: { role: sel.value } });
-          hooks.toast('角色已更新');
+          await api(`/api/accounts/${sel.dataset.uid}`, { method: 'PATCH', body: { role: sel.value } });
+          hooks.toast('身份已更新');
         } catch (err) {
           hooks.toast(err.message, 'warn');
         }
-        openMembers();
+        openAccounts();
       };
     });
-
-    document.querySelectorAll('[data-kick]').forEach((btn) => {
-      btn.onclick = async () => {
-        const ok = await hooks.confirm({ title: '移除成员', message: `确定把「${btn.dataset.name}」移出球队？对方将无法再查看球队数据。`, ok: '移除' });
-        if (!ok) return;
-        try {
-          await api(`/api/team/members/${btn.dataset.kick}`, { method: 'DELETE' });
-          hooks.toast('已移除');
-          openMembers();
-        } catch (err) {
-          hooks.toast(err.message, 'warn');
-        }
-      };
-    });
-
-    const leaveBtn = document.querySelector('[data-leave]');
-    if (leaveBtn) {
-      leaveBtn.onclick = async () => {
-        const ok = await hooks.confirm({ title: '退出球队', message: `确定退出「${team ? team.name : ''}」？退出后不再同步这支球队的数据。`, ok: '退出' });
-        if (!ok) return;
-        try {
-          await api(`/api/team/members/${user.id}`, { method: 'DELETE' });
-          hooks.toast('已退出球队');
-          openTeams();
-        } catch (err) {
-          hooks.toast(err.message, 'warn');
-        }
-      };
-    }
   }
 
   /* ── 推送（写操作） ──

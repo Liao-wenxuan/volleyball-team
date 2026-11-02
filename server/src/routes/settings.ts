@@ -40,7 +40,7 @@ router.get('/', (req, res) => {
 /** 更新训练模板（全量替换） */
 router.put(
   '/template',
-  requireRole('owner', 'editor'),
+  requireRole('admin', 'coach'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(templateSchema, req.body);
@@ -55,7 +55,7 @@ router.put(
 /** 更新主题 */
 router.put(
   '/theme',
-  requireRole('owner', 'editor'),
+  requireRole('admin', 'coach'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(themeSchema, req.body);

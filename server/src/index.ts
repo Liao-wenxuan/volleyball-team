@@ -10,7 +10,7 @@ import cors from 'cors';
 import path from 'node:path';
 import { errorMiddleware, HttpError } from './http';
 import authRoutes from './routes/auth';
-import teamRoutes from './routes/team';
+import accountRoutes from './routes/accounts';
 import playerRoutes from './routes/players';
 import sessionRoutes from './routes/sessions';
 import skillRoutes from './routes/skills';
@@ -32,7 +32,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/team', teamRoutes);
+app.use('/api/accounts', accountRoutes);
 app.use('/api/players', playerRoutes);
 app.use('/api', sessionRoutes); // 内部路径已是 /weeks/:key、/sessions...
 app.use('/api/skills', skillRoutes);

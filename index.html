@@ -639,9 +639,8 @@ try {
 
 <div class="toast-stack" id="toasts" aria-live="polite"></div>
 
-<!-- 登录门禁（r23）：公网打开即停在登录页。
-     队员拿到邀请码进站，第一眼必须是「登录」——否则他看到的是自己设备上的空数据，
-     会以为球队没录数据 / 系统坏了。底部保留「仅在本机使用」，你自己没网时照样能录。 -->
+<!-- 登录门禁（r24）：公网打开即停在登录页。
+     没有注册入口 —— 账号由管理端统一发放，队员/教练拿到的都是初始密码。 -->
 <div class="auth-gate" id="authGate">
   <div class="auth-gate-card">
     <div class="auth-gate-head">
@@ -652,30 +651,36 @@ try {
       </span>
       <div>
         <h1>信工院排球队</h1>
-        <p id="gateSub">登录后同步队员、考勤与技能数据</p>
+        <p id="gateSub">用管理员发给你的账号登录</p>
       </div>
     </div>
 
-    <div class="cloud-tabs">
-      <button type="button" class="cloud-tab on" data-gate-tab="login">登录</button>
-      <button type="button" class="cloud-tab" data-gate-tab="register">注册</button>
+    <div id="gateLoginPane">
+      <form id="gateForm">
+        <div class="form-grid">
+          <div class="field full"><label>用户名</label><input name="username" required placeholder="学号或姓名拼音" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+          <div class="field full"><label>密码</label><input name="password" type="password" required placeholder="初始密码" autocomplete="current-password"></div>
+        </div>
+        <details class="gate-adv"><summary>服务器地址</summary><input name="base" placeholder="https://vb.bscjs.top"></details>
+        <p class="gate-err" id="gateErr" hidden></p>
+        <button type="submit" class="btn btn-primary gate-submit" id="gateSubmit">登录</button>
+      </form>
+      <p class="gate-note">还没有账号？找球队管理员要，账号由管理端统一发放。</p>
+      <div class="gate-foot">
+        <button type="button" class="gate-skip" id="gateSkip">不登录，仅在本机使用</button>
+      </div>
     </div>
 
-    <form id="gateForm">
-      <div class="form-grid">
-        <div class="field full gate-reg" hidden><label>你的名字</label><input name="name" maxlength="20" placeholder="教练" autocomplete="name"></div>
-        <div class="field full gate-reg" hidden><label>球队名 <small>（有邀请码可不填）</small></label><input name="teamName" maxlength="30" placeholder="信工院排球队"></div>
-        <div class="field full gate-reg" hidden><label>邀请码 <small>（选填，凭码加入已有球队）</small></label><input name="inviteCode" maxlength="6" placeholder="6 位邀请码" style="text-transform:uppercase" autocomplete="off"></div>
-        <div class="field full"><label>邮箱</label><input name="email" type="email" required placeholder="you@example.com" autocomplete="username"></div>
-        <div class="field full"><label>密码</label><input name="password" type="password" required minlength="6" placeholder="至少 6 位" autocomplete="current-password"></div>
-      </div>
-      <details class="gate-adv"><summary>服务器地址</summary><input name="base" placeholder="https://vb.bscjs.top"></details>
-      <p class="gate-err" id="gateErr" hidden></p>
-      <button type="submit" class="btn btn-primary gate-submit" id="gateSubmit">登录</button>
-    </form>
-
-    <div class="gate-foot">
-      <button type="button" class="gate-skip" id="gateSkip">不登录，仅在本机使用</button>
+    <div id="gatePwPane" hidden>
+      <p class="gate-note" style="margin:0 0 16px">首次登录，请把初始密码改成自己记得住的（至少 6 位）。</p>
+      <form id="pwGateForm">
+        <div class="form-grid">
+          <div class="field full"><label>新密码</label><input name="newPassword" type="password" required minlength="6" autocomplete="new-password"></div>
+          <div class="field full"><label>确认新密码</label><input name="again" type="password" required minlength="6" autocomplete="new-password"></div>
+        </div>
+        <p class="gate-err" id="pwGateErr" hidden></p>
+        <button type="submit" class="btn btn-primary gate-submit" id="pwGateSubmit">保存并进入</button>
+      </form>
     </div>
   </div>
 </div>

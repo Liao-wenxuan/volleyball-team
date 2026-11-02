@@ -24,3 +24,6 @@ server/dist/
 # 截图自动化临时产物
 .playwright-cli/
 tools/.seed-demo.json
+
+# 本地测试库
+server/*.db*

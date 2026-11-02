@@ -2,17 +2,16 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import type { Request } from 'express';
-import { db, newId, now } from '../db';
+import { db } from '../db';
 import { HttpError, asyncHandler, parse } from '../http';
 import { requireAuth, signToken, type AuthedRequest } from '../auth';
-import { DEFAULT_FORMATION, DEFAULT_TEMPLATE } from '../defaults';
 import { getSettings } from '../repo';
 
 const router = Router();
 
-/* ══════════ 限流：同 IP+邮箱 连续失败 5 次锁 15 分钟 ══════════
+/* ══════════ 限流：同 IP+用户名 连续失败 5 次锁 15 分钟 ══════════
  * 内存计数，重启清零 —— 对一台小服务器足够，不值得为此引 redis。
- * 键用 IP+邮箱而不是纯 IP：学生都在校园网同一个出口 IP，
+ * 键用 IP+用户名而不是纯 IP：学生都在校园网同一个出口 IP，
  * 纯 IP 计数会让「一个人输错密码」锁掉整个宿舍网。
  * 服务端在 Caddy 反代后面，真实 IP 取 x-forwarded-for 第一段。 */
 const WINDOW_MS = 15 * 60 * 1000;
@@ -50,17 +49,14 @@ function markOk(req: Request, scope: string) {
 
 /* ══════════ 校验 ══════════ */
 
-const registerSchema = z.object({
-  email: z.string().trim().toLowerCase().email('邮箱格式不对'),
-  password: z.string().min(6, '密码至少 6 位'),
-  name: z.string().trim().min(1, '请填名字').max(20),
-  teamName: z.string().trim().max(30).optional(),
-  // 填了邀请码 → 加入已有球队（队员身份）；不填 → 自建新队当队长
-  inviteCode: z.string().trim().length(6, '邀请码应为 6 位').optional()
-});
-
 const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().email('邮箱格式不对'),
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(2, '请填用户名')
+    .max(32, '用户名太长')
+    .regex(/^[a-z0-9_.-]+$/, '用户名只能包含字母、数字、下划线'),
   password: z.string().min(1, '请填密码')
 });
 
@@ -71,137 +67,79 @@ const passwordSchema = z.object({
 
 /* ══════════ 工具 ══════════ */
 
-function getRole(userId: string, teamId: string): 'owner' | 'editor' | 'viewer' {
-  const m = db
-    .prepare('SELECT role FROM team_members WHERE user_id = ? AND team_id = ?')
-    .get(userId, teamId) as { role: 'owner' | 'editor' | 'viewer' } | undefined;
-  return m ? m.role : 'viewer';
-}
-
+/** 登录/注册/me 统一返回体：前端拿到就知道该进哪个端 */
 function payload(userId: string) {
-  const user = db.prepare('SELECT id, email, name FROM users WHERE id = ?').get(userId) as {
+  const user = db
+    .prepare('SELECT id, username, email, name, must_change_pw FROM users WHERE id = ?')
+    .get(userId) as {
     id: string;
+    username: string | null;
     email: string;
     name: string;
+    must_change_pw: number;
   };
+
   const team = db
     .prepare(
       'SELECT t.id, t.name FROM teams t JOIN team_members m ON m.team_id = t.id WHERE m.user_id = ? ORDER BY m.joined_at LIMIT 1'
     )
-    .get(userId) as { id: string; name: string };
-  const res = {
+    .get(userId) as { id: string; name: string } | undefined;
+  if (!team) throw new HttpError(403, '账号还没有加入任何球队', 'no_team');
+
+  const m = db
+    .prepare('SELECT role FROM team_members WHERE user_id = ? AND team_id = ?')
+    .get(userId, team.id) as { role: string };
+
+  return {
     token: signToken(userId),
-    user,
+    user: {
+      id: user.id,
+      username: user.username || '',
+      email: user.email,
+      name: user.name
+    },
     team,
-    role: getRole(userId, team.id),
+    role: m.role,
+    mustChangePassword: !!user.must_change_pw,
     settings: getSettings(team.id)
   };
-  return res;
-}
-
-/** 校验邀请码：不存在 / 已撤销 / 已过期 都返回 null（不区分原因，避免被探测） */
-export function validInvite(code: string) {
-  const row = db
-    .prepare('SELECT code, team_id, expires_at, revoked FROM invites WHERE code = ?')
-    .get(code.toUpperCase()) as
-    | { code: string; team_id: string; expires_at: number; revoked: number }
-    | undefined;
-  if (!row || row.revoked) return null;
-  if (row.expires_at < now()) return null;
-  return row;
 }
 
 /* ══════════ 路由 ══════════ */
 
-router.post(
-  '/register',
-  asyncHandler(async (req, res) => {
-    guardRate(req, 'reg');
-    const body = parse(registerSchema, req.body);
-
-    const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(body.email);
-    if (exists) {
-      markFail(req, 'reg');
-      throw new HttpError(409, '这个邮箱已经注册过了', 'email_taken');
-    }
-
-    // 凭邀请码：加入已有球队，角色是队员（只读）；否则自建新队当队长
-    let joinTeamId: string | null = null;
-    if (body.inviteCode) {
-      const inv = validInvite(body.inviteCode);
-      if (!inv) throw new HttpError(400, '邀请码无效或已过期，请找管理员确认', 'bad_invite');
-      joinTeamId = inv.team_id;
-    } else if (!body.teamName) {
-      throw new HttpError(400, '请填球队名，或填写邀请码加入已有球队', 'bad_request');
-    }
-
-    const userId = newId('u');
-    const teamId = joinTeamId || newId('t');
-    const role = joinTeamId ? 'viewer' : 'owner';
-    const ts = now();
-
-    // 建号 + 入队（或建队 + 默认模板 + 默认站位），一次性事务，别留半成品账号
-    // 顺序有讲究：teams 必须先于 team_members（外键指向它）
-    const tx = db.transaction(() => {
-      db.prepare('INSERT INTO users (id, email, password_hash, name, created_at) VALUES (?, ?, ?, ?, ?)').run(
-        userId,
-        body.email,
-        bcrypt.hashSync(body.password, 10),
-        body.name,
-        ts
-      );
-      if (!joinTeamId) {
-        db.prepare('INSERT INTO teams (id, name, created_at) VALUES (?, ?, ?)').run(teamId, body.teamName, ts);
-        db.prepare('INSERT INTO team_settings (team_id, template, theme, updated_at) VALUES (?, ?, ?, ?)').run(
-          teamId,
-          JSON.stringify(DEFAULT_TEMPLATE),
-          'aurora',
-          ts
-        );
-        db.prepare('INSERT INTO formations (team_id, preset, pos, updated_at) VALUES (?, ?, ?, ?)').run(
-          teamId,
-          DEFAULT_FORMATION.preset,
-          JSON.stringify(DEFAULT_FORMATION.pos),
-          ts
-        );
-      }
-      db.prepare('INSERT INTO team_members (user_id, team_id, role, joined_at) VALUES (?, ?, ?, ?)').run(
-        userId,
-        teamId,
-        role,
-        ts
-      );
-    });
-    tx();
-
-    markOk(req, 'reg');
-    res.status(201).json(payload(userId));
-  })
-);
+/* 注册接口已删除：账号一律由管理端发放（见 routes/accounts.ts）。
+   公开注册意味着任何人都能建队，对一个只服务本队的系统是纯风险面。 */
 
 router.post(
   '/login',
   asyncHandler(async (req, res) => {
-    guardRate(req, loginScope(req));
+    const scope = loginScope(req);
+    guardRate(req, scope);
     const body = parse(loginSchema, req.body);
-    // 不区分「邮箱不存在」和「密码错误」，避免被枚举账号
-    const row = db.prepare('SELECT id, password_hash FROM users WHERE email = ?').get(body.email) as
-      | { id: string; password_hash: string }
-      | undefined;
+
+    // 不区分「用户不存在」和「密码错误」，避免被枚举账号
+    const row = db
+      .prepare('SELECT id, password_hash, status FROM users WHERE username = ?')
+      .get(body.username) as { id: string; password_hash: string; status: string } | undefined;
+
     if (!row || !bcrypt.compareSync(body.password, row.password_hash)) {
-      markFail(req, loginScope(req));
-      throw new HttpError(401, '邮箱或密码不对', 'bad_credentials');
+      markFail(req, scope);
+      throw new HttpError(401, '用户名或密码不对', 'bad_credentials');
     }
-    markOk(req, loginScope(req));
+    if (row.status === 'disabled') {
+      throw new HttpError(403, '账号已停用，请联系管理员', 'account_disabled');
+    }
+
+    markOk(req, scope);
     res.json(payload(row.id));
   })
 );
 
-/** 登录限流的 scope 取邮箱；请求体没带邮箱时兜底成 '?' */
+/** 登录限流的 scope 取用户名；请求体还没解析时兜底成 '?' */
 function loginScope(req: Request): string {
-  const b = req.body as { email?: string } | undefined;
-  const e = typeof b?.email === 'string' ? b.email.trim().toLowerCase() : '';
-  return e || '?';
+  const b = req.body as { username?: string } | undefined;
+  const u = typeof b?.username === 'string' ? b.username.trim().toLowerCase() : '';
+  return u || '?';
 }
 
 router.get('/me', requireAuth, (req, res) => {
@@ -223,7 +161,7 @@ router.get('/teams', requireAuth, (req, res) => {
   res.json({ teams });
 });
 
-/** 修改密码：验旧密码再写新的，和登录一样不分旧密码错/账号错以外的情况 */
+/** 修改密码：验旧密码再写新的。首登强制改密也走这里，改完清 must_change_pw */
 router.post(
   '/password',
   requireAuth,
@@ -236,7 +174,10 @@ router.post(
     if (!row || !bcrypt.compareSync(b.oldPassword, row.password_hash)) {
       throw new HttpError(400, '当前密码不对', 'bad_password');
     }
-    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(
+    if (b.oldPassword === b.newPassword) {
+      throw new HttpError(400, '新密码不能和当前密码一样', 'same_password');
+    }
+    db.prepare('UPDATE users SET password_hash = ?, must_change_pw = 0 WHERE id = ?').run(
       bcrypt.hashSync(b.newPassword, 10),
       r.user.id
     );

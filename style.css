@@ -2107,6 +2107,15 @@ html.gate-pass .auth-gate{display:none!important}
 .gate-foot{margin-top:16px;padding-top:14px;border-top:1px solid var(--ov070);text-align:center}
 .gate-skip{border:none;background:none;color:var(--muted);font-size:12px;cursor:pointer;padding:5px 10px;border-radius:8px;transition:.15s}
 .gate-skip:hover{color:var(--text);background:var(--ov050)}
+.gate-note{margin:14px 0 0;font-size:12px;line-height:1.65;color:var(--muted)}
+/* 发号后一次性展示的密码块 */
+.secret-box{margin:16px 0;border:1px solid var(--ov110);border-radius:12px;overflow:hidden;background:var(--ov025,rgba(255,255,255,.025))}
+.secret-box>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px}
+.secret-box>div+div{border-top:1px solid var(--ov070)}
+.secret-box small{font-size:11px;color:var(--muted)}
+.secret-box b{font-size:15px;letter-spacing:.4px}
+.secret-box b.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:1.5px;color:var(--cyan)}
+.member-row.row-off{opacity:.45}
 @media (max-width:520px){
   .auth-gate{padding:16px;align-items:flex-start;padding-top:7vh}
   .auth-gate-card{padding:24px 20px 18px;border-radius:18px}

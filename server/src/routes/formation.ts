@@ -47,7 +47,7 @@ router.get('/', (req, res) => {
 
 router.put(
   '/',
-  requireRole('owner', 'editor'),
+  requireRole('admin', 'coach'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(posSchema, req.body);
@@ -70,7 +70,7 @@ router.get('/library', (req, res) => {
 
 router.put(
   '/library',
-  requireRole('owner', 'editor'),
+  requireRole('admin', 'coach'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(librarySchema, req.body);
