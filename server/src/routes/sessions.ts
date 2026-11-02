@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db, newId, now, dateKey, mondayOf, parseKey } from '../db';
 import { HttpError, asyncHandler, parse } from '../http';
-import { requireAuth, type AuthedRequest } from '../auth';
+import { requireAuth, requireRole, type AuthedRequest } from '../auth';
 import { STATES, ensureWeek, getSession } from '../repo';
 
 const router = Router();
@@ -29,6 +29,7 @@ const createSchema = z.object({
 /** 加练：模板以外的临时训练 */
 router.post(
   '/sessions',
+  requireRole('owner', 'editor'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(createSchema, req.body);
@@ -54,6 +55,7 @@ const patchSchema = z.object({
 /** 改某一次训练：时间、地点、取消（只影响这一周，不动模板） */
 router.patch(
   '/sessions/:id',
+  requireRole('owner', 'editor'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(patchSchema, req.body);
@@ -76,7 +78,7 @@ router.patch(
   })
 );
 
-router.delete('/sessions/:id', (req, res) => {
+router.delete('/sessions/:id', requireRole('owner', 'editor'), (req, res) => {
   const r = req as unknown as AuthedRequest;
   const info = db.prepare('DELETE FROM sessions WHERE team_id = ? AND id = ?').run(r.teamId, req.params.id);
   if (info.changes === 0) throw new HttpError(404, '训练不存在', 'not_found');
@@ -93,6 +95,7 @@ const attSchema = z.object({ state: z.enum([...STATES] as [string, ...string[]])
  */
 router.put(
   '/sessions/:id/attendance/:playerId',
+  requireRole('owner', 'editor'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(attSchema, req.body);
@@ -114,7 +117,7 @@ router.put(
 );
 
 /** 清除一个人的考勤（考勤格循环回「未登记」时调用） */
-router.delete('/sessions/:id/attendance/:playerId', (req, res) => {
+router.delete('/sessions/:id/attendance/:playerId', requireRole('owner', 'editor'), (req, res) => {
   const r = req as unknown as AuthedRequest;
   const session = getSession(r.teamId, req.params.id);
   if (!session) throw new HttpError(404, '训练不存在', 'not_found');

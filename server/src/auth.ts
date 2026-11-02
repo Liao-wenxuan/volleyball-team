@@ -22,6 +22,8 @@ if (!process.env.JWT_SECRET) {
 export interface AuthedRequest extends Request {
   user: { id: string; email: string; name: string };
   teamId: string;
+  /** 这次请求针对的球队里的身份：owner 队长 / editor 管理员 / viewer 队员（只读） */
+  role: 'owner' | 'editor' | 'viewer';
 }
 
 export function signToken(userId: string): string {
@@ -50,16 +52,31 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   const wanted = String(req.headers['x-team-id'] || '');
   const member = wanted
     ? (db
-        .prepare('SELECT team_id FROM team_members WHERE user_id = ? AND team_id = ?')
-        .get(user.id, wanted) as { team_id: string } | undefined)
+        .prepare('SELECT team_id, role FROM team_members WHERE user_id = ? AND team_id = ?')
+        .get(user.id, wanted) as { team_id: string; role: 'owner' | 'editor' | 'viewer' } | undefined)
     : (db
-        .prepare('SELECT team_id FROM team_members WHERE user_id = ? ORDER BY joined_at LIMIT 1')
-        .get(user.id) as { team_id: string } | undefined);
+        .prepare('SELECT team_id, role FROM team_members WHERE user_id = ? ORDER BY joined_at LIMIT 1')
+        .get(user.id) as { team_id: string; role: 'owner' | 'editor' | 'viewer' } | undefined);
 
   if (!member) return next(new HttpError(403, '没有可访问的球队', 'no_team'));
 
   const r = req as AuthedRequest;
   r.user = user;
   r.teamId = member.team_id;
+  r.role = member.role;
   next();
+}
+
+/**
+ * 写操作的角色门禁。必须在 requireAuth 之后用（依赖 req.role）。
+ * viewer 只放行读接口，增删改一律 403 —— 前端藏按钮只是体验，权限以这里为准。
+ */
+export function requireRole(...roles: Array<'owner' | 'editor' | 'viewer'>) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const r = req as AuthedRequest;
+    if (!roles.includes(r.role)) {
+      return next(new HttpError(403, '当前身份只有查看权限，如需编辑请联系管理员', 'forbidden'));
+    }
+    next();
+  };
 }

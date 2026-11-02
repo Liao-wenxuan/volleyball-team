@@ -4557,6 +4557,7 @@ ${aiContext()}`;
         toast,
         openModal,
         closeModal,
+        confirm: confirmDialog,
         getDB: () => db,
         save,
         renderAll: renderAllCurrent,

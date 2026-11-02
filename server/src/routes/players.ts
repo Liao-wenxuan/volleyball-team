@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db, newId, now } from '../db';
 import { HttpError, asyncHandler, parse } from '../http';
-import { requireAuth, type AuthedRequest } from '../auth';
+import { requireAuth, requireRole, type AuthedRequest } from '../auth';
 import { GRADES, POSITIONS, getPlayer, listPlayers } from '../repo';
 
 const router = Router();
@@ -40,6 +40,7 @@ router.get('/', (req, res) => {
 
 router.post(
   '/',
+  requireRole('owner', 'editor'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(createSchema, req.body);
@@ -72,6 +73,7 @@ router.post(
 
 router.patch(
   '/:id',
+  requireRole('owner', 'editor'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(patchSchema, req.body);
@@ -117,7 +119,7 @@ router.patch(
   })
 );
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requireRole('owner', 'editor'), (req, res) => {
   const r = req as unknown as AuthedRequest;
   const info = db.prepare('DELETE FROM players WHERE team_id = ? AND id = ?').run(r.teamId, req.params.id);
   if (info.changes === 0) throw new HttpError(404, '队员不存在', 'not_found');

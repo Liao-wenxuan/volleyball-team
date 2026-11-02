@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db, now } from '../db';
 import { asyncHandler, parse } from '../http';
-import { requireAuth, type AuthedRequest } from '../auth';
+import { requireAuth, requireRole, type AuthedRequest } from '../auth';
 import { getFormation, listFormationSaves, replaceFormationSaves } from '../repo';
 
 const router = Router();
@@ -47,6 +47,7 @@ router.get('/', (req, res) => {
 
 router.put(
   '/',
+  requireRole('owner', 'editor'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(posSchema, req.body);
@@ -69,6 +70,7 @@ router.get('/library', (req, res) => {
 
 router.put(
   '/library',
+  requireRole('owner', 'editor'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(librarySchema, req.body);

@@ -123,6 +123,17 @@ CREATE TABLE IF NOT EXISTS formation_saves (
   at      INTEGER NOT NULL,
   PRIMARY KEY (team_id, id)
 );
+
+-- 邀请码：管理员生成，新队员凭码入队。撤销用 revoked 标记，保留记录可追溯
+CREATE TABLE IF NOT EXISTS invites (
+  code       TEXT PRIMARY KEY,
+  team_id    TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  created_by TEXT NOT NULL REFERENCES users(id),
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  revoked    INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_invites_team ON invites(team_id);
 `);
 
 export const SKILL_KEYS = ['serve', 'receive', 'set', 'spike', 'block', 'defense'] as const;

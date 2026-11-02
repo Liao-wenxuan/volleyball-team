@@ -2081,6 +2081,31 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 .cloud-id p{margin:2px 0 0;font-size:12.5px;color:var(--text-2,#aab)}
 .cloud-account .form-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
 
+/* ── 用户管理：角色徽章 / 成员列表 / 邀请码 ── */
+.cloud-role-badge{display:inline-block;font-size:11px;line-height:1;padding:4px 8px;border-radius:99px;vertical-align:2px;font-weight:600;letter-spacing:.5px}
+.cloud-role-badge.r-owner{background:rgba(var(--violet-rgb),.22);color:var(--violet)}
+.cloud-role-badge.r-editor{background:rgba(var(--cyan-rgb),.18);color:var(--cyan)}
+.cloud-role-badge.r-viewer{background:var(--ov050,rgba(255,255,255,.06));color:var(--text-2,#aab)}
+.cloud-section{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;font-weight:700;color:var(--text-2,#aab);letter-spacing:1px;margin:18px 0 8px}
+.cloud-section:first-child{margin-top:4px}
+.member-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 2px;border-bottom:1px solid var(--ov110,rgba(255,255,255,.07))}
+.member-row:last-of-type{border-bottom:none}
+.member-row.on{background:var(--ov045,rgba(255,255,255,.03));border-radius:10px;padding-left:10px;padding-right:10px}
+.m-main{min-width:0;display:flex;flex-direction:column;gap:2px}
+.m-main b{font-size:13.5px}
+.m-main b small{font-weight:400;color:var(--text-2,#aab);margin-left:4px}
+.m-main small{font-size:11.5px;color:var(--text-2,#aab);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-ops{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.m-cur{font-size:11.5px;color:var(--green);font-weight:600}
+.btn.btn-sm{padding:5px 12px;font-size:12px}
+.invite-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;letter-spacing:3px;color:var(--cyan)}
+.role-sel{background:var(--ov050,rgba(255,255,255,.05));border:1px solid var(--ov110,rgba(255,255,255,.1));color:var(--text);border-radius:8px;font-size:12px;padding:5px 6px;outline:none;cursor:pointer}
+.join-row{display:flex;gap:8px;margin-bottom:8px}
+.join-row input{flex:1;background:var(--ov045,rgba(255,255,255,.04));border:1px solid var(--ov110,rgba(255,255,255,.1));border-radius:10px;color:var(--text);font-size:14px;letter-spacing:3px;padding:9px 12px;outline:none;text-transform:uppercase}
+.join-row input:focus{border-color:rgba(var(--violet-rgb),.55)}
+/* 队员只读：把纯展示界面上最扎眼的编辑入口藏掉（写保护仍以服务端为准） */
+body.cloud-viewer [data-needs-editor]{display:none!important}
+
 /* ══════════ 批量导入名单 ══════════ */
 .import-help{font-size:12.5px;line-height:1.75;color:var(--text-2);background:var(--ov045);border:1px solid var(--ov110);border-radius:12px;padding:11px 13px;margin-bottom:14px}
 .import-help code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;background:var(--ov050);padding:1px 5px;border-radius:5px}

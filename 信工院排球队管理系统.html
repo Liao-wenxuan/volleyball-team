@@ -7,8 +7,6 @@
 <meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%237b6cff'/%3E%3Crect%20x='12'%20y='12'%20width='40'%20height='40'%20rx='4'%20fill='none'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M12%2028h40'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M32%2012v40'%20stroke='%23fff'%20stroke-width='3'%20stroke-opacity='.55'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#05070f">
-
-
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -2097,6 +2095,31 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 .cloud-id p{margin:2px 0 0;font-size:12.5px;color:var(--text-2,#aab)}
 .cloud-account .form-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
 
+/* ── 用户管理：角色徽章 / 成员列表 / 邀请码 ── */
+.cloud-role-badge{display:inline-block;font-size:11px;line-height:1;padding:4px 8px;border-radius:99px;vertical-align:2px;font-weight:600;letter-spacing:.5px}
+.cloud-role-badge.r-owner{background:rgba(var(--violet-rgb),.22);color:var(--violet)}
+.cloud-role-badge.r-editor{background:rgba(var(--cyan-rgb),.18);color:var(--cyan)}
+.cloud-role-badge.r-viewer{background:var(--ov050,rgba(255,255,255,.06));color:var(--text-2,#aab)}
+.cloud-section{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;font-weight:700;color:var(--text-2,#aab);letter-spacing:1px;margin:18px 0 8px}
+.cloud-section:first-child{margin-top:4px}
+.member-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 2px;border-bottom:1px solid var(--ov110,rgba(255,255,255,.07))}
+.member-row:last-of-type{border-bottom:none}
+.member-row.on{background:var(--ov045,rgba(255,255,255,.03));border-radius:10px;padding-left:10px;padding-right:10px}
+.m-main{min-width:0;display:flex;flex-direction:column;gap:2px}
+.m-main b{font-size:13.5px}
+.m-main b small{font-weight:400;color:var(--text-2,#aab);margin-left:4px}
+.m-main small{font-size:11.5px;color:var(--text-2,#aab);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-ops{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.m-cur{font-size:11.5px;color:var(--green);font-weight:600}
+.btn.btn-sm{padding:5px 12px;font-size:12px}
+.invite-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;letter-spacing:3px;color:var(--cyan)}
+.role-sel{background:var(--ov050,rgba(255,255,255,.05));border:1px solid var(--ov110,rgba(255,255,255,.1));color:var(--text);border-radius:8px;font-size:12px;padding:5px 6px;outline:none;cursor:pointer}
+.join-row{display:flex;gap:8px;margin-bottom:8px}
+.join-row input{flex:1;background:var(--ov045,rgba(255,255,255,.04));border:1px solid var(--ov110,rgba(255,255,255,.1));border-radius:10px;color:var(--text);font-size:14px;letter-spacing:3px;padding:9px 12px;outline:none;text-transform:uppercase}
+.join-row input:focus{border-color:rgba(var(--violet-rgb),.55)}
+/* 队员只读：把纯展示界面上最扎眼的编辑入口藏掉（写保护仍以服务端为准） */
+body.cloud-viewer [data-needs-editor]{display:none!important}
+
 /* ══════════ 批量导入名单 ══════════ */
 .import-help{font-size:12.5px;line-height:1.75;color:var(--text-2);background:var(--ov045);border:1px solid var(--ov110);border-radius:12px;padding:11px 13px;margin-bottom:14px}
 .import-help code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;background:var(--ov050);padding:1px 5px;border-radius:5px}
@@ -2581,13 +2604,13 @@ body.sv-mode > *:not(#shareView){display:none !important}
           </div>
           <hr>
           <div class="up-links">
-            <button id="menuTemplate"><span class="up-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span>训练模板</span><i>›</i></button>
+            <button id="menuTemplate" data-needs-editor><span class="up-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span>训练模板</span><i>›</i></button>
             <button id="menuTheme"><span class="up-ico"><svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><circle cx="12" cy="16.5" r="3"/></svg></span><span>主题色</span><i>›</i></button>
             <button id="menuShare"><span class="up-ico"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span><span>分享队伍动态</span><i>›</i></button>
             <button id="menuExport"><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></span><span>导出备份</span><i>›</i></button>
             <button id="menuLinkShare"><span class="up-ico"><svg viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="9" height="7" rx="1.6"/><rect x="12.5" y="12.5" width="9" height="7" rx="1.6"/><path d="M11 11l2 1.5"/></svg></span><span>发给另一台设备</span><i>›</i></button>
-            <button id="menuImport"><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M12 21V9M7 14l5-5 5 5"/><path d="M4 3h16"/></svg></span><span>导入备份</span><i>›</i></button>
-            <button class="danger" id="menuClear"><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/></svg></span><span>清空所有数据</span><i>›</i></button>
+            <button id="menuImport" data-needs-editor><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M12 21V9M7 14l5-5 5 5"/><path d="M4 3h16"/></svg></span><span>导入备份</span><i>›</i></button>
+            <button class="danger" id="menuClear" data-needs-editor><span class="up-ico"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/></svg></span><span>清空所有数据</span><i>›</i></button>
           </div>
           <hr>
           <button class="up-logout" id="menuAbout">关于这个系统</button>
@@ -2714,7 +2737,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
           <header class="panel-head">
             <div><h3>本周训练</h3><p>按固定模板生成 · 单次改动只影响本周</p></div>
             <div class="panel-head-actions">
-              <button class="btn-mini" id="attAddBtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> 加练</button>
+              <button class="btn-mini" id="attAddBtn" data-needs-editor><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> 加练</button>
               <button class="text-link" data-goto="attendance">去登记
                 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
               </button>
@@ -2792,8 +2815,8 @@ body.sv-mode > *:not(#shareView){display:none !important}
           <p id="rosterSub">还没有队员。从添加第一名队员开始。</p>
         </div>
         <div class="page-head-actions">
-          <button class="btn btn-ghost magnetic" id="bulkImportBtn"><svg viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4M4 20h16"/></svg>批量导入</button>
-          <button class="btn btn-primary magnetic" id="addPlayerBtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>新增队员</button>
+          <button class="btn btn-ghost magnetic" id="bulkImportBtn" data-needs-editor><svg viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4M4 20h16"/></svg>批量导入</button>
+          <button class="btn btn-primary magnetic" id="addPlayerBtn" data-needs-editor><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>新增队员</button>
         </div>
       </div>
 
@@ -2843,7 +2866,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
           <button class="btn btn-ghost" id="attRcptBtn"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4z"/><path d="m9 10 2 2 4-4"/></svg>回执</button>
           <button class="btn btn-ghost" id="attCardBtn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 4v16"/></svg>训练卡</button>
           <button class="btn btn-ghost" id="attSeasonBtn"><svg viewBox="0 0 24 24"><path d="M3 20h18M6 20V9m6 11V4m6 16v-7"/></svg>赛季卡</button>
-          <button class="btn btn-primary" id="attAddBtnPage"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>加练</button>
+          <button class="btn btn-primary" id="attAddBtnPage" data-needs-editor><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>加练</button>
         </div>
       </div>
 
@@ -2988,8 +3011,8 @@ body.sv-mode > *:not(#shareView){display:none !important}
           <p>6 项技能，0–10 分。每次训练或比赛后手动加减，所有变化留痕。</p>
         </div>
         <div class="page-head-actions">
-          <button class="btn btn-ghost" id="manualBtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>手动调整</button>
-          <button class="btn btn-primary magnetic" id="batchBtn"><svg viewBox="0 0 24 24"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>训练后调整</button>
+          <button class="btn btn-ghost" id="manualBtn" data-needs-editor><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>手动调整</button>
+          <button class="btn btn-primary magnetic" id="batchBtn" data-needs-editor><svg viewBox="0 0 24 24"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>训练后调整</button>
         </div>
       </div>
 
@@ -3116,6 +3139,11 @@ body.sv-mode > *:not(#shareView){display:none !important}
  *     后台推送；失败则重新拉这一周/阵型，以服务器为准。
  * - token 存 localStorage（Bearer 方案，不依赖 cookie，
  *   所以 GitHub Pages / file:// 都能连）。
+ *
+ * 角色体系（2026-11 用户管理）：
+ * - owner 队长 / editor 管理员：可编辑；viewer 队员：只读。
+ * - 只读的执行点有两层：前端 push 前拦截（体验），后端 requireRole（真相）。
+ * - 邀请码：管理员生成 6 位码 → 队员注册时填码入队（只读），或登录后凭码加队。
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -3124,14 +3152,19 @@ body.sv-mode > *:not(#shareView){display:none !important}
     base: 'xgy_api_base',
     token: 'xgy_api_token',
     user: 'xgy_api_user',
-    team: 'xgy_api_team'
+    team: 'xgy_api_team',
+    role: 'xgy_api_role'
   };
   const DEFAULT_BASE = 'http://localhost:8787';
 
-  let hooks = null; // app.js 注入：toast/openModal/closeModal/getDB/save/renderAll/applyServerState
+  let hooks = null; // app.js 注入：toast/openModal/closeModal/confirm/getDB/save/renderAll/applyServerState/applyWeek/currentMondayKey
   let user = null;  // { id, email, name }
   let team = null;  // { id, name }
+  let role = null;  // 'owner' | 'editor' | 'viewer'
   let syncingWeeks = new Set();
+  let lastViewerWarn = 0;
+
+  const ROLE_LABEL = { owner: '队长', editor: '管理员', viewer: '队员' };
 
   function base() {
     return (localStorage.getItem(LS.base) || DEFAULT_BASE).replace(/\/+$/, '');
@@ -3142,6 +3175,12 @@ body.sv-mode > *:not(#shareView){display:none !important}
   function enabled() {
     return !!token() && !!user;
   }
+  function isViewer() {
+    return enabled() && role === 'viewer';
+  }
+  function canManage() {
+    return enabled() && (role === 'owner' || role === 'editor');
+  }
 
   async function api(path, opts) {
     const o = opts || {};
@@ -3149,7 +3188,8 @@ body.sv-mode > *:not(#shareView){display:none !important}
       method: o.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
-        ...(token() ? { Authorization: 'Bearer ' + token() } : {})
+        ...(token() ? { Authorization: 'Bearer ' + token() } : {}),
+        ...(o.teamId ? { 'X-Team-Id': o.teamId } : {})
       },
       body: o.body ? JSON.stringify(o.body) : undefined
     });
@@ -3171,25 +3211,49 @@ body.sv-mode > *:not(#shareView){display:none !important}
       const t = localStorage.getItem(LS.team);
       user = u ? JSON.parse(u) : null;
       team = t ? JSON.parse(t) : null;
+      role = localStorage.getItem(LS.role) || null;
     } catch (e) {
-      user = null; team = null;
+      user = null; team = null; role = null;
     }
-    if (!token()) { user = null; team = null; }
+    if (!token()) { user = null; team = null; role = null; }
   }
 
   function saveSession(payload) {
     localStorage.setItem(LS.token, payload.token);
     localStorage.setItem(LS.user, JSON.stringify(payload.user));
     localStorage.setItem(LS.team, JSON.stringify(payload.team));
+    localStorage.setItem(LS.role, payload.role || 'owner');
     user = payload.user;
     team = payload.team;
+    role = payload.role || 'owner';
+    paintBodyClass();
+  }
+
+  /** 切换球队：/me 带 X-Team-Id，服务器返回新队的角色和设置 */
+  async function switchTeam(teamId) {
+    const data = await api('/api/auth/me', { teamId });
+    team = data.team;
+    role = data.role;
+    localStorage.setItem(LS.team, JSON.stringify(team));
+    localStorage.setItem(LS.role, role);
+    paintBodyClass();
+    await pullCore();
+    await syncWeek(currentMondayKey(), true);
+    hooks.renderAll();
+    hooks.toast(`已切换到 ${team.name}`);
+  }
+
+  function paintBodyClass() {
+    document.body.classList.toggle('cloud-viewer', isViewer());
   }
 
   function logout() {
     localStorage.removeItem(LS.token);
     localStorage.removeItem(LS.user);
     localStorage.removeItem(LS.team);
-    user = null; team = null;
+    localStorage.removeItem(LS.role);
+    user = null; team = null; role = null;
+    paintBodyClass();
     paintCloudUI();
     hooks && hooks.toast('已退出云端账号，数据保留在本机', 'ok');
   }
@@ -3203,6 +3267,10 @@ body.sv-mode > *:not(#shareView){display:none !important}
       api('/api/formation/library'),
       api('/api/auth/me')
     ]);
+    // 角色以服务器为准（比如被队长改过角色）
+    role = me.role || role;
+    localStorage.setItem(LS.role, role);
+    paintBodyClass();
     hooks.applyServerState({
       players: players.players,
       skillLogs: logs.logs,
@@ -3232,40 +3300,16 @@ body.sv-mode > *:not(#shareView){display:none !important}
     }
   }
 
-  /* ── 登录 / 注册弹窗 ── */
+  /* ── 弹窗通用 ── */
   function field(label, inner) {
     return `<div class="field full"><label>${label}</label>${inner}</div>`;
   }
 
+  /* ── 登录 / 注册弹窗 ── */
   function openLogin() {
     if (!hooks) return;
     if (enabled()) {
-      const body = `<div class="cloud-account">
-        <div class="cloud-id">
-          <span class="u-avatar xl" style="--a:var(--cyan);--b:var(--violet)">${(user.name || user.email)[0] || '云'}</span>
-          <div><h3>${escHtml(user.name)}</h3><p>${escHtml(user.email)} · ${escHtml(team ? team.name : '')}</p></div>
-        </div>
-        <p class="form-note">当前为云端模式：数据实时同步到 ${escHtml(base())}。退出登录后回到本机数据（本机数据不会被删除）。</p>
-        <div class="form-foot">
-          <button type="button" class="btn btn-ghost" id="cloudResync">重新同步</button>
-          <button type="button" class="btn btn-danger-ghost" id="cloudLogout">退出登录</button>
-        </div>
-      </div>`;
-      hooks.openModal('云端同步', body, { mid: true });
-      document.getElementById('cloudLogout').onclick = () => { hooks.closeModal(); logout(); hooks.renderAll(); };
-      document.getElementById('cloudResync').onclick = async (e) => {
-        e.target.disabled = true;
-        try {
-          await pullCore();
-          await syncWeek(currentMondayKey(), true);
-          hooks.toast('已重新同步');
-          hooks.closeModal();
-          hooks.renderAll();
-        } catch (err) {
-          hooks.toast(err.message, 'warn');
-          e.target.disabled = false;
-        }
-      };
+      openAccount();
       return;
     }
 
@@ -3275,13 +3319,14 @@ body.sv-mode > *:not(#shareView){display:none !important}
         <button type="button" class="cloud-tab" data-tab="register">注册</button>
       </div>
       <form id="cloudForm"><div class="form-grid">
-        ${field('服务器', `<input name="base" value="${escHtml(base())}" placeholder="https://your-app.up.railway.app" required>`)}
+        ${field('服务器', `<input name="base" value="${escHtml(base())}" placeholder="https://your-app.example.com" required>`)}
         <div class="field full cloud-reg" hidden><label>你的名字</label><input name="name" maxlength="20" placeholder="教练"></div>
-        <div class="field full cloud-reg" hidden><label>球队名</label><input name="teamName" maxlength="30" placeholder="信工院排球队"></div>
+        <div class="field full cloud-reg" hidden><label>球队名 <small>（有邀请码可不填）</small></label><input name="teamName" maxlength="30" placeholder="信工院排球队"></div>
+        <div class="field full cloud-reg" hidden><label>邀请码 <small>（选填，队员凭码加入已有球队）</small></label><input name="inviteCode" maxlength="6" placeholder="6 位邀请码" style="text-transform:uppercase"></div>
         ${field('邮箱', '<input name="email" type="email" required placeholder="you@example.com">')}
         ${field('密码', '<input name="password" type="password" required minlength="6" placeholder="至少 6 位">')}
       </div>
-      <p class="form-note">云端模式会把队员、考勤、技能、阵型同步到服务器，多台设备（电脑/平板）都能看到同一份数据。不登录则仍是本机模式。</p>
+      <p class="form-note">云端模式会把队员、考勤、技能、阵型同步到服务器，多台设备（电脑/平板）都能看到同一份数据。凭邀请码注册的队员是只读身份。不登录则仍是本机模式。</p>
       <div class="form-foot"><button type="submit" class="btn btn-primary" id="cloudSubmit">登录并同步</button></div>
       </form>
     </div>`;
@@ -3310,7 +3355,12 @@ body.sv-mode > *:not(#shareView){display:none !important}
       };
       if (mode === 'register') {
         payload.name = String(fd.get('name') || '').trim() || '教练';
-        payload.teamName = String(fd.get('teamName') || '').trim() || '我的排球队';
+        const invite = String(fd.get('inviteCode') || '').trim().toUpperCase();
+        if (invite) {
+          payload.inviteCode = invite;
+        } else {
+          payload.teamName = String(fd.get('teamName') || '').trim() || '我的排球队';
+        }
       }
       const btn = document.getElementById('cloudSubmit');
       btn.disabled = true;
@@ -3323,7 +3373,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
         hooks.closeModal();
         paintCloudUI();
         hooks.renderAll();
-        hooks.toast(`已连接云端：${data.team.name}`);
+        hooks.toast(`已连接云端：${data.team.name}（${ROLE_LABEL[data.role] || data.role}）`);
       } catch (err) {
         hooks.toast(err.message, 'warn');
         btn.disabled = false;
@@ -3332,8 +3382,304 @@ body.sv-mode > *:not(#shareView){display:none !important}
     };
   }
 
-  /* ── 推送（写操作） ── */
-  const push = {
+  /* ── 账号弹窗（已登录） ── */
+  function openAccount() {
+    const roleBadge = `<span class="cloud-role-badge r-${role}">${ROLE_LABEL[role] || role}</span>`;
+    const manageBtn = canManage() ? '<button type="button" class="btn btn-ghost" id="cloudMembers">成员管理</button>' : '';
+    const body = `<div class="cloud-account">
+      <div class="cloud-id">
+        <span class="u-avatar xl" style="--a:var(--cyan);--b:var(--violet)">${(user.name || user.email)[0] || '云'}</span>
+        <div><h3>${escHtml(user.name)} ${roleBadge}</h3><p>${escHtml(user.email)} · ${escHtml(team ? team.name : '')}</p></div>
+      </div>
+      <p class="form-note">当前为云端模式：数据实时同步到 ${escHtml(base())}。${isViewer() ? '你的身份是队员（只读），如需编辑请联系管理员。' : ''}退出登录后回到本机数据（本机数据不会被删除）。</p>
+      <div class="form-foot">
+        <button type="button" class="btn btn-ghost" id="cloudTeams">切换球队</button>
+        <button type="button" class="btn btn-ghost" id="cloudPassword">修改密码</button>
+      </div>
+      <div class="form-foot">
+        ${manageBtn}
+        <button type="button" class="btn btn-ghost" id="cloudResync">重新同步</button>
+        <button type="button" class="btn btn-danger-ghost" id="cloudLogout">退出登录</button>
+      </div>
+    </div>`;
+    hooks.openModal('云端同步', body, { mid: true });
+    document.getElementById('cloudLogout').onclick = () => { hooks.closeModal(); logout(); hooks.renderAll(); };
+    document.getElementById('cloudResync').onclick = async (e) => {
+      e.target.disabled = true;
+      try {
+        await pullCore();
+        await syncWeek(currentMondayKey(), true);
+        hooks.toast('已重新同步');
+        hooks.closeModal();
+        hooks.renderAll();
+      } catch (err) {
+        hooks.toast(err.message, 'warn');
+        e.target.disabled = false;
+      }
+    };
+    document.getElementById('cloudPassword').onclick = openPassword;
+    document.getElementById('cloudTeams').onclick = openTeams;
+    const m = document.getElementById('cloudMembers');
+    if (m) m.onclick = openMembers;
+  }
+
+  /* ── 切换球队 ── */
+  async function openTeams() {
+    let teams = [];
+    try {
+      teams = (await api('/api/auth/teams')).teams;
+    } catch (e) {
+      hooks.toast(e.message, 'warn');
+      return;
+    }
+    const rows = teams.map((t) => `
+      <div class="member-row ${team && t.id === team.id ? 'on' : ''}">
+        <div class="m-main"><b>${escHtml(t.name)}</b><small>${ROLE_LABEL[t.role] || t.role}</small></div>
+        ${team && t.id === team.id
+          ? '<span class="m-cur">当前</span>'
+          : `<button type="button" class="btn btn-ghost btn-sm" data-switch="${t.id}">进入</button>`}
+      </div>`).join('');
+    const body = `<div class="cloud-account">
+      <div class="cloud-section">我加入的球队</div>
+      ${rows || '<p class="form-note">还没有加入任何球队。</p>'}
+      <div class="cloud-section">凭邀请码加入</div>
+      <div class="join-row">
+        <input name="joinCode" maxlength="6" placeholder="6 位邀请码" style="text-transform:uppercase">
+        <button type="button" class="btn btn-primary btn-sm" id="joinBtn">加入</button>
+      </div>
+      <p class="form-note">向目标球队的管理员要一个邀请码，输入后立即加入（队员为只读身份）。</p>
+      <div class="form-foot"><button type="button" class="btn btn-ghost" id="teamsBack">返回</button></div>
+    </div>`;
+    hooks.openModal('切换球队', body, { mid: true });
+    document.getElementById('teamsBack').onclick = openAccount;
+    document.querySelectorAll('[data-switch]').forEach((btn) => {
+      btn.onclick = async () => {
+        btn.disabled = true;
+        try {
+          await switchTeam(btn.dataset.switch);
+          hooks.closeModal();
+          openAccount();
+        } catch (e) {
+          hooks.toast(e.message, 'warn');
+          btn.disabled = false;
+        }
+      };
+    });
+    document.getElementById('joinBtn').onclick = async () => {
+      const input = document.querySelector('.join-row input');
+      const code = String(input.value || '').trim().toUpperCase();
+      if (code.length !== 6) { hooks.toast('邀请码是 6 位', 'warn'); return; }
+      const btn = document.getElementById('joinBtn');
+      btn.disabled = true;
+      try {
+        const r = await api('/api/team/join', { method: 'POST', body: { code } });
+        hooks.toast(`已加入 ${r.team.name}（${ROLE_LABEL[r.role] || r.role}）`);
+        openTeams();
+      } catch (e) {
+        hooks.toast(e.message, 'warn');
+        btn.disabled = false;
+      }
+    };
+  }
+
+  /* ── 修改密码 ── */
+  function openPassword() {
+    const body = `<div class="cloud-auth">
+      <form id="pwForm"><div class="form-grid">
+        ${field('当前密码', '<input name="oldPassword" type="password" required autocomplete="current-password">')}
+        ${field('新密码', '<input name="newPassword" type="password" required minlength="6" placeholder="至少 6 位" autocomplete="new-password">')}
+        ${field('确认新密码', '<input name="again" type="password" required minlength="6" autocomplete="new-password">')}
+      </div>
+      <div class="form-foot"><button type="submit" class="btn btn-primary">保存新密码</button></div>
+      </form>
+    </div>`;
+    hooks.openModal('修改密码', body, { mid: true });
+    const form = document.getElementById('pwForm');
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const newPassword = String(fd.get('newPassword') || '');
+      if (newPassword !== String(fd.get('again') || '')) {
+        hooks.toast('两次输入的新密码不一样', 'warn');
+        return;
+      }
+      try {
+        await api('/api/auth/password', {
+          method: 'POST',
+          body: { oldPassword: String(fd.get('oldPassword') || ''), newPassword }
+        });
+        hooks.toast('密码已修改');
+        openAccount();
+      } catch (err) {
+        hooks.toast(err.message, 'warn');
+      }
+    };
+  }
+
+  /* ── 成员管理（owner / editor） ── */
+  function fmtDate(ts) {
+    const d = new Date(ts);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+
+  async function openMembers() {
+    if (!canManage()) return;
+    let members = [];
+    let invites = [];
+    try {
+      const [m, inv] = await Promise.all([api('/api/team/members'), api('/api/team/invites')]);
+      members = m.members;
+      invites = inv.invites || [];
+    } catch (e) {
+      hooks.toast(e.message, 'warn');
+      return;
+    }
+
+    const amOwner = role === 'owner';
+    const activeInvites = invites.filter((i) => !i.revoked && i.expiresAt > Date.now());
+
+    const memberRows = members.map((m) => {
+      const isSelf = m.id === user.id;
+      const isOwner = m.role === 'owner';
+      const controls = [];
+      if (amOwner && !isSelf && !isOwner) {
+        controls.push(`<select class="role-sel" data-uid="${m.id}">
+          <option value="viewer" ${m.role === 'viewer' ? 'selected' : ''}>队员（只读）</option>
+          <option value="editor" ${m.role === 'editor' ? 'selected' : ''}>管理员</option>
+        </select>`);
+        controls.push(`<button type="button" class="btn btn-danger-ghost btn-sm" data-kick="${m.id}" data-name="${escHtml(m.name)}">移除</button>`);
+      } else if (isSelf && !isOwner) {
+        controls.push(`<button type="button" class="btn btn-danger-ghost btn-sm" data-leave="1">退队</button>`);
+      }
+      return `<div class="member-row">
+        <div class="m-main"><b>${escHtml(m.name)}${isSelf ? '<small>（我）</small>' : ''}</b><small>${escHtml(m.email)} · ${fmtDate(m.joinedAt)}加入</small></div>
+        <div class="m-ops">
+          <span class="cloud-role-badge r-${m.role}">${ROLE_LABEL[m.role]}</span>
+          ${controls.join('')}
+        </div>
+      </div>`;
+    }).join('');
+
+    const inviteRows = activeInvites.map((i) => `
+      <div class="member-row">
+        <div class="m-main"><b class="invite-code">${i.code}</b><small>${fmtDate(i.expiresAt)} 过期</small></div>
+        <div class="m-ops">
+          <button type="button" class="btn btn-ghost btn-sm" data-copy="${i.code}">复制</button>
+          <button type="button" class="btn btn-danger-ghost btn-sm" data-revoke="${i.code}">撤销</button>
+        </div>
+      </div>`).join('');
+
+    const body = `<div class="cloud-account">
+      <div class="cloud-section">球队成员（${members.length}）</div>
+      ${memberRows}
+      <div class="cloud-section">邀请码
+        <button type="button" class="btn btn-primary btn-sm" id="genInvite">生成新邀请码</button>
+      </div>
+      ${inviteRows || '<p class="form-note">还没有有效邀请码。生成一个发给队员，注册时填码即可入队（只读身份）。</p>'}
+      <p class="form-note">已登录的队员也可以凭码加入第二支球队（「切换球队」页有入口说明）。</p>
+      <div class="form-foot"><button type="button" class="btn btn-ghost" id="membersBack">返回</button></div>
+    </div>`;
+    hooks.openModal('成员管理', body, { mid: true });
+    document.getElementById('membersBack').onclick = openAccount;
+
+    document.getElementById('genInvite').onclick = async (e) => {
+      e.target.disabled = true;
+      try {
+        const r = await api('/api/team/invites', { method: 'POST' });
+        hooks.toast(`已生成邀请码 ${r.code}，7 天内有效`);
+        openMembers();
+      } catch (err) {
+        hooks.toast(err.message, 'warn');
+        e.target.disabled = false;
+      }
+    };
+
+    document.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(btn.dataset.copy);
+          hooks.toast(`已复制 ${btn.dataset.copy}`);
+        } catch (e) {
+          hooks.toast('复制失败，请手动记下邀请码', 'warn');
+        }
+      };
+    });
+
+    document.querySelectorAll('[data-revoke]').forEach((btn) => {
+      btn.onclick = async () => {
+        const ok = await hooks.confirm({ title: '撤销邀请码', message: `撤销后 ${btn.dataset.revoke} 将立即失效，已用它注册的成员不受影响。`, ok: '撤销' });
+        if (!ok) return;
+        try {
+          await api(`/api/team/invites/${btn.dataset.revoke}`, { method: 'DELETE' });
+          hooks.toast('已撤销');
+          openMembers();
+        } catch (err) {
+          hooks.toast(err.message, 'warn');
+        }
+      };
+    });
+
+    document.querySelectorAll('.role-sel').forEach((sel) => {
+      sel.onchange = async () => {
+        try {
+          await api(`/api/team/members/${sel.dataset.uid}`, { method: 'PATCH', body: { role: sel.value } });
+          hooks.toast('角色已更新');
+        } catch (err) {
+          hooks.toast(err.message, 'warn');
+        }
+        openMembers();
+      };
+    });
+
+    document.querySelectorAll('[data-kick]').forEach((btn) => {
+      btn.onclick = async () => {
+        const ok = await hooks.confirm({ title: '移除成员', message: `确定把「${btn.dataset.name}」移出球队？对方将无法再查看球队数据。`, ok: '移除' });
+        if (!ok) return;
+        try {
+          await api(`/api/team/members/${btn.dataset.kick}`, { method: 'DELETE' });
+          hooks.toast('已移除');
+          openMembers();
+        } catch (err) {
+          hooks.toast(err.message, 'warn');
+        }
+      };
+    });
+
+    const leaveBtn = document.querySelector('[data-leave]');
+    if (leaveBtn) {
+      leaveBtn.onclick = async () => {
+        const ok = await hooks.confirm({ title: '退出球队', message: `确定退出「${team ? team.name : ''}」？退出后不再同步这支球队的数据。`, ok: '退出' });
+        if (!ok) return;
+        try {
+          await api(`/api/team/members/${user.id}`, { method: 'DELETE' });
+          hooks.toast('已退出球队');
+          openTeams();
+        } catch (err) {
+          hooks.toast(err.message, 'warn');
+        }
+      };
+    }
+  }
+
+  /* ── 推送（写操作） ──
+   * viewer（队员只读）在发请求前就拦下：不合法的操作不必等服务器 403。
+   * 高频操作本地已经先变了，fireAndSync 的回拉会把界面恢复成服务器状态。 */
+  function guardWrite(fn) {
+    return function (...args) {
+      if (isViewer()) {
+        const t = Date.now();
+        if (t - lastViewerWarn > 4000) {
+          lastViewerWarn = t;
+          hooks && hooks.toast('队员身份只有查看权限，如需编辑请联系管理员', 'warn');
+        }
+        return Promise.reject(new Error('forbidden'));
+      }
+      return fn.apply(null, args);
+    };
+  }
+
+  const rawPush = {
     playerCreate: (p) => api('/api/players', { method: 'POST', body: p }),
     playerUpdate: (id, p) => api(`/api/players/${id}`, { method: 'PATCH', body: p }),
     playerDelete: (id) => api(`/api/players/${id}`, { method: 'DELETE' }),
@@ -3356,9 +3702,13 @@ body.sv-mode > *:not(#shareView){display:none !important}
     theme: (themeId) => api('/api/settings/theme', { method: 'PUT', body: { theme: themeId } })
   };
 
+  const push = {};
+  Object.keys(rawPush).forEach((k) => { push[k] = guardWrite(rawPush[k]); });
+
   /** 高频写（考勤、阵型）：后台推送，失败提示并回拉 */
   function fireAndSync(promise, resync) {
     promise.catch((e) => {
+      if (e && e.message === 'forbidden') return; // viewer 拦截已经提示过了
       hooks && hooks.toast(`云端同步失败：${e.message}`, 'warn');
       if (resync) resync();
     });
@@ -3387,6 +3737,7 @@ body.sv-mode > *:not(#shareView){display:none !important}
     attach(h) {
       hooks = h;
       restoreSession();
+      paintBodyClass();
       paintCloudUI();
       const btn = document.getElementById('cloudBtn');
       if (btn) btn.onclick = openLogin;
@@ -3408,6 +3759,8 @@ body.sv-mode > *:not(#shareView){display:none !important}
     enabled,
     user: () => user,
     team: () => team,
+    role: () => role,
+    isViewer,
     openLogin,
     logout,
     syncWeek,
@@ -9902,6 +10255,7 @@ ${aiContext()}`;
         toast,
         openModal,
         closeModal,
+        confirm: confirmDialog,
         getDB: () => db,
         save,
         renderAll: renderAllCurrent,

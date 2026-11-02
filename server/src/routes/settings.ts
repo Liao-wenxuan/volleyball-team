@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db, now } from '../db';
 import { asyncHandler, parse } from '../http';
-import { requireAuth, type AuthedRequest } from '../auth';
+import { requireAuth, requireRole, type AuthedRequest } from '../auth';
 import { getSettings } from '../repo';
 
 const router = Router();
@@ -40,6 +40,7 @@ router.get('/', (req, res) => {
 /** 更新训练模板（全量替换） */
 router.put(
   '/template',
+  requireRole('owner', 'editor'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(templateSchema, req.body);
@@ -54,6 +55,7 @@ router.put(
 /** 更新主题 */
 router.put(
   '/theme',
+  requireRole('owner', 'editor'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(themeSchema, req.body);

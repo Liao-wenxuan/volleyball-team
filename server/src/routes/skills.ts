@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db, now } from '../db';
 import { asyncHandler, parse, HttpError } from '../http';
-import { requireAuth, type AuthedRequest } from '../auth';
+import { requireAuth, requireRole, type AuthedRequest } from '../auth';
 import { SKILL_KEYS } from '../db';
 import { listLogs, listPlayers, setSkill } from '../repo';
 
@@ -38,6 +38,7 @@ const batchSchema = z.object({
  */
 router.post(
   '/batch',
+  requireRole('owner', 'editor'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(batchSchema, req.body);
@@ -66,6 +67,7 @@ const oneSchema = z.object({
 
 router.post(
   '/players/:id',
+  requireRole('owner', 'editor'),
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(oneSchema, req.body);
