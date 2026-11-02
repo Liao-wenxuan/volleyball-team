@@ -12,6 +12,7 @@
  *
  * 发新版：把 VERSION 加一，旧缓存在 activate 时自动清掉。
  * ═══════════════════════════════════════════════════════════════ */
+// v27: 管理端上线（/admin 独立入口）；修导航缓存污染（非主页导航不再写坏离线壳）
 // v26: 头像菜单加退出登录 + 显示当前登录身份
 // v25: 登录后可把本机数据搬到云端；队员性别入库
 // v24: 账号体系 v2（删注册改发号、用户名登录、首登强制改密、账号管理页）
@@ -19,7 +20,7 @@
 // v22: 用户管理（角色/邀请码/成员管理/改密码/切队）
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v26';
+const VERSION = 'v27';
 const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',
@@ -62,8 +63,12 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put('./index.html', copy));
+          // 只有主页导航才刷新离线壳。任何 URL 都缓存成 ./index.html 的话，
+          // 用户访问过 /admin 再断网，「离线打开教练端」会变成管理端页面
+          if (url.pathname === '/' || url.pathname.endsWith('/index.html')) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put('./index.html', copy));
+          }
           return res;
         })
         .catch(() => caches.match('./index.html'))
