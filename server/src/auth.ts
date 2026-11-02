@@ -38,27 +38,52 @@ export function signToken(userId: string): string {
   return jwt.sign({ uid: userId }, SECRET, { expiresIn: TTL });
 }
 
-export function requireAuth(req: Request, _res: Response, next: NextFunction) {
+/**
+ * 只验「人」：JWT → users 行 → 账号状态。不解析球队。
+ *
+ * 为什么从 requireAuth 里拆出来：管理端接口是跨队的，不能走「按 X-Team-Id
+ * 解析 membership」的逻辑；更关键的是——如果用户唯一加入的队被停用，
+ * requireAuth 会在球队状态检查上把他拦死，他自己反而进不了管理端去恢复。
+ * 管理端路由（routes/admin.ts）必须只依赖这一层。
+ */
+export function verifyUser(req: Request): AuthedUser {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-  if (!token) return next(new HttpError(401, '未登录', 'unauthorized'));
+  if (!token) throw new HttpError(401, '未登录', 'unauthorized');
 
   let payload: { uid?: string };
   try {
     payload = jwt.verify(token, SECRET) as { uid?: string };
   } catch {
-    return next(new HttpError(401, '登录已过期，请重新登录', 'token_expired'));
+    throw new HttpError(401, '登录已过期，请重新登录', 'token_expired');
   }
-  if (!payload.uid) return next(new HttpError(401, '登录信息无效', 'unauthorized'));
+  if (!payload.uid) throw new HttpError(401, '登录信息无效', 'unauthorized');
 
   const user = db
     .prepare('SELECT id, username, email, name, status, must_change_pw FROM users WHERE id = ?')
     .get(payload.uid) as
     | { id: string; username: string | null; email: string; name: string; status: string; must_change_pw: number }
     | undefined;
-  if (!user) return next(new HttpError(401, '账号不存在', 'unauthorized'));
+  if (!user) throw new HttpError(401, '账号不存在', 'unauthorized');
   if (user.status === 'disabled') {
-    return next(new HttpError(403, '账号已停用，请联系管理员', 'account_disabled'));
+    throw new HttpError(403, '账号已停用，请联系管理员', 'account_disabled');
+  }
+
+  return {
+    id: user.id,
+    username: user.username || '',
+    email: user.email,
+    name: user.name,
+    mustChangePassword: !!user.must_change_pw
+  };
+}
+
+export function requireAuth(req: Request, _res: Response, next: NextFunction) {
+  let user: AuthedUser;
+  try {
+    user = verifyUser(req);
+  } catch (e) {
+    return next(e);
   }
 
   // 决定这次请求作用于哪个队：请求头优先，否则取加入的第一个队
@@ -73,14 +98,16 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
 
   if (!member) return next(new HttpError(403, '没有可访问的球队', 'no_team'));
 
+  // 停用的球队全员拦截（管理端 /api/admin/* 不走这里，所以系统管理员仍可恢复球队）
+  const team = db.prepare('SELECT status FROM teams WHERE id = ?').get(member.team_id) as
+    | { status: string }
+    | undefined;
+  if (team && team.status === 'disabled') {
+    return next(new HttpError(403, '球队已停用，请联系系统管理员', 'team_disabled'));
+  }
+
   const r = req as AuthedRequest;
-  r.user = {
-    id: user.id,
-    username: user.username || '',
-    email: user.email,
-    name: user.name,
-    mustChangePassword: !!user.must_change_pw
-  };
+  r.user = user;
   r.teamId = member.team_id;
   r.role = member.role;
   next();

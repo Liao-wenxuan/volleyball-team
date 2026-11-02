@@ -238,6 +238,24 @@ function migrateAccountV2() {
 
 migrateAccountV2();
 
+/**
+ * 迁移：管理端（多球队运营）
+ *
+ * teams 加 status 列（'active' | 'disabled'）。为什么只 ADD COLUMN 不重建：
+ * teams 被 team_members / players / sessions / team_settings / formations /
+ * formation_saves / invites / skill_logs 八处外键引用，foreign_keys=ON 时
+ * DROP TABLE 会级联清空全库 —— 那是数据丢失，不是迁移（同 users 的教训）。
+ * 停用语义在 auth.ts 执行：requireAuth 解析出 membership 后查这里的状态。
+ */
+function migrateAdminV2() {
+  if (!columnNames('teams').includes('status')) {
+    db.exec("ALTER TABLE teams ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
+    console.log('[db] 管理端迁移：teams 已补 status 列');
+  }
+}
+
+migrateAdminV2();
+
 /** 跟前端一致的短 id：p_xxx / s_xxx / l_xxx */
 export function newId(prefix: string): string {
   return prefix + '_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);

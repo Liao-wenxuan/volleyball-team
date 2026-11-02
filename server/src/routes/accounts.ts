@@ -10,11 +10,11 @@
  */
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import crypto from 'node:crypto';
 import { z } from 'zod';
 import { db, newId, now, type Role } from '../db';
 import { HttpError, asyncHandler, parse } from '../http';
 import { requireAuth, requireRole, type AuthedRequest } from '../auth';
+import { genPassword } from '../passwords';
 
 const router = Router();
 router.use(requireAuth);
@@ -44,15 +44,6 @@ const patchSchema = z.object({
 });
 
 /* ══════════ 工具 ══════════ */
-
-/** 8 位初始密码：去掉 0/O/1/l/I 这些抄错率高的字符 */
-function genPassword(): string {
-  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const buf = crypto.randomBytes(8);
-  let out = '';
-  for (let i = 0; i < 8; i++) out += chars[buf[i] % chars.length];
-  return out;
-}
 
 function assertCanManage(me: AuthedRequest, targetRole: Role) {
   if (me.role === 'admin') return;

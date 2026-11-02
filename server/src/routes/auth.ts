@@ -81,10 +81,15 @@ function payload(userId: string) {
 
   const team = db
     .prepare(
-      'SELECT t.id, t.name FROM teams t JOIN team_members m ON m.team_id = t.id WHERE m.user_id = ? ORDER BY m.joined_at LIMIT 1'
+      `SELECT t.id, t.name, t.status FROM teams t JOIN team_members m ON m.team_id = t.id
+        WHERE m.user_id = ? ORDER BY m.joined_at LIMIT 1`
     )
-    .get(userId) as { id: string; name: string } | undefined;
+    .get(userId) as { id: string; name: string; status: string } | undefined;
   if (!team) throw new HttpError(403, '账号还没有加入任何球队', 'no_team');
+  if (team.status === 'disabled') {
+    // 登录时就拦下，不发 token —— 停用队的教练连门都进不来
+    throw new HttpError(403, '球队已停用，请联系系统管理员', 'team_disabled');
+  }
 
   const m = db
     .prepare('SELECT role FROM team_members WHERE user_id = ? AND team_id = ?')

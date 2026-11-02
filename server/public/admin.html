@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>系统管理 · 排球球队平台</title>
+<style>
+:root{
+  --bg:#f2f4f1; --panel:#ffffff; --line:#e3e7e2;
+  --ink:#1d2a24; --ink2:#5c6b63; --ink3:#93a29a;
+  --green:#0e8f6f; --green-soft:#e3f4ee;
+  --red:#d4453f; --red-soft:#fdeeed;
+  --amber:#c07f1f; --amber-soft:#fdf3e2;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+  background:
+    radial-gradient(900px 500px at 85% -10%, #dcefe7 0%, transparent 60%),
+    radial-gradient(700px 420px at -10% 110%, #e9efe6 0%, transparent 55%),
+    var(--bg);
+  min-height:100vh;color:var(--ink);
+}
+.wrap{max-width:1080px;margin:0 auto;padding:32px 24px 64px}
+
+/* ── 登录屏 ── */
+#loginView{max-width:380px;margin:12vh auto 0;background:var(--panel);border:1px solid var(--line);
+  border-radius:20px;padding:36px 32px;box-shadow:0 18px 50px rgba(20,40,30,.08)}
+#loginView h1{font-size:20px;margin-bottom:4px}
+#loginView .sub{color:var(--ink3);font-size:13px;margin-bottom:24px}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:12px;color:var(--ink2);margin-bottom:6px}
+.fld input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+  font-size:14px;outline:none;background:#fbfcfa;transition:border .15s}
+.fld input:focus{border-color:var(--green)}
+.btn{border:none;border-radius:10px;padding:10px 16px;font-size:14px;cursor:pointer;
+  background:#eef1ec;color:var(--ink);transition:filter .15s}
+.btn:hover{filter:brightness(.96)}
+.btn.primary{background:var(--green);color:#fff}
+.btn.danger{background:var(--red-soft);color:var(--red)}
+.btn.ghost{background:transparent;border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.wide{width:100%;padding:12px}
+.err{background:var(--red-soft);color:var(--red);font-size:13px;border-radius:10px;
+  padding:10px 12px;margin-bottom:14px;display:none}
+.err.show{display:block}
+.note{color:var(--ink3);font-size:12px;line-height:1.6;margin-top:14px}
+
+/* ── 顶栏 ── */
+header{display:flex;align-items:center;gap:14px;margin-bottom:24px}
+header .logo{width:38px;height:38px;border-radius:11px;background:var(--green);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:17px}
+header h1{font-size:18px}
+header .sub{font-size:12px;color:var(--ink3)}
+header .spacer{flex:1}
+header .who{font-size:13px;color:var(--ink2)}
+
+/* ── 球队行卡 ── */
+.toolbar{display:flex;align-items:center;margin-bottom:14px}
+.toolbar h2{font-size:15px;color:var(--ink2);font-weight:500}
+.toolbar .spacer{flex:1}
+.team{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px 22px;margin-bottom:14px;transition:box-shadow .15s}
+.team:hover{box-shadow:0 8px 24px rgba(20,40,30,.06)}
+.team .head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.team .head .name{font-size:16px;font-weight:600}
+.badge{font-size:11px;padding:3px 9px;border-radius:99px;font-weight:500}
+.badge.ok{background:var(--green-soft);color:var(--green)}
+.badge.off{background:#eceff0;color:var(--ink3)}
+.team .head .created{font-size:12px;color:var(--ink3);margin-left:auto}
+.metrics{display:flex;gap:0;margin-bottom:16px}
+.metric{flex:1;border-left:1px solid var(--line);padding-left:16px}
+.metric:first-child{border-left:none;padding-left:0}
+.metric .v{font-size:22px;font-weight:600}
+.metric .v small{font-size:12px;color:var(--ink3);font-weight:400}
+.metric .k{font-size:12px;color:var(--ink3);margin-top:2px}
+.team .foot{display:flex;align-items:center;gap:10px}
+.trend{flex:1;display:flex;align-items:flex-end;gap:14px}
+.trend .cell{flex:1;max-width:120px}
+.trend .bar{height:38px;display:flex;align-items:flex-end}
+.trend .bar i{display:block;width:100%;border-radius:5px 5px 2px 2px;background:var(--green);min-height:3px;opacity:.85}
+.trend .bar i.none{background:repeating-linear-gradient(45deg,#dde3de 0 4px,#eef1ec 4px 8px)}
+.trend .lbl{font-size:11px;color:var(--ink3);margin-top:4px}
+.trend .val{font-size:11px;color:var(--ink2)}
+.team.off .metrics,.team.off .trend{opacity:.45}
+
+/* ── 弹层 ── */
+.scrim{position:fixed;inset:0;background:rgba(18,30,24,.42);display:none;
+  align-items:flex-start;justify-content:center;padding:8vh 16px;z-index:50;overflow:auto}
+.scrim.show{display:flex}
+.modal{background:var(--panel);border-radius:18px;padding:26px 28px;width:100%;max-width:520px;
+  box-shadow:0 24px 70px rgba(10,25,18,.25)}
+.modal h3{font-size:16px;margin-bottom:18px}
+.modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.acct{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.acct:last-child{border-bottom:none}
+.acct .avatar{width:34px;height:34px;border-radius:50%;background:var(--green-soft);color:var(--green);
+  display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.acct.dis .avatar{background:#eceff0;color:var(--ink3)}
+.acct .info{flex:1;min-width:0}
+.acct .info .n{font-size:14px;font-weight:500}
+.acct .info .u{font-size:12px;color:var(--ink3)}
+.acct .ops{display:flex;gap:6px}
+.btn.sm{padding:6px 11px;font-size:12px;border-radius:8px}
+.pw-show{background:var(--green-soft);border-radius:12px;padding:16px;text-align:center}
+.pw-show .u{font-size:13px;color:var(--ink2);margin-bottom:8px}
+.pw-show .pw{font-size:24px;font-weight:700;letter-spacing:2px;font-family:Consolas,monospace}
+.pw-show .tip{font-size:12px;color:var(--amber);margin-top:8px}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(20px);
+  background:#233129;color:#fff;padding:10px 18px;border-radius:12px;font-size:13px;
+  opacity:0;pointer-events:none;transition:all .25s;z-index:99}
+#toast.show{opacity:1;transform:translateX(-50%)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- ══ 登录屏 ══ -->
+<div id="loginView" hidden>
+  <h1 id="loginTitle">系统管理</h1>
+  <div class="sub">排球球队平台 · 仅限系统管理员</div>
+  <div class="err" id="loginErr"></div>
+  <form id="loginForm">
+    <div class="fld"><label>用户名</label><input id="loginUser" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
+    <div class="fld"><label>密码</label><input id="loginPass" type="password" autocomplete="current-password" required></div>
+    <button class="btn primary wide" type="submit">登录</button>
+  </form>
+  <form id="pwForm" hidden>
+    <div class="fld"><label>当前密码</label><input id="pwOld" type="password" autocomplete="current-password" required></div>
+    <div class="fld"><label>新密码（至少 6 位）</label><input id="pwNew" type="password" minlength="6" autocomplete="new-password" required></div>
+    <button class="btn primary wide" type="submit">改密码并进入</button>
+  </form>
+  <div class="note">教练端与队员端请从主页登录，这里只处理整个系统的球队运营。</div>
+</div>
+
+<!-- ══ 主界面 ══ -->
+<div class="wrap" id="mainView" hidden>
+  <header>
+    <div class="logo">⚡</div>
+    <div><h1>系统管理</h1><div class="sub" id="hSub">多球队运营平台</div></div>
+    <div class="spacer"></div>
+    <span class="who" id="whoami"></span>
+    <button class="btn ghost sm" id="btnLogout">退出</button>
+  </header>
+
+  <div class="toolbar">
+    <h2>球队概览</h2>
+    <div class="spacer"></div>
+    <button class="btn primary" id="btnNewTeam">＋ 新建球队</button>
+  </div>
+  <div id="teamList"></div>
+</div>
+
+<!-- ══ 弹层：建队 ══ -->
+<div class="scrim" id="mNew">
+  <div class="modal">
+    <h3>新建球队</h3>
+    <div class="err" id="newErr"></div>
+    <form id="newForm">
+      <div class="fld"><label>队名</label><input id="fTeamName" maxlength="30" placeholder="如：农学院排球队" required></div>
+      <div class="fld"><label>教练姓名</label><input id="fCoachName" maxlength="20" placeholder="如：王建国" required></div>
+      <div class="fld"><label>教练用户名（登录用）</label><input id="fCoachUser" placeholder="字母 / 数字 / 下划线" autocapitalize="none" spellcheck="false" required></div>
+      <div class="actions">
+        <button type="button" class="btn ghost" data-close>取消</button>
+        <button type="submit" class="btn primary">创建球队</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══ 弹层：一次性密码 ══ -->
+<div class="scrim" id="mPw">
+  <div class="modal">
+    <h3>账号已就绪</h3>
+    <div class="pw-show">
+      <div class="u" id="pwWho"></div>
+      <div class="pw" id="pwValue"></div>
+      <div class="tip">⚠ 只显示这一次，服务器只存哈希。请立即交给本人，首次登录后会要求改密。</div>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn" id="btnCopyPw">复制密码</button>
+      <button type="button" class="btn primary" data-close>我已保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 弹层：教练账号 ══ -->
+<div class="scrim" id="mAcct">
+  <div class="modal">
+    <h3 id="acctTitle">教练账号</h3>
+    <div id="acctList"></div>
+    <div class="actions"><button type="button" class="btn ghost" data-close>关闭</button></div>
+  </div>
+</div>
+
+<!-- ══ 弹层：确认 ══ -->
+<div class="scrim" id="mConfirm">
+  <div class="modal">
+    <h3 id="cfTitle"></h3>
+    <div style="color:var(--ink2);font-size:13px;line-height:1.7" id="cfBody"></div>
+    <div class="actions">
+      <button type="button" class="btn ghost" data-close>取消</button>
+      <button type="button" class="btn danger" id="cfOk">确认</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ═══════════ 管理端 · 系统运营 ═══════════
+ * 数据同源：页面和 API 由同一个 Express 服务，直接相对路径请求。
+ * token 存 localStorage('xgy_admin_token')，与教练端互不干扰（分开登录）。 */
+
+var TOKEN = localStorage.getItem('xgy_admin_token') || '';
+var ME = null;
+
+/* ── 基础 ── */
+function $(s){ return document.querySelector(s); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function toast(msg){ var t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(function(){ t.classList.remove('show'); },2200); }
+function showErr(id,msg){ var e=$(id); e.textContent=msg; e.classList.add('show'); }
+function hideErr(id){ $(id).classList.remove('show'); }
+
+function api(method, path, body){
+  return fetch(path, {
+    method: method,
+    headers: Object.assign({'Content-Type':'application/json'},
+      TOKEN ? {'Authorization':'Bearer '+TOKEN} : {}),
+    body: body ? JSON.stringify(body) : undefined
+  }).then(function(r){
+    return r.json().catch(function(){ return {}; }).then(function(data){
+      if (!r.ok) {
+        var e = new Error(data.message || ('请求失败 ' + r.status));
+        e.status = r.status; e.code = data.code;
+        throw e;
+      }
+      return data;
+    });
+  });
+}
+
+/* ── 弹层通用 ── */
+function openM(id){ $(id).classList.add('show'); }
+function closeM(id){ $(id).classList.remove('show'); }
+document.addEventListener('click', function(ev){
+  var t = ev.target.closest('[data-close]');
+  if (t) { var s = t.closest('.scrim'); if (s) s.classList.remove('show'); }
+});
+document.querySelectorAll('.scrim').forEach(function(s){
+  s.addEventListener('click', function(ev){ if (ev.target === s) s.classList.remove('show'); });
+});
+
+/* 确认弹层：返回 Promise<boolean>，杜绝裸 confirm */
+var _cfResolve = null;
+function confirmBox(title, body, okText){
+  $('#cfTitle').textContent = title;
+  $('#cfBody').innerHTML = body;
+  $('#cfOk').textContent = okText || '确认';
+  openM('#mConfirm');
+  return new Promise(function(res){ _cfResolve = res; });
+}
+$('#cfOk').onclick = function(){ closeM('#mConfirm'); if (_cfResolve) _cfResolve(true); _cfResolve=null; };
+$('#mConfirm').addEventListener('click', function(){ if(_cfResolve) _cfResolve(false); _cfResolve=null; });
+
+/* ── 展示工具 ── */
+function fmtTime(ts){
+  if (!ts) return '—';
+  var d = Date.now() - ts;
+  if (d < 60e3) return '刚刚';
+  if (d < 3600e3) return Math.floor(d/60e3) + ' 分钟前';
+  if (d < 86400e3) return Math.floor(d/3600e3) + ' 小时前';
+  if (d < 7*86400e3) return Math.floor(d/86400e3) + ' 天前';
+  return new Date(ts).toLocaleDateString('zh-CN');
+}
+function fmtRate(r){ return r==null ? '—' : (r + '%'); }
+function weekLabel(iso){
+  var m = iso.split('-');
+  return (+m[1]) + '/' + (+m[2]);
+}
+function trendSvg(trend){
+  var max = 100;
+  return '<div class="trend">' + trend.map(function(w){
+    var h = w.rate==null ? 0 : Math.max(4, Math.round(w.rate/max*38));
+    var v = w.rate==null ? '无记录' : w.rate+'%';
+    return '<div class="cell"><div class="bar"><i class="'+(w.rate==null?'none':'')+
+      '" style="height:'+h+'px"></i></div><div class="val">'+v+'</div><div class="lbl">周'+weekLabel(w.week)+'</div></div>';
+  }).join('') + '</div>';
+}
+
+/* ══════════ 登录 ══════════ */
+
+function enterApp(){ $('#loginView').hidden = true; $('#mainView').hidden = false; loadTeams(); }
+
+$('#loginForm').onsubmit = function(ev){
+  ev.preventDefault();
+  hideErr('#loginErr');
+  var u = $('#loginUser').value.trim(), p = $('#loginPass').value;
+  api('POST','/api/auth/login',{username:u,password:p}).then(function(data){
+    if (data.role !== 'admin') {
+      showErr('#loginErr','这个账号不是系统管理员。教练请从球队主页登录。');
+      return;
+    }
+    TOKEN = data.token;
+    localStorage.setItem('xgy_admin_token', TOKEN);
+    ME = data.user;
+    if (data.mustChangePassword) { switchToPwForm(); return; }
+    paintMe(); enterApp();
+  }).catch(function(e){ showErr('#loginErr', e.message); });
+};
+
+function switchToPwForm(){
+  $('#loginForm').hidden = true;
+  $('#pwForm').hidden = false;
+  $('#loginTitle').textContent = '首次登录，先改密码';
+  toast('初始密码仅临时使用，请设置自己的密码');
+}
+
+$('#pwForm').onsubmit = function(ev){
+  ev.preventDefault();
+  hideErr('#loginErr');
+  api('POST','/api/auth/password',{oldPassword:$('#loginPass').value,newPassword:$('#pwNew').value})
+    .then(function(){
+      ME.mustChangePassword = false;
+      toast('密码已更新');
+      paintMe(); enterApp();
+    })
+    .catch(function(e){
+      // 改密失败但 token 已拿到：仍放进去（下不为例的场景是老密码错，留在改密屏重试）
+      showErr('#loginErr', e.message);
+    });
+};
+
+function paintMe(){
+  $('#whoami').textContent = ME ? (ME.name + ' · 系统管理员') : '';
+}
+
+$('#btnLogout').onclick = function(){
+  TOKEN = ''; ME = null;
+  localStorage.removeItem('xgy_admin_token');
+  $('#mainView').hidden = true;
+  $('#loginView').hidden = false;
+  $('#pwForm').hidden = true; $('#loginForm').hidden = false;
+  $('#loginTitle').textContent = '系统管理';
+  $('#loginPass').value = ''; $('#pwNew').value = '';
+};
+
+/* ══════════ 球队概览 ══════════ */
+
+function loadTeams(){
+  api('GET','/api/admin/teams').then(function(data){
+    renderTeams(data.teams);
+  }).catch(function(e){
+    if (e.status === 401) { $('#btnLogout').onclick(); return; }
+    toast(e.message);
+  });
+}
+
+function renderTeams(teams){
+  var el = $('#teamList');
+  if (!teams.length) {
+    el.innerHTML = '<div class="team" style="text-align:center;color:var(--ink3);padding:48px 0">'+
+      '还没有任何球队。点右上角「＋ 新建球队」开出第一支。</div>';
+    return;
+  }
+  el.innerHTML = teams.map(function(t){
+    var off = t.status === 'disabled';
+    return '<div class="team'+(off?' off':'')+'" data-id="'+esc(t.id)+'">'+
+      '<div class="head"><span class="name">'+esc(t.name)+'</span>'+
+        (off?'<span class="badge off">已停用</span>':'<span class="badge ok">运营中</span>')+
+        '<span class="created">建于 '+new Date(t.createdAt).toLocaleDateString('zh-CN')+'</span></div>'+
+      '<div class="metrics">'+
+        '<div class="metric"><div class="v">'+t.playerCount+'<small> 人</small></div><div class="k">队员数</div></div>'+
+        '<div class="metric"><div class="v">'+t.weekSessions+'<small> 次</small></div><div class="k">本周训练</div></div>'+
+        '<div class="metric"><div class="v">'+esc(fmtRate(t.attendanceRate))+'</div><div class="k">出勤率</div></div>'+
+        '<div class="metric"><div class="v" style="font-size:15px;line-height:30px">'+esc(fmtTime(t.lastActive))+'</div><div class="k">最近活跃</div></div>'+
+      '</div>'+
+      '<div class="foot">'+trendSvg(t.trend)+
+        '<button class="btn sm acct-btn" data-id="'+esc(t.id)+'" data-name="'+esc(t.name)+'">教练账号</button>'+
+        (off
+          ? '<button class="btn sm primary toggle-btn" data-id="'+esc(t.id)+'" data-to="active" data-name="'+esc(t.name)+'">恢复球队</button>'
+          : '<button class="btn sm danger toggle-btn" data-id="'+esc(t.id)+'" data-to="disabled" data-name="'+esc(t.name)+'">停用</button>')+
+      '</div></div>';
+  }).join('');
+}
+
+$('#teamList').addEventListener('click', function(ev){
+  var tb = ev.target.closest('.toggle-btn');
+  if (tb) return toggleTeam(tb);
+  var ab = ev.target.closest('.acct-btn');
+  if (ab) return openAccounts(ab.dataset.id, ab.dataset.name);
+});
+
+function toggleTeam(btn){
+  var to = btn.dataset.to, id = btn.dataset.id, name = btn.dataset.name;
+  var disabling = to === 'disabled';
+  confirmBox(
+    disabling ? '停用「'+name+'」？' : '恢复「'+name+'」？',
+    disabling
+      ? '停用后这支队<b>所有账号（教练和队员）都无法登录</b>，训练、考勤、技能数据全部保留，随时可恢复。'
+      : '恢复后这支队的所有账号立刻可以重新登录。',
+    disabling ? '确认停用' : '确认恢复'
+  ).then(function(ok){
+    if (!ok) return;
+    api('PATCH','/api/admin/teams/'+id,{status:to}).then(function(){
+      toast(disabling ? '已停用' : '已恢复');
+      loadTeams();
+    }).catch(function(e){ toast(e.message); });
+  });
+}
+
+/* ══════════ 新建球队 ══════════ */
+
+$('#btnNewTeam').onclick = function(){ hideErr('#newErr'); $('#newForm').reset(); openM('#mNew'); setTimeout(function(){ $('#fTeamName').focus(); },50); };
+
+$('#newForm').onsubmit = function(ev){
+  ev.preventDefault();
+  hideErr('#newErr');
+  var body = {
+    teamName: $('#fTeamName').value.trim(),
+    coachName: $('#fCoachName').value.trim(),
+    coachUsername: $('#fCoachUser').value.trim()
+  };
+  api('POST','/api/admin/teams',body).then(function(data){
+    closeM('#mNew');
+    $('#pwWho').textContent = '教练账号 '+data.account.username+'（'+data.account.name+'）· 球队「'+data.team.name+'」';
+    $('#pwValue').textContent = data.initialPassword;
+    $('#btnCopyPw').dataset.pw = data.initialPassword;
+    openM('#mPw');
+    loadTeams();
+  }).catch(function(e){ showErr('#newErr', e.message); });
+};
+
+$('#btnCopyPw').onclick = function(){
+  var pw = this.dataset.pw || '';
+  if (navigator.clipboard) navigator.clipboard.writeText(pw).then(function(){ toast('已复制'); },
+    function(){ toast('复制失败，请手动选择'); });
+  else toast('请手动选择复制');
+};
+
+/* ══════════ 教练账号管理 ══════════ */
+
+var ACCT_TEAM = '';
+
+function openAccounts(teamId, teamName){
+  ACCT_TEAM = teamId;
+  $('#acctTitle').textContent = '账号 · ' + teamName;
+  $('#acctList').innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px 0">加载中…</div>';
+  openM('#mAcct');
+  api('GET','/api/admin/accounts?teamId='+encodeURIComponent(teamId)).then(function(data){
+    renderAccounts(data.accounts);
+  }).catch(function(e){ $('#acctList').innerHTML = '<div class="err show">'+esc(e.message)+'</div>'; });
+}
+
+function renderAccounts(list){
+  if (!list.length) { $('#acctList').innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px 0">这个队还没有任何账号。</div>'; return; }
+  var roleCn = {admin:'管理员',coach:'教练',player:'队员'};
+  $('#acctList').innerHTML = list.map(function(a){
+    var isAdmin = a.role === 'admin';
+    var dis = a.status === 'disabled';
+    return '<div class="acct'+(dis?' dis':'')+'">'+
+      '<div class="avatar">'+esc((a.name||'?').charAt(0))+'</div>'+
+      '<div class="info"><div class="n">'+esc(a.name)+
+        ' <span style="font-size:11px;color:var(--ink3)">'+(roleCn[a.role]||a.role)+'</span>'+
+        (a.mustChangePassword?' <span style="font-size:11px;color:var(--amber)">待首登改密</span>':'')+'</div>'+
+      '<div class="u">'+esc(a.username||'—')+(a.playerName?' · 绑定球员 '+esc(a.playerName):'')+'</div></div>'+
+      '<div class="ops">'+
+        (isAdmin
+          ? '<span style="font-size:11px;color:var(--ink3)">系统管理员 · 不可在此操作</span>'
+          : '<button class="btn sm ghost rp-btn" data-id="'+esc(a.id)+'">重置密码</button>'+
+            '<button class="btn sm ghost rn-btn" data-id="'+esc(a.id)+'" data-name="'+esc(a.name)+'">改名</button>'+
+            (dis
+              ? '<button class="btn sm primary en-btn" data-id="'+esc(a.id)+'">启用</button>'
+              : '<button class="btn sm danger dis-btn" data-id="'+esc(a.id)+'" data-name="'+esc(a.name)+'">停用</button>'))+
+      '</div></div>';
+  }).join('');
+}
+
+$('#acctList').addEventListener('click', function(ev){
+  var b;
+  if ((b = ev.target.closest('.rp-btn'))) return resetPw(b.dataset.id);
+  if ((b = ev.target.closest('.rn-btn'))) return renameAcct(b.dataset.id, b.dataset.name);
+  if ((b = ev.target.closest('.dis-btn'))) return setStatus(b.dataset.id, 'disabled', b.dataset.name);
+  if ((b = ev.target.closest('.en-btn'))) return setStatus(b.dataset.id, 'active', '');
+});
+
+function resetPw(id){
+  confirmBox('重置这个账号的密码？',
+    '旧密码立刻失效，会生成一个<b>一次性密码</b>（只显示一次），账号下次登录时被要求改成自己的密码。','重置')
+    .then(function(ok){
+      if (!ok) return;
+      api('POST','/api/admin/accounts/'+id+'/reset-password').then(function(data){
+        $('#pwWho').textContent = '新的一次性密码';
+        $('#pwValue').textContent = data.initialPassword;
+        $('#btnCopyPw').dataset.pw = data.initialPassword;
+        openM('#mPw');
+      }).catch(function(e){ toast(e.message); });
+    });
+}
+
+function renameAcct(id, old){
+  var v = prompt('改成什么姓名？', old);
+  if (v == null) return;
+  v = v.trim();
+  if (!v) { toast('姓名不能为空'); return; }
+  api('PATCH','/api/admin/accounts/'+id,{name:v}).then(function(){
+    toast('已改名');
+    openAccounts(ACCT_TEAM, $('#acctTitle').textContent.replace('账号 · ',''));
+    loadTeams();
+  }).catch(function(e){ toast(e.message); });
+}
+
+function setStatus(id, status, name){
+  var disabling = status === 'disabled';
+  confirmBox(
+    disabling ? '停用账号「'+name+'」？' : '启用这个账号？',
+    disabling ? '停用后他<b>立刻无法登录</b>，名下数据不变，随时可启用回来。' : '启用后他可以重新登录。',
+    disabling ? '确认停用' : '确认启用'
+  ).then(function(ok){
+    if (!ok) return;
+    api('PATCH','/api/admin/accounts/'+id,{status:status}).then(function(){
+      toast(disabling ? '已停用' : '已启用');
+      openAccounts(ACCT_TEAM, $('#acctTitle').textContent.replace('账号 · ',''));
+    }).catch(function(e){ toast(e.message); });
+  });
+}
+
+/* ══════════ 启动 ══════════ */
+(function boot(){
+  if (!TOKEN) { $('#loginView').hidden = false; return; }
+  api('GET','/api/admin/me').then(function(data){
+    ME = data.user; paintMe(); enterApp();
+  }).catch(function(e){
+    // token 失效/身份不符：静默清掉回登录屏（跟教练端 logout(quiet) 同思路，防双提示）
+    TOKEN = ''; localStorage.removeItem('xgy_admin_token');
+    $('#loginView').hidden = false;
+  });
+})();
+</script>
+</body>
+</html>
