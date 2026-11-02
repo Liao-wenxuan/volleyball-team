@@ -934,6 +934,9 @@
     syncWeek,
     pullCore,
     push,
-    fireAndSync
+    fireAndSync,
+    // 备份导入：云端模式下必须走服务端一个事务写库（本地模式不调这里）。
+    // 以前导入只写 localStorage，reload 时被 pullCore 整份覆盖 —— 导入等于白做。
+    importBackup: guardWrite((mode, data) => api('/api/import', { method: 'POST', body: { mode, data } }))
   };
 })();

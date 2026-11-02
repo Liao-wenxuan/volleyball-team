@@ -4170,7 +4170,10 @@ try {
     syncWeek,
     pullCore,
     push,
-    fireAndSync
+    fireAndSync,
+    // 备份导入：云端模式下必须走服务端一个事务写库（本地模式不调这里）。
+    // 以前导入只写 localStorage，reload 时被 pullCore 整份覆盖 —— 导入等于白做。
+    importBackup: guardWrite((mode, data) => api('/api/import', { method: 'POST', body: { mode, data } }))
   };
 })();
 
@@ -9355,17 +9358,43 @@ try {
     });
     $('#impCancel').onclick = closeModal;
     $('#impGo').onclick = async () => {
-      if (modeOf() === 'replace') {
+      const mode = modeOf();
+      const cloud = CloudOn() && window.XGYCloud && window.XGYCloud.importBackup;
+      const teamName = cloud && window.XGYCloud.team() ? window.XGYCloud.team().name : '';
+
+      if (mode === 'replace') {
         const ok = await confirmDialog({
           title: '完全覆盖？',
-          message: `本机现有的 ${db.players.length} 名队员、全部考勤和技能记录会被删掉，换成备份的内容。`,
+          message: cloud
+            ? `云端「${teamName}」现有的 ${db.players.length} 名队员、全部考勤和技能记录会被删掉，换成备份的内容。此操作不可撤销。`
+            : `本机现有的 ${db.players.length} 名队员、全部考勤和技能记录会被删掉，换成备份的内容。`,
           ok: '覆盖'
         });
         if (!ok) return;
-        db = normalizeDB(incoming);
-      } else {
-        db = merged.db;
       }
+
+      /* 云端模式：走服务端一个事务写库。
+         以前这里只写 localStorage，reload 时 pullCore 会拿服务器数据整份覆盖，
+         导入的东西在刷新那一瞬间就没了 —— 所以云端必须把数据真正推到服务器。 */
+      if (cloud) {
+        const btn = $('#impGo');
+        btn.disabled = true;
+        btn.textContent = '正在写入云端…';
+        try {
+          const res = await window.XGYCloud.importBackup(mode, incoming);
+          const s = (res && res.stats) || {};
+          toast(`已导入云端：匹配 ${s.matched || 0} 人、新增 ${s.added || 0} 人、训练覆盖 ${s.sOver || 0} 场 / 新增 ${s.sAdd || 0} 场、技能记录 ${s.lAdd || 0} 条`);
+          setTimeout(() => location.reload(), 700);
+        } catch (e) {
+          btn.disabled = false;
+          btn.textContent = '导入';
+          toast(`云端导入失败，云端数据未改动：${e && e.message ? e.message : '未知错误'}`, 'warn');
+        }
+        return;
+      }
+
+      if (mode === 'replace') db = normalizeDB(incoming);
+      else db = merged.db;
       save();
       location.reload();
     };
