@@ -250,9 +250,9 @@ router.post(
     const ts = now();
 
     const insPlayer = db.prepare(
-      `INSERT INTO players (id, team_id, name, number, position, grade, height, gender,
+      `INSERT INTO players (id, team_id, user_id, name, number, position, grade, height, gender,
                             serve, receive, "set_", spike, block, defense, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     const updPlayer = db.prepare(
       `UPDATE players SET position = ?, grade = ?, height = ?,
@@ -286,8 +286,19 @@ router.post(
     };
 
     const run = db.transaction(() => {
-      /* ── 1. 清场（replace） ── */
+      const noKey = (name: string, number: number): string => `${name}::${number || 0}`;
+
+      /* ── 1. 清场（replace） ──
+       * 删球员行之前先记下「姓名+号码 → 绑定的登录账号」：
+       * 队员账号的绑定关系存在 players.user_id 上，行一删就没，
+       * 重建后不迁回去的话，队员登录「我的」会看不到自己。 */
+      const keepBind = new Map<string, string>();
       if (mode === 'replace') {
+        const rows = db
+          .prepare('SELECT name, number, user_id FROM players WHERE team_id = ? AND user_id IS NOT NULL')
+          .all(teamId) as { name: string; number: number; user_id: string }[];
+        for (const p of rows) keepBind.set(noKey(p.name, p.number), p.user_id);
+
         db.prepare('DELETE FROM attendance WHERE session_id IN (SELECT id FROM sessions WHERE team_id = ?)').run(teamId);
         db.prepare('DELETE FROM sessions WHERE team_id = ?').run(teamId);
         db.prepare('DELETE FROM skill_logs WHERE team_id = ?').run(teamId);
@@ -299,7 +310,6 @@ router.post(
         .prepare('SELECT id, name, number FROM players WHERE team_id = ?')
         .all(teamId) as { id: string; name: string; number: number }[];
 
-      const noKey = (name: string, number: number): string => `${name}::${number || 0}`;
       const countName = (list: { name: string }[]): Map<string, number> => {
         const m = new Map<string, number>();
         for (const p of list) m.set(p.name, (m.get(p.name) || 0) + 1);
@@ -335,8 +345,16 @@ router.post(
           const nid = newId('p');
           usedIds.add(nid);
           idMap.set(p.id, nid);
+          // 一个账号只能绑一行：备份里万一有同名同号的重复行，第二行不抢绑（否则唯一索引会炸整个事务）
+          let bind: string | null = null;
+          if (mode === 'replace') {
+            const key = noKey(p.name, p.number);
+            bind = keepBind.get(key) || null;
+            if (bind) keepBind.delete(key);
+          }
           insPlayer.run(
-            nid, teamId, p.name, p.number, p.position, p.grade, p.height, p.gender,
+            nid, teamId, bind,
+            p.name, p.number, p.position, p.grade, p.height, p.gender,
             p.skills.serve, p.skills.receive, p.skills.set, p.skills.spike, p.skills.block, p.skills.defense,
             p.createdAt, p.updatedAt
           );
