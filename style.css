@@ -2076,6 +2076,44 @@ html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
 .cloud-tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--ov3,rgba(255,255,255,.05));padding:4px;border-radius:12px}
 .cloud-tab{flex:1;padding:9px 0;border:none;border-radius:9px;background:transparent;color:var(--text-2,#aab);font-size:14px;cursor:pointer;transition:.18s}
 .cloud-tab.on{background:var(--violet);color:#fff;font-weight:600}
+/* 登录门禁：盖住整个应用，先登录再谈数据 */
+.auth-gate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
+  padding:24px;overflow:auto;
+  background:radial-gradient(900px 520px at 82% -12%,rgba(var(--violet-rgb),.20),transparent 62%),
+             radial-gradient(720px 460px at 6% 110%,rgba(var(--cyan-rgb),.13),transparent 60%),var(--bg)}
+.auth-gate[hidden]{display:none!important}
+html.gate-pass .auth-gate{display:none!important}
+.auth-gate-card{width:100%;max-width:430px;padding:30px 30px 22px;border-radius:22px;
+  background:var(--solid-elev);border:1px solid var(--ov110);
+  box-shadow:0 40px 90px -40px rgba(0,0,0,.85)}
+.auth-gate-head{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.auth-gate-logo{width:46px;height:46px;flex:none;display:grid;place-items:center;border-radius:14px;
+  background:linear-gradient(150deg,var(--violet),var(--cyan));color:#fff;
+  box-shadow:0 10px 24px -12px rgba(var(--violet-rgb),.9)}
+.auth-gate-logo svg{width:24px;height:24px}
+.auth-gate-head h1{margin:0;font-size:19px;font-weight:700;letter-spacing:.2px}
+.auth-gate-head p{margin:3px 0 0;font-size:12.5px;color:var(--muted);line-height:1.5}
+.auth-gate .cloud-tabs{margin-bottom:18px}
+.gate-adv{margin-top:12px;font-size:12px;color:var(--muted)}
+.gate-adv summary{cursor:pointer;padding:4px 0;list-style:none;user-select:none}
+.gate-adv summary::-webkit-details-marker{display:none}
+.gate-adv summary::before{content:'▸ ';font-size:10px}
+.gate-adv[open] summary::before{content:'▾ '}
+.gate-adv input{width:100%;margin-top:8px;font-size:13px}
+.gate-submit{width:100%;margin-top:18px;padding:12px 0}
+.gate-err{margin:14px 0 0;padding:9px 12px;border-radius:10px;font-size:12.5px;line-height:1.5;
+  background:rgba(255,107,138,.12);color:var(--red);border:1px solid rgba(255,107,138,.28)}
+.gate-err[hidden]{display:none}
+.gate-foot{margin-top:16px;padding-top:14px;border-top:1px solid var(--ov070);text-align:center}
+.gate-skip{border:none;background:none;color:var(--muted);font-size:12px;cursor:pointer;padding:5px 10px;border-radius:8px;transition:.15s}
+.gate-skip:hover{color:var(--text);background:var(--ov050)}
+@media (max-width:520px){
+  .auth-gate{padding:16px;align-items:flex-start;padding-top:7vh}
+  .auth-gate-card{padding:24px 20px 18px;border-radius:18px}
+  .auth-gate-head h1{font-size:17px}
+}
+html[data-mode="light"] .auth-gate-card{background:#fff;border-color:rgba(17,24,39,.1)}
+html[data-mode="light"] .auth-gate-logo{color:#fff}
 .cloud-id{display:flex;align-items:center;gap:14px;margin-bottom:14px}
 .cloud-id h3{margin:0;font-size:17px}
 .cloud-id p{margin:2px 0 0;font-size:12.5px;color:var(--text-2,#aab)}

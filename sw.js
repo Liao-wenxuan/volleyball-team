@@ -12,10 +12,11 @@
  *
  * 发新版：把 VERSION 加一，旧缓存在 activate 时自动清掉。
  * ═══════════════════════════════════════════════════════════════ */
+// v23: 登录门禁（公网进站先登录，file:/github.io 不挡）
 // v22: 用户管理（角色/邀请码/成员管理/改密码/切队）
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v22';
+const VERSION = 'v23';
 const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',

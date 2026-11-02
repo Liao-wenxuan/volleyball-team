@@ -26,7 +26,8 @@
     token: 'xgy_api_token',
     user: 'xgy_api_user',
     team: 'xgy_api_team',
-    role: 'xgy_api_role'
+    role: 'xgy_api_role',
+    skip: 'xgy_api_skip' // 用户选过「不登录，仅在本机使用」
   };
   const DEFAULT_BASE = 'http://localhost:8787';
 
@@ -120,14 +121,19 @@
     document.body.classList.toggle('cloud-viewer', isViewer());
   }
 
-  function logout() {
+  function logout(opts) {
+    const quiet = !!(opts && opts.quiet); // token 过期时由调用方自己给提示，别叠两条 toast
     localStorage.removeItem(LS.token);
     localStorage.removeItem(LS.user);
     localStorage.removeItem(LS.team);
     localStorage.removeItem(LS.role);
+    localStorage.removeItem(LS.skip); // 主动退出 = 想换账号，下次必须重新登录
     user = null; team = null; role = null;
     paintBodyClass();
     paintCloudUI();
+    hooks && hooks.closeModal && hooks.closeModal();
+    if (quiet) return;
+    showGate();
     hooks && hooks.toast('已退出云端账号，数据保留在本机', 'ok');
   }
 
@@ -178,6 +184,119 @@
     return `<div class="field full"><label>${label}</label>${inner}</div>`;
   }
 
+  /* ── 登录门禁（公网进站第一屏） ──
+   * 单文件双击打开（file:）和 GitHub Pages 静态演示站没有后端，不能挡；
+   * 只要是通过 http(s) 访问的"服务"，进来就得先登录。 */
+  function gateNeeded() {
+    if (location.protocol === 'file:') return false;
+    if (/\.github\.io$/i.test(location.hostname)) return false;
+    return true;
+  }
+
+  function showGate(msg) {
+    if (!gateNeeded()) return;
+    const g = document.getElementById('authGate');
+    if (!g) return;
+    document.documentElement.classList.remove('gate-pass');
+    g.hidden = false;
+    const err = document.getElementById('gateErr');
+    if (err) {
+      err.hidden = !msg;
+      if (msg) err.textContent = msg;
+    }
+  }
+
+  function hideGate() {
+    const g = document.getElementById('authGate');
+    if (!g) return;
+    g.hidden = true;
+    document.documentElement.classList.add('gate-pass');
+  }
+
+  /* 登录/注册的唯一实现：门禁页和顶栏弹窗都调这里，避免两套逻辑走偏 */
+  async function runAuth(mode, vals) {
+    const b = String(vals.base || '').trim().replace(/\/+$/, '');
+    if (!/^https?:\/\//.test(b)) throw new Error('服务器地址需要以 http(s):// 开头');
+    localStorage.setItem(LS.base, b);
+
+    const payload = { email: vals.email, password: vals.password };
+    if (mode === 'register') {
+      payload.name = vals.name || '教练';
+      const invite = String(vals.inviteCode || '').trim().toUpperCase();
+      if (invite) payload.inviteCode = invite;
+      else payload.teamName = vals.teamName || '我的排球队';
+    }
+
+    const data = await api(`/api/auth/${mode}`, { method: 'POST', body: payload });
+    saveSession(data);
+    localStorage.removeItem(LS.skip);
+    await pullCore();
+    await syncWeek(currentMondayKey(), true);
+    paintCloudUI();
+    return data;
+  }
+
+  function bindGate() {
+    const g = document.getElementById('authGate');
+    const form = document.getElementById('gateForm');
+    if (!g || !form) return;
+
+    const baseInput = form.querySelector('[name=base]');
+    if (baseInput) baseInput.value = base();
+
+    let mode = 'login';
+    g.querySelectorAll('[data-gate-tab]').forEach((tab) => {
+      tab.onclick = () => {
+        mode = tab.dataset.gateTab;
+        g.querySelectorAll('[data-gate-tab]').forEach((t) => t.classList.toggle('on', t === tab));
+        g.querySelectorAll('.gate-reg').forEach((el) => { el.hidden = mode !== 'register'; });
+        document.getElementById('gateSubmit').textContent = mode === 'register' ? '注册并进入' : '登录';
+        document.getElementById('gateErr').hidden = true;
+        const pw = form.querySelector('[name=password]');
+        if (pw) pw.setAttribute('autocomplete', mode === 'register' ? 'new-password' : 'current-password');
+      };
+    });
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const btn = document.getElementById('gateSubmit');
+      const err = document.getElementById('gateErr');
+      const idle = mode === 'register' ? '注册并进入' : '登录';
+      btn.disabled = true;
+      btn.textContent = '连接中…';
+      err.hidden = true;
+      try {
+        const data = await runAuth(mode, {
+          base: fd.get('base'),
+          email: String(fd.get('email') || '').trim(),
+          password: String(fd.get('password') || ''),
+          name: String(fd.get('name') || '').trim(),
+          teamName: String(fd.get('teamName') || '').trim(),
+          inviteCode: String(fd.get('inviteCode') || '').trim()
+        });
+        hideGate();
+        hooks.renderAll();
+        hooks.toast(`已连接云端：${data.team.name}（${ROLE_LABEL[data.role] || data.role}）`);
+      } catch (ex) {
+        err.hidden = false;
+        err.textContent = ex.message;
+        btn.disabled = false;
+        btn.textContent = idle;
+      }
+    };
+
+    const skip = document.getElementById('gateSkip');
+    if (skip) {
+      skip.onclick = () => {
+        localStorage.setItem(LS.skip, '1');
+        hideGate();
+        paintCloudUI();
+        hooks && hooks.toast('本机模式：数据只存在这台设备', 'ok');
+      };
+    }
+  }
+
   /* ── 登录 / 注册弹窗 ── */
   function openLogin() {
     if (!hooks) return;
@@ -219,32 +338,20 @@
     form.onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
-      const b = String(fd.get('base') || '').trim().replace(/\/+$/, '');
-      if (!/^https?:\/\//.test(b)) { hooks.toast('服务器地址需要以 http(s):// 开头', 'warn'); return; }
-      localStorage.setItem(LS.base, b);
-      const payload = {
-        email: String(fd.get('email') || '').trim(),
-        password: String(fd.get('password') || '')
-      };
-      if (mode === 'register') {
-        payload.name = String(fd.get('name') || '').trim() || '教练';
-        const invite = String(fd.get('inviteCode') || '').trim().toUpperCase();
-        if (invite) {
-          payload.inviteCode = invite;
-        } else {
-          payload.teamName = String(fd.get('teamName') || '').trim() || '我的排球队';
-        }
-      }
       const btn = document.getElementById('cloudSubmit');
       btn.disabled = true;
       btn.textContent = '连接中…';
       try {
-        const data = await api(`/api/auth/${mode}`, { method: 'POST', body: payload });
-        saveSession(data);
-        await pullCore();
-        await syncWeek(currentMondayKey(), true);
+        const data = await runAuth(mode, {
+          base: fd.get('base'),
+          email: String(fd.get('email') || '').trim(),
+          password: String(fd.get('password') || ''),
+          name: String(fd.get('name') || '').trim(),
+          teamName: String(fd.get('teamName') || '').trim(),
+          inviteCode: String(fd.get('inviteCode') || '').trim()
+        });
         hooks.closeModal();
-        paintCloudUI();
+        hideGate();
         hooks.renderAll();
         hooks.toast(`已连接云端：${data.team.name}（${ROLE_LABEL[data.role] || data.role}）`);
       } catch (err) {
@@ -610,10 +717,16 @@
     attach(h) {
       hooks = h;
       restoreSession();
+      bindGate();
       paintBodyClass();
       paintCloudUI();
       const btn = document.getElementById('cloudBtn');
       if (btn) btn.onclick = openLogin;
+
+      // 进站先过门禁：没有登录态（且不是本机/静态演示）就停在登录页
+      if (enabled() || !gateNeeded() || localStorage.getItem(LS.skip) === '1') hideGate();
+      else showGate();
+
       if (enabled()) {
         // 静默校验 token 并拉最新数据；失败（过期）则退回本地模式
         pullCore()
@@ -621,8 +734,8 @@
           .then((ok) => { if (ok) hooks.renderAll(); })
           .catch((e) => {
             if (e.code === 'token_expired' || e.code === 'unauthorized') {
-              logout();
-              hooks.toast('云端登录已过期，已回到本机模式', 'warn');
+              logout({ quiet: true });
+              showGate('登录已过期，请重新登录');
             } else {
               hooks.toast(`云端暂时不可用：${e.message}（先用本机数据）`, 'warn');
             }

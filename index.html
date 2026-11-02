@@ -14,6 +14,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="排球队">
 <link rel="stylesheet" href="style.css">
+<script>
+/* 已有登录态（或用户选过「仅在本机使用」）时先藏门禁，避免刷新时闪一下登录页。
+   这段必须在样式表之后、首帧之前执行，所以内联在 head。 */
+try {
+  if (localStorage.getItem('xgy_api_token') || localStorage.getItem('xgy_api_skip') === '1') {
+    document.documentElement.classList.add('gate-pass');
+  }
+} catch (e) { /* 隐私模式下 localStorage 会抛，忽略即可 */ }
+</script>
 </head>
 <body>
 <div class="scroll-progress" aria-hidden="true"><span id="scrollBar"></span></div>
@@ -629,6 +638,47 @@
 </div>
 
 <div class="toast-stack" id="toasts" aria-live="polite"></div>
+
+<!-- 登录门禁（r23）：公网打开即停在登录页。
+     队员拿到邀请码进站，第一眼必须是「登录」——否则他看到的是自己设备上的空数据，
+     会以为球队没录数据 / 系统坏了。底部保留「仅在本机使用」，你自己没网时照样能录。 -->
+<div class="auth-gate" id="authGate">
+  <div class="auth-gate-card">
+    <div class="auth-gate-head">
+      <span class="auth-gate-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M3.5 12h17M12 3.5v17"/>
+        </svg>
+      </span>
+      <div>
+        <h1>信工院排球队</h1>
+        <p id="gateSub">登录后同步队员、考勤与技能数据</p>
+      </div>
+    </div>
+
+    <div class="cloud-tabs">
+      <button type="button" class="cloud-tab on" data-gate-tab="login">登录</button>
+      <button type="button" class="cloud-tab" data-gate-tab="register">注册</button>
+    </div>
+
+    <form id="gateForm">
+      <div class="form-grid">
+        <div class="field full gate-reg" hidden><label>你的名字</label><input name="name" maxlength="20" placeholder="教练" autocomplete="name"></div>
+        <div class="field full gate-reg" hidden><label>球队名 <small>（有邀请码可不填）</small></label><input name="teamName" maxlength="30" placeholder="信工院排球队"></div>
+        <div class="field full gate-reg" hidden><label>邀请码 <small>（选填，凭码加入已有球队）</small></label><input name="inviteCode" maxlength="6" placeholder="6 位邀请码" style="text-transform:uppercase" autocomplete="off"></div>
+        <div class="field full"><label>邮箱</label><input name="email" type="email" required placeholder="you@example.com" autocomplete="username"></div>
+        <div class="field full"><label>密码</label><input name="password" type="password" required minlength="6" placeholder="至少 6 位" autocomplete="current-password"></div>
+      </div>
+      <details class="gate-adv"><summary>服务器地址</summary><input name="base" placeholder="https://vb.bscjs.top"></details>
+      <p class="gate-err" id="gateErr" hidden></p>
+      <button type="submit" class="btn btn-primary gate-submit" id="gateSubmit">登录</button>
+    </form>
+
+    <div class="gate-foot">
+      <button type="button" class="gate-skip" id="gateSkip">不登录，仅在本机使用</button>
+    </div>
+  </div>
+</div>
 <!-- 文件选择框的坑（2026-10-31 r17 重写）：
      ① 不能写 accept=".json"/.xlsx：iPadOS 和部分安卓的文档选择器按 MIME/UTI 过滤，
         认不出来会把文件变灰点不动。类型校验交给 app.js。
