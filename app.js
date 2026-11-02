@@ -17,12 +17,22 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-10-31 · r21'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-02 · r29'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
   /* ══════════ 常量 ══════════ */
   const DB_KEY = 'xgy_volleyball_v2';
+
+  /* 云端模式下按球队分桶存本机缓存：同一个浏览器开两个标签登两个队时，
+   * 缓存不会互相覆盖（否则断网时会读到另一个队的名单）。
+   * 未登录的本地模式不加后缀，原数据原封不动。
+   * 必须读实时 storage 而不是内存里的 db —— loadDB 跑在 cloud.js attach 之前，
+   * 所以走 XGYCloud.dbScope()（它直接从 sessionStorage/localStorage 算）。 */
+  function dbKey() {
+    const c = window.XGYCloud;
+    return DB_KEY + (c && typeof c.dbScope === 'function' ? c.dbScope() : '');
+  }
   const SCHEMA = 2;
   const SKILLS = [
     { key: 'serve', label: '发球' },
@@ -286,7 +296,7 @@
   function loadDB() {
     try { localStorage.removeItem('xgy-volley-v1'); } catch (e) { /* ignore */ }
     try {
-      const raw = localStorage.getItem(DB_KEY);
+      const raw = localStorage.getItem(dbKey());
       if (!raw) return blankDB();
       const data = JSON.parse(raw);
       if (!data || data.version !== SCHEMA) return blankDB();
@@ -310,7 +320,7 @@
 
   function save() {
     try {
-      localStorage.setItem(DB_KEY, JSON.stringify(db));
+      localStorage.setItem(dbKey(), JSON.stringify(db));
     } catch (e) {
       toast('保存失败：本机存储空间不足或被禁用', 'warn');
     }
@@ -3474,7 +3484,7 @@
   async function clearAllData() {
     const ok = await confirmDialog({ title: '清空所有数据？', message: '队员、训练、考勤、技能记录都会被删除，无法恢复。建议先导出备份。', ok: '清空所有数据' });
     if (!ok) return;
-    try { localStorage.removeItem(DB_KEY); } catch (e) { /* ignore */ }
+    try { localStorage.removeItem(dbKey()); } catch (e) { /* ignore */ }
     location.reload();
   }
 
@@ -4587,6 +4597,18 @@ ${aiContext()}`;
         confirm: confirmDialog,
         getDB: () => db,
         save,
+        // 退出云端后把内存切回本机数据：否则内存里还是上一个队的名单，
+        // 用户在「仅在本机使用」里一编辑就把云端数据写进了本机那份，或者
+        // 换号登录时被当成「本机原有名单」搬到新队去（串队事故）。
+        reloadLocal: () => { db = loadDB(); renderAllCurrent(); },
+        // 「本机原有数据」＝本地模式那份（不带球队后缀）。登录时用它判断要不要提示搬迁，
+        // 不能拿内存里的 db —— 那可能是上一个云端队的名单，搬过去就是串队。
+        localDB: () => {
+          try {
+            const raw = localStorage.getItem(DB_KEY);
+            return raw ? JSON.parse(raw) : null;
+          } catch (e) { return null; }
+        },
         renderAll: renderAllCurrent,
         applyServerState,
         applyWeek,

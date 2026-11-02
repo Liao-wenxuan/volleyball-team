@@ -31,6 +31,35 @@
   };
   const DEFAULT_BASE = 'http://localhost:8787';
 
+  /* ── 会话存储：按标签页隔离 ──
+   * localStorage 是按「域名」共享的，不是按标签页。原先把登录态存那里，
+   * 同浏览器开两个标签登两个队时，后登录的会盖掉前一个：刷新一下整页变成别人的队；
+   * 更糟的是前一个标签的写操作其实已经打在后登录那个队上了（token() 每次实时读 storage）。
+   *
+   * 现在：登录态（token/user/team/role）优先读写 sessionStorage —— 每标签一份、刷新保留，
+   * localStorage 只留一份「新开标签时的默认身份」。
+   * 设备级偏好（服务器地址、跳过登录标记）仍走 localStorage。
+   * 注意：四个 key 必须整组取自同一层，不能混读（否则 user 是 A、token 是 B）。 */
+  function readSessionRaw() {
+    let inSession = false;
+    try { inSession = sessionStorage.getItem(LS.token) !== null; } catch (_) { /* 隐私模式 */ }
+    const get = (k) => {
+      if (inSession) {
+        try { return sessionStorage.getItem(k); } catch (_) { return null; }
+      }
+      return localStorage.getItem(k);
+    };
+    return { token: get(LS.token) || '', user: get(LS.user), team: get(LS.team), role: get(LS.role) };
+  }
+  function sessSet(key, value) {
+    try { sessionStorage.setItem(key, value); } catch (_) { /* ignore */ }
+    localStorage.setItem(key, value);
+  }
+  function sessDel(key) {
+    try { sessionStorage.removeItem(key); } catch (_) { /* ignore */ }
+    localStorage.removeItem(key);
+  }
+
   let hooks = null; // app.js 注入：toast/openModal/closeModal/confirm/getDB/save/renderAll/applyServerState/applyWeek/currentMondayKey
   let user = null;  // { id, email, name }
   let team = null;  // { id, name }
@@ -44,6 +73,11 @@
     return (localStorage.getItem(LS.base) || DEFAULT_BASE).replace(/\/+$/, '');
   }
   function token() {
+    // 每次实时读：写操作要拿到当前标签页自己的 token，不能缓存
+    try {
+      const s = sessionStorage.getItem(LS.token);
+      if (s !== null) return s;
+    } catch (_) { /* 隐私模式退回 localStorage */ }
     return localStorage.getItem(LS.token) || '';
   }
   function enabled() {
@@ -80,30 +114,42 @@
 
   /* ── 会话恢复 ── */
   function restoreSession() {
+    const raw = readSessionRaw();
     try {
-      const u = localStorage.getItem(LS.user);
-      const t = localStorage.getItem(LS.team);
-      user = u ? JSON.parse(u) : null;
-      team = t ? JSON.parse(t) : null;
-      role = localStorage.getItem(LS.role) || null;
+      user = raw.user ? JSON.parse(raw.user) : null;
+      team = raw.team ? JSON.parse(raw.team) : null;
+      role = raw.role || null;
     } catch (e) {
       user = null; team = null; role = null;
     }
-    if (!token()) { user = null; team = null; role = null; }
+    if (!raw.token) { user = null; team = null; role = null; }
     // 角色枚举换过代（owner/editor/viewer → admin/coach/player）：
     // 本地存着旧值的浏览器先按无权限处理，attach 里的 pullCore 会用服务器返回的值纠正
     if (role && !['admin', 'coach', 'player'].includes(role)) role = null;
   }
 
   function saveSession(payload) {
-    localStorage.setItem(LS.token, payload.token);
-    localStorage.setItem(LS.user, JSON.stringify(payload.user));
-    localStorage.setItem(LS.team, JSON.stringify(payload.team));
-    localStorage.setItem(LS.role, payload.role || 'player');
+    sessSet(LS.token, payload.token);
+    sessSet(LS.user, JSON.stringify(payload.user));
+    sessSet(LS.team, JSON.stringify(payload.team));
+    sessSet(LS.role, payload.role || 'player');
     user = payload.user;
     team = payload.team;
     role = payload.role || 'player';
     paintBodyClass();
+  }
+
+  /** 本机数据缓存的分桶后缀：云端模式按球队分开存，避免两个标签互相覆盖。
+   *  未登录（本地模式）返回空串，沿用原来的 key。app.js 在 loadDB 时调用。 */
+  function dbScope() {
+    const raw = readSessionRaw();
+    if (!raw.token || !raw.team) return '';
+    try {
+      const t = JSON.parse(raw.team);
+      return t && t.id ? '::' + t.id : '';
+    } catch (e) {
+      return '';
+    }
   }
 
   /** 切换球队：/me 带 X-Team-Id，服务器返回新队的角色和设置 */
@@ -111,8 +157,8 @@
     const data = await api('/api/auth/me', { teamId });
     team = data.team;
     role = data.role;
-    localStorage.setItem(LS.team, JSON.stringify(team));
-    localStorage.setItem(LS.role, role);
+    sessSet(LS.team, JSON.stringify(team));
+    sessSet(LS.role, role);
     paintBodyClass();
     await pullCore();
     await syncWeek(currentMondayKey(), true);
@@ -126,14 +172,17 @@
 
   function logout(opts) {
     const quiet = !!(opts && opts.quiet); // token 过期时由调用方自己给提示，别叠两条 toast
-    localStorage.removeItem(LS.token);
-    localStorage.removeItem(LS.user);
-    localStorage.removeItem(LS.team);
-    localStorage.removeItem(LS.role);
+    sessDel(LS.token);
+    sessDel(LS.user);
+    sessDel(LS.team);
+    sessDel(LS.role);
     localStorage.removeItem(LS.skip); // 主动退出 = 想换账号，下次必须重新登录
     user = null; team = null; role = null;
     paintBodyClass();
     paintCloudUI();
+    // 内存里的 db 还是刚退出那个队的名单，切回本机那份
+    // （否则回到本地模式后的编辑会写脏本机数据，换号登录还会被当成「本机原有名单」搬走）
+    hooks && hooks.reloadLocal && hooks.reloadLocal();
     hooks && hooks.closeModal && hooks.closeModal();
     if (quiet) return;
     showGate();
@@ -151,7 +200,7 @@
     ]);
     // 角色以服务器为准（比如被队长改过角色）
     role = me.role || role;
-    localStorage.setItem(LS.role, role);
+    sessSet(LS.role, role);
     paintBodyClass();
     hooks.applyServerState({
       players: players.players,
@@ -256,7 +305,8 @@
 
   function localSnapshot() {
     try {
-      const cur = hooks.getDB ? hooks.getDB() : null;
+      // 「本机数据」只认本地模式那份（无球队后缀），不认内存 —— 内存里可能是别的队的名单
+      const cur = hooks.localDB ? hooks.localDB() : (hooks.getDB ? hooks.getDB() : null);
       if (!cur) return null;
       const snap = {
         players: JSON.parse(JSON.stringify(cur.players || [])),
@@ -928,6 +978,7 @@
     user: () => user,
     team: () => team,
     role: () => role,
+    dbScope,
     isViewer,
     openLogin,
     logout,
