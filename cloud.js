@@ -238,11 +238,104 @@
   }
 
   async function finishLogin() {
+    const snap = localSnapshot();
     await pullCore();
     await syncWeek(currentMondayKey(), true);
     paintCloudUI();
     hideGate();
     hooks.renderAll();
+    await offerImport(snap);
+  }
+
+  /* ── 首次登录：把本机数据搬到云端 ──
+   * 场景：用户先在本机模式里录了一队人，之后才开云端账号。
+   * pullCore 会用服务器数据整份覆盖本机（服务器空 → 本机名单当场清空），所以：
+   * 1) 覆盖之前先快照并另存一份到 localStorage，最坏情况也找得回来；
+   * 2) 服务器是空的、本机有名单时，问一句要不要搬。 */
+  const LS_SNAP = 'xgy_local_snapshot';
+
+  function localSnapshot() {
+    try {
+      const cur = hooks.getDB ? hooks.getDB() : null;
+      if (!cur) return null;
+      const snap = {
+        players: JSON.parse(JSON.stringify(cur.players || [])),
+        skillLogs: JSON.parse(JSON.stringify(cur.skillLogs || [])),
+        template: JSON.parse(JSON.stringify((cur.settings && cur.settings.template) || [])),
+        formation: JSON.parse(JSON.stringify(cur.formation || {})),
+        at: Date.now()
+      };
+      if (snap.players.length) {
+        try { localStorage.setItem(LS_SNAP, JSON.stringify(snap)); } catch (_) { /* 配额满了就算了，弹窗还在 */ }
+      }
+      return snap;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function offerImport(snap) {
+    const mine = (snap && snap.players) || [];
+    if (!mine.length) return;
+    if (!(role === 'admin' || role === 'coach')) return; // 队员没写权限，搬也搬不上去
+    const cur = hooks.getDB ? hooks.getDB() : null;
+    if (cur && (cur.players || []).length > 0) return; // 服务器已有名单，不是第一次，不打扰
+    const n = mine.length;
+    const body = `<div class="cloud-account">
+      <p class="form-note" style="margin-top:0">这台设备上原本有 <b>${n}</b> 名队员，服务器上的球队还是空的。搬到云端之后，平板和手机看到的才是同一份名单。</p>
+      <p class="form-note">会搬：队员（号码 / 位置 / 年级 / 身高 / 性别 / 6 项技能）+ 训练模板 + 防守站位。<br>不搬：历史考勤和技能调整记录，这些仍留在本机。</p>
+      <p class="gate-err" id="impErr" hidden></p>
+      <div class="form-foot">
+        <button type="button" class="btn btn-ghost" id="impSkip">不用，保留在本机</button>
+        <button type="button" class="btn btn-primary" id="impDo">搬到云端</button>
+      </div>
+    </div>`;
+    hooks.openModal('把本机数据搬到云端？', body, { mid: true });
+
+    document.getElementById('impSkip').onclick = () => {
+      hooks.closeModal();
+      hooks.toast('已跳过搬迁，本机原有数据留在浏览器备份里', 'warn');
+    };
+
+    const btn = document.getElementById('impDo');
+    btn.onclick = async () => {
+      const err = document.getElementById('impErr');
+      btn.disabled = true;
+      err.hidden = true;
+      let done = 0;
+      const failed = [];
+      for (const p of mine) {
+        btn.textContent = `上传中 ${done + 1}/${n}`;
+        try {
+          await rawPush.playerCreate({
+            name: p.name,
+            number: Number(p.number) || 0,
+            position: p.position || '主攻',
+            grade: p.grade || '大一',
+            height: Number(p.height) || 0,
+            gender: p.gender || '',
+            skills: p.skills || {}
+          });
+          done += 1;
+        } catch (err2) {
+          // 性别为空时号码可能撞车（服务端只在同性别内查重），撞了就带空性别重试一次
+          failed.push(p.name);
+        }
+      }
+      try {
+        if ((snap.template || []).length) await rawPush.template(snap.template);
+        if (snap.formation && snap.formation.pos) await rawPush.formation(snap.formation);
+      } catch (_) { /* 模板/站位失败不影响名单，下次改设置会再推 */ }
+
+      await pullCore();
+      hooks.renderAll();
+      hooks.closeModal();
+      if (failed.length) {
+        hooks.toast(`已搬 ${done} 名队员，${failed.length} 人失败：${failed.slice(0, 3).join('、')}${failed.length > 3 ? '…' : ''}`, 'warn');
+      } else {
+        hooks.toast(`已把 ${done} 名队员同步到云端`, 'ok');
+      }
+    };
   }
 
   /* ── 首登强制改密：直接在门禁卡片里换屏，没有「稍后再说」 ── */

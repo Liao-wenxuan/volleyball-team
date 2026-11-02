@@ -28,6 +28,7 @@ export interface PlayerRow {
   position: string;
   grade: string;
   height: number;
+  gender: string;
   serve: number;
   receive: number;
   set_: number;
@@ -45,6 +46,7 @@ export interface Player {
   position: string;
   grade: string;
   height: number;
+  gender: string;
   skills: Record<string, number>;
   createdAt: number;
   updatedAt: number;
@@ -58,6 +60,7 @@ export function toPlayer(r: PlayerRow): Player {
     position: r.position,
     grade: r.grade,
     height: r.height,
+    gender: r.gender || '',
     skills: {
       serve: r.serve,
       receive: r.receive,

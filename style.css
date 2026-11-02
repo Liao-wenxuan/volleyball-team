@@ -2105,6 +2105,7 @@ html.gate-pass .auth-gate{display:none!important}
   background:rgba(255,107,138,.12);color:var(--red);border:1px solid rgba(255,107,138,.28)}
 .gate-err[hidden]{display:none}
 .gate-foot{margin-top:16px;padding-top:14px;border-top:1px solid var(--ov070);text-align:center}
+.gate-hint{display:block;font-size:11px;color:var(--muted);opacity:.8;margin-bottom:2px}
 .gate-skip{border:none;background:none;color:var(--muted);font-size:12px;cursor:pointer;padding:5px 10px;border-radius:8px;transition:.15s}
 .gate-skip:hover{color:var(--text);background:var(--ov050)}
 .gate-note{margin:14px 0 0;font-size:12px;line-height:1.65;color:var(--muted)}

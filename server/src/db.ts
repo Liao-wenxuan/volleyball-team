@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS players (
   position   TEXT NOT NULL DEFAULT '主攻',
   grade      TEXT NOT NULL DEFAULT '大一',
   height     INTEGER NOT NULL DEFAULT 0,
+  gender     TEXT NOT NULL DEFAULT '',   -- ''/男/女；号码查重只在同性别内做，所以必须跟着同步
   serve      REAL NOT NULL DEFAULT 5,
   receive    REAL NOT NULL DEFAULT 5,
   set_       REAL NOT NULL DEFAULT 5,
@@ -218,7 +219,12 @@ function migrateAccountV2() {
     console.log('[db] 角色迁移完成：owner→admin / editor→coach / viewer→player');
   }
 
-  // 3. players 绑定登录账号
+  // 3. players 补 gender（前端 10-31 加的字段，服务端一直漏了，云端模式性别会被丢掉）
+  if (!columnNames('players').includes('gender')) {
+    db.exec("ALTER TABLE players ADD COLUMN gender TEXT NOT NULL DEFAULT ''");
+  }
+
+  // 4. players 绑定登录账号
   if (!columnNames('players').includes('user_id')) {
     db.exec('ALTER TABLE players ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE SET NULL');
   }

@@ -16,6 +16,8 @@ const createSchema = z.object({
   position: z.enum(POSITIONS as [string, ...string[]]).default('主攻'),
   grade: z.enum(GRADES as [string, ...string[]]).default('大一'),
   height: z.number().int().min(0).max(250).default(0),
+  // '' 表示还没标（老数据），前端按「不分性别」处理
+  gender: z.enum(['', '男', '女']).default(''),
   skills: z
     .object({
       serve: skillField,
@@ -48,8 +50,8 @@ router.post(
     const ts = now();
     const s = b.skills || {};
     db.prepare(
-      `INSERT INTO players (id, team_id, name, number, position, grade, height, serve, receive, "set_", spike, block, defense, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO players (id, team_id, name, number, position, grade, height, gender, serve, receive, "set_", spike, block, defense, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       r.teamId,
@@ -58,6 +60,7 @@ router.post(
       b.position,
       b.grade,
       b.height,
+      b.gender,
       s.serve ?? 5,
       s.receive ?? 5,
       s.set ?? 5,
@@ -86,6 +89,7 @@ router.patch(
       position: b.position ?? cur.position,
       grade: b.grade ?? cur.grade,
       height: b.height ?? cur.height,
+      gender: b.gender ?? cur.gender,
       serve: b.skills?.serve ?? cur.skills.serve,
       receive: b.skills?.receive ?? cur.skills.receive,
       set: b.skills?.set ?? cur.skills.set,
@@ -95,7 +99,7 @@ router.patch(
     };
 
     db.prepare(
-      `UPDATE players SET name=?, number=?, position=?, grade=?, height=?,
+      `UPDATE players SET name=?, number=?, position=?, grade=?, height=?, gender=?,
         serve=?, receive=?, "set_"=?, spike=?, block=?, defense=?, updated_at=?
        WHERE team_id=? AND id=?`
     ).run(
@@ -104,6 +108,7 @@ router.patch(
       next.position,
       next.grade,
       next.height,
+      next.gender,
       next.serve,
       next.receive,
       next.set,
