@@ -857,6 +857,13 @@
     document.querySelectorAll('#avatarBtn .u-avatar, #upAvatar, #chipAvatar').forEach((el) => { el.textContent = letter; });
     const brandMode = document.getElementById('brandMode');
     if (brandMode) brandMode.textContent = on ? 'VOLLEYBALL · CLOUD' : 'VOLLEYBALL · LOCAL';
+    // 品牌名跟队走：云端显示登录账号所属球队，本机回落默认名（多球队后写死会串队）
+    const teamName = on && team ? team.name : '信工院排球队';
+    const brandTeam = document.getElementById('brandTeam');
+    if (brandTeam) brandTeam.textContent = teamName;
+    const footerTeam = document.getElementById('footerTeam');
+    if (footerTeam) footerTeam.textContent = teamName;
+    document.title = `${teamName} · 球队管理`;
     const nameEl = document.getElementById('upName');
     if (nameEl) {
       nameEl.textContent = on && user ? user.name : '管理员';
