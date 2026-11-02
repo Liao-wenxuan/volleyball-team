@@ -1,0 +1,26 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# 一次只跑一个部署，后到的排队；不做 cancel-in-progress，避免半路打断服务器上的 npm ci
+concurrency:
+  group: deploy-production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH 到服务器执行部署脚本
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          install -m 600 /dev/null ~/deploy_key
+          printf '%s\n' "$SSH_KEY" > ~/deploy_key
+          ssh -i ~/deploy_key \
+              -o StrictHostKeyChecking=accept-new \
+              -o ServerAliveInterval=15 \
+              ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+              'bash ~/deploy-volleyball.sh'
