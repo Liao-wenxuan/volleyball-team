@@ -4002,6 +4002,7 @@
     $('#menuImport').onclick = () => { closePopovers(); openImportChooser(); };
     $('#menuClear').onclick = () => { closePopovers(); clearAllData(); };
     $('#menuAbout').onclick = () => { closePopovers(); openHelp(); };
+    $('#menuLogout').onclick = () => { closePopovers(); window.XGYCloud.logout(); renderAllCurrent(); };
 
     $('#searchTrigger').onclick = openPalette;
     $('#paletteScrim').onclick = (e) => { if (e.target === $('#paletteScrim')) closePalette(); };

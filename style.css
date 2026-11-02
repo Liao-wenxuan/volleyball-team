@@ -368,6 +368,10 @@ kbd{
 .up-links button.danger .up-ico{background:rgba(255,107,138,.1)}
 .up-logout{width:100%;padding:10px;border-radius:10px;font-size:12px;color:var(--muted);background:var(--ov030);transition:.25s}
 .up-logout:hover{background:var(--ov070);color:#fff}
+.up-logout.danger{color:var(--red)}
+.up-logout.danger:hover{background:var(--red);color:#fff}
+/* 云端才有的菜单项（退出登录）：本机模式整体藏掉 */
+body:not(.cloud-on) [data-cloud-only]{display:none!important}
 
 /* ── tooltip (气泡提示) ── */
 [data-tip]{position:relative}

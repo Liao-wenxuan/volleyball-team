@@ -845,9 +845,36 @@
   /* ── 顶栏按钮状态 ── */
   function paintCloudUI() {
     const btn = document.getElementById('cloudBtn');
-    if (!btn) return;
-    btn.classList.toggle('cloud-on', enabled());
-    btn.setAttribute('data-tip', enabled() ? `云端：${team ? team.name : user.name}` : '连接云端');
+    const on = enabled();
+    document.body.classList.toggle('cloud-on', on); // [data-cloud-only] 的显隐靠这条
+    if (btn) {
+      btn.classList.toggle('cloud-on', on);
+      btn.setAttribute('data-tip', on ? `云端：${team ? team.name : user.name}` : '连接云端');
+    }
+
+    // 头像菜单的身份区 + 退出按钮：云端显示真实身份，本机显示默认文案
+    const letter = on && user ? (user.name || user.username || '管').charAt(0) : '管';
+    document.querySelectorAll('#avatarBtn .u-avatar, #upAvatar, #chipAvatar').forEach((el) => { el.textContent = letter; });
+    const brandMode = document.getElementById('brandMode');
+    if (brandMode) brandMode.textContent = on ? 'VOLLEYBALL · CLOUD' : 'VOLLEYBALL · LOCAL';
+    const nameEl = document.getElementById('upName');
+    if (nameEl) {
+      nameEl.textContent = on && user ? user.name : '管理员';
+    }
+    const subEl = document.getElementById('upSub');
+    if (subEl) {
+      if (on && team) {
+        subEl.textContent = `${team.name} · ${ROLE_LABEL[role] || role || ''}`;
+      } else {
+        subEl.textContent = '本地账号 · 一个人维护全队数据';
+      }
+    }
+    const chipName = document.getElementById('chipName');
+    if (chipName) chipName.textContent = on && user ? user.name : '管理员';
+    const chipSub = document.getElementById('chipSub');
+    if (chipSub) chipSub.textContent = on ? (ROLE_LABEL[role] || '已登录') : '本地账号';
+    const lo = document.getElementById('menuLogout');
+    if (lo) lo.hidden = !on;
   }
 
   function currentMondayKey() {
