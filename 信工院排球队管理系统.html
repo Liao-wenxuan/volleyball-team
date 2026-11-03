@@ -3267,6 +3267,17 @@ try {
   };
   const DEFAULT_BASE = 'http://localhost:8787';
 
+  /* 默认服务器地址：页面本身跑在 http(s) 上时（vb.bscjs.top / 局域网部署），
+   * 同源就是最合理的默认值 —— 新设备登录不用手动展开「服务器地址」也能直接登录。
+   * 写死 localhost:8787 的坑：生产站新访客的登录请求会打到自己电脑上，
+   * 报一个浏览器控制台里的 Failed to fetch，界面上只有一句「Failed to fetch」。 */
+  function defaultBase() {
+    if (/^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+      return location.origin;
+    }
+    return DEFAULT_BASE;
+  }
+
   /* ── 会话存储：按标签页隔离 ──
    * localStorage 是按「域名」共享的，不是按标签页。原先把登录态存那里，
    * 同浏览器开两个标签登两个队时，后登录的会盖掉前一个：刷新一下整页变成别人的队；
@@ -3306,7 +3317,15 @@ try {
   const ROLE_LABEL = { admin: '管理员', coach: '教练', player: '队员' };
 
   function base() {
-    return (localStorage.getItem(LS.base) || DEFAULT_BASE).replace(/\/+$/, '');
+    return (localStorage.getItem(LS.base) || defaultBase()).replace(/\/+$/, '');
+  }
+
+  /* 一次性迁移：老版本把 localhost:8787 当默认值存进了 localStorage，
+   * 在生产站上这会让登录永远打到自己电脑上。检测到就清掉，回落到 defaultBase()。 */
+  function migrateBase() {
+    if (localStorage.getItem(LS.base) === DEFAULT_BASE && defaultBase() !== DEFAULT_BASE) {
+      localStorage.removeItem(LS.base);
+    }
   }
   function token() {
     // 每次实时读：写操作要拿到当前标签页自己的 token，不能缓存
@@ -4189,6 +4208,7 @@ try {
   window.XGYCloud = {
     attach(h) {
       hooks = h;
+      migrateBase();
       restoreSession();
       bindGate();
       paintBodyClass();
@@ -6178,7 +6198,7 @@ try {
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-03 · r31'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-03 · r32.2'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -8469,8 +8489,21 @@ try {
   }
 
   /* ══════════ 训练后批量调整 ══════════ */
+  /* 兜底壳：脏数据抛异常时也要给可见反馈，不能让按钮「看起来没反应」 */
   function openBatchAdjust() {
-    if (!db.players.length) { toast('先添加队员', 'warn'); return; }
+    try {
+      openBatchAdjustInner();
+    } catch (e) {
+      console.error('[batch-adjust]', e);
+      toast('打开训练后调整失败：' + e.message, 'warn');
+    }
+  }
+
+  function openBatchAdjustInner() {
+    if (!db.players.length) {
+      toast(CloudOn() ? '这个队还没有队员，先去人员管理添加' : '先添加队员，或点顶栏「连接云端」登录', 'warn');
+      return;
+    }
     const mondays = [0, -1, -2, -3].map((n) => addDays(getMonday(new Date()), n * 7));
     const options = [];
     mondays.forEach((m) => { getSessions(m).forEach((s) => { if (s.status !== 'cancelled') options.push({ s, m }); }); });

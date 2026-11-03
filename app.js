@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-03 · r31'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-03 · r32.2'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -2308,8 +2308,21 @@
   }
 
   /* ══════════ 训练后批量调整 ══════════ */
+  /* 兜底壳：脏数据抛异常时也要给可见反馈，不能让按钮「看起来没反应」 */
   function openBatchAdjust() {
-    if (!db.players.length) { toast('先添加队员', 'warn'); return; }
+    try {
+      openBatchAdjustInner();
+    } catch (e) {
+      console.error('[batch-adjust]', e);
+      toast('打开训练后调整失败：' + e.message, 'warn');
+    }
+  }
+
+  function openBatchAdjustInner() {
+    if (!db.players.length) {
+      toast(CloudOn() ? '这个队还没有队员，先去人员管理添加' : '先添加队员，或点顶栏「连接云端」登录', 'warn');
+      return;
+    }
     const mondays = [0, -1, -2, -3].map((n) => addDays(getMonday(new Date()), n * 7));
     const options = [];
     mondays.forEach((m) => { getSessions(m).forEach((s) => { if (s.status !== 'cancelled') options.push({ s, m }); }); });
