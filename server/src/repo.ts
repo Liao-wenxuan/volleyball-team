@@ -340,12 +340,12 @@ export function setSkill(
 /* ══════════ 阵型 ══════════ */
 
 export function getFormation(teamId: string) {
-  const row = db.prepare('SELECT preset, pos, updated_at FROM formations WHERE team_id = ?').get(teamId) as
-    | { preset: string; pos: string; updated_at: number }
+  const row = db.prepare('SELECT preset, name, pos, updated_at FROM formations WHERE team_id = ?').get(teamId) as
+    | { preset: string; name: string | null; pos: string; updated_at: number }
     | undefined;
   if (!row) return null;
   try {
-    return { preset: row.preset, pos: JSON.parse(row.pos), updatedAt: row.updated_at };
+    return { preset: row.preset, name: row.name || '', pos: JSON.parse(row.pos), updatedAt: row.updated_at };
   } catch {
     return null;
   }

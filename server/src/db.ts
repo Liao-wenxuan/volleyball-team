@@ -275,6 +275,20 @@ function migrateNotesV2() {
 
 migrateNotesV2();
 
+/**
+ * r33：阵型板标题跟阵型库统一。
+ * formations（当前站位表）补 name 列，记「当前套用的是阵型库里哪一套」；
+ * 纯显示用途，手动拖动时前端会清空。只 ADD COLUMN，老库幂等。
+ */
+function migrateFormationName() {
+  if (!columnNames('formations').includes('name')) {
+    db.exec("ALTER TABLE formations ADD COLUMN name TEXT NOT NULL DEFAULT ''");
+    console.log('[db] r33 迁移：formations 已补 name 列');
+  }
+}
+
+migrateFormationName();
+
 /** 跟前端一致的短 id：p_xxx / s_xxx / l_xxx */
 export function newId(prefix: string): string {
   return prefix + '_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);

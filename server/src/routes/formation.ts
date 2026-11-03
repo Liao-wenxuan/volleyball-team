@@ -17,6 +17,7 @@ const posMapSchema = z.record(
 
 const posSchema = z.object({
   preset: z.string().max(20).default('custom'),
+  name: z.string().max(12).optional(), // r33：当前套用的阵型库名字（纯显示）
   pos: posMapSchema
 });
 
@@ -54,9 +55,9 @@ router.put(
     // 六个位置必须齐全，少一个前端画不出来
     assertFullPos(b.pos);
     db.prepare(
-      `INSERT INTO formations (team_id, preset, pos, updated_at) VALUES (?, ?, ?, ?)
-       ON CONFLICT(team_id) DO UPDATE SET preset = excluded.preset, pos = excluded.pos, updated_at = excluded.updated_at`
-    ).run(r.teamId, b.preset, JSON.stringify(b.pos), now());
+      `INSERT INTO formations (team_id, preset, name, pos, updated_at) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(team_id) DO UPDATE SET preset = excluded.preset, name = excluded.name, pos = excluded.pos, updated_at = excluded.updated_at`
+    ).run(r.teamId, b.preset, b.name || '', JSON.stringify(b.pos), now());
     res.json({ formation: getFormation(r.teamId) });
   })
 );

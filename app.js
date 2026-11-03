@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-03 · r32.3'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-03 · r33'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -104,6 +104,22 @@
     { id: 'lib', name: '自由人', color: '#37e39b' }
   ];
 
+  const FX_FRONT_Y = 3; // 网到 3m 线之间是前排（y 从网起算）
+
+  // 自由人轮转到前排（进入 3m 线内）时按排球规则换标牌：自由人→副攻2、原副攻→副攻1；
+  // 纯显示层变化，不挪任何位置、不改数据 id（2026-11-03 用户拍板：保留各自颜色）
+  function fxLibFront() {
+    const p = db.formation.pos && db.formation.pos.lib;
+    return !!p && p.y < FX_FRONT_Y;
+  }
+  function fxRoleName(id) {
+    if (fxLibFront()) {
+      if (id === 'lib') return '副攻2';
+      if (id === 'mb') return '副攻1';
+    }
+    return FX_ROLES.find((r) => r.id === id).name;
+  }
+
   // 仅作内部默认站位（「恢复默认」按钮 / 新建初始值用）；预设列表已移除，阵型全部由用户在「阵型库」自行保存
   const FX_PRESETS = {
     base: {
@@ -121,7 +137,7 @@
   function blankFormation() {
     const pos = {};
     FX_ROLES.forEach((r) => { pos[r.id] = { x: FX_PRESETS.base.pos[r.id].x, y: FX_PRESETS.base.pos[r.id].y }; });
-    return { version: 1, preset: 'base', pos };
+    return { version: 1, preset: 'base', name: '', pos };
   }
 
   function normalizeFormation(raw) {
@@ -137,7 +153,9 @@
         y: fxClamp(Number.isFinite(y) ? y : base.pos[r.id].y)
       };
     });
-    return { version: 1, preset: FX_PRESETS[raw.preset] ? raw.preset : 'custom', pos };
+    // name = 当前套用的是阵型库里哪一套（r33 标题统一用）；手动拖动会清掉
+    const name = typeof raw.name === 'string' ? raw.name.trim().slice(0, 12) : '';
+    return { version: 1, preset: FX_PRESETS[raw.preset] ? raw.preset : 'custom', name, pos };
   }
 
   /* ══════════ 日期 ══════════ */
@@ -3548,8 +3566,8 @@
       el.style.setProperty('--role', r.color);
       el.tabIndex = 0;
       el.setAttribute('role', 'button');
-      el.setAttribute('aria-label', `${r.name}，拖动调整站位，方向键微调`);
-      el.innerHTML = `<span>${r.name}</span>`;
+      el.setAttribute('aria-label', `${fxRoleName(r.id)}，拖动调整站位，方向键微调`);
+      el.innerHTML = `<span>${fxRoleName(r.id)}</span>`;
       court.appendChild(el);
       fxEls[r.id] = el;
       bindFxPointer(el, r);
@@ -3650,6 +3668,11 @@
       const p = f.pos[r.id];
       el.style.left = (p.x / FX_SIZE * 100) + '%';
       el.style.top = (p.y / FX_SIZE * 100) + '%';
+      // 标牌名随自由人是否在前排动态变（自由人→副攻2 / 副攻→副攻1）
+      const label = fxRoleName(r.id);
+      const span = el.querySelector('span');
+      if (span && span.textContent !== label) span.textContent = label;
+      el.setAttribute('aria-label', `${label}，拖动调整站位，方向键微调`);
     });
     paintFxPresets();
     paintFxSaves();
@@ -3657,10 +3680,14 @@
   }
 
   function paintFxPresets() {
-    // 出厂预设已移除，只同步状态标签：base = 默认站位，其余一律算自定义
-    const label = db.formation.preset === 'base' ? '默认站位' : '自定义';
+    // 标题 / 状态标签跟阵型库统一（r33）：base = 默认站位，
+    // 套用了库里的哪套就显示那套的名字，手动改动后回落「自定义站位」
+    const label = db.formation.preset === 'base' ? '默认站位' : (db.formation.name || '自定义');
+    const title = db.formation.preset === 'base' ? '默认站位' : (db.formation.name || '自定义站位');
     const tag = $('#fxState');
     if (tag) tag.textContent = label;
+    const h2 = $('#fxTitle');
+    if (h2) h2.textContent = title;
     const fsName = $('#fxFsName');
     if (fsName) fsName.textContent = label;
   }
@@ -3714,6 +3741,8 @@
       if (!el) return;
       const p = db.formation.pos[r.id];
       el.textContent = `x ${p.x.toFixed(2)} · y ${p.y.toFixed(2)}`;
+      const nameEl = el.parentElement && el.parentElement.querySelector('.fx-role-name');
+      if (nameEl) nameEl.textContent = fxRoleName(r.id);
     });
   }
 
@@ -3722,7 +3751,7 @@
     if (!preset) return;
     const pos = {};
     FX_ROLES.forEach((r) => { pos[r.id] = { x: preset.pos[r.id].x, y: preset.pos[r.id].y }; });
-    db.formation = { version: 1, preset: k, pos };
+    db.formation = { version: 1, preset: k, name: '', pos };
     save();
     cloudPushFormation();
     renderTactics();
@@ -3758,7 +3787,7 @@
     if (!f) return;
     const pos = {};
     FX_ROLES.forEach((r) => { pos[r.id] = { x: f.pos[r.id].x, y: f.pos[r.id].y }; });
-    db.formation = { version: 1, preset: 'custom', pos };
+    db.formation = { version: 1, preset: 'custom', name: f.name, pos };
     save();
     cloudPushFormation();
     renderTactics();
@@ -3888,6 +3917,7 @@
       const p = db.formation.pos[role.id];
       db.formation.pos[role.id] = { x: fxSnap(p.x), y: fxSnap(p.y) };
       db.formation.preset = 'custom';
+      db.formation.name = ''; // 手动动过就不再是「库里的那套」，标题回落自定义
       save();
       cloudPushFormation();
       renderTactics();
@@ -3907,6 +3937,7 @@
       const p = db.formation.pos[role.id];
       db.formation.pos[role.id] = { x: fxClamp(p.x + d[0] * FX_SNAP), y: fxClamp(p.y + d[1] * FX_SNAP) };
       db.formation.preset = 'custom';
+      db.formation.name = ''; // 方向键微调同样视为手动改动
       save();
       cloudPushFormation();
       renderTactics();
@@ -4261,7 +4292,7 @@
       applyTheme(payload.theme);
     }
     if (payload.formation && payload.formation.pos) {
-      db.formation = normalizeFormation({ version: 1, preset: payload.formation.preset, pos: payload.formation.pos });
+      db.formation = normalizeFormation({ version: 1, preset: payload.formation.preset, name: payload.formation.name, pos: payload.formation.pos });
     }
     // 云端阵型库以服务器为准（本地同名字段直接覆盖）
     if (Array.isArray(payload.formations)) {

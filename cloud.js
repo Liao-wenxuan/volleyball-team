@@ -897,7 +897,7 @@
     skillBatch: (changes, source, date) =>
       api('/api/skills/batch', { method: 'POST', body: { changes, source, date } }),
 
-    formation: (f) => api('/api/formation', { method: 'PUT', body: { preset: f.preset, pos: f.pos } }),
+    formation: (f) => api('/api/formation', { method: 'PUT', body: { preset: f.preset, pos: f.pos, name: f.name || '' } }),
     formationLibrary: (list) => api('/api/formation/library', { method: 'PUT', body: { formations: list } }),
     template: (t) => api('/api/settings/template', { method: 'PUT', body: { template: t } }),
     theme: (themeId) => api('/api/settings/theme', { method: 'PUT', body: { theme: themeId } }),

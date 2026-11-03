@@ -458,10 +458,11 @@ router.post(
         const pos = cleanPos(formation?.pos);
         if (pos) {
           const preset = str(formation?.preset, 20) || 'custom';
+          const fname = str(formation?.name, 12);
           db.prepare(
-            `INSERT INTO formations (team_id, preset, pos, updated_at) VALUES (?, ?, ?, ?)
-             ON CONFLICT(team_id) DO UPDATE SET preset = excluded.preset, pos = excluded.pos, updated_at = excluded.updated_at`
-          ).run(teamId, preset, JSON.stringify(pos), ts);
+            `INSERT INTO formations (team_id, preset, name, pos, updated_at) VALUES (?, ?, ?, ?, ?)
+             ON CONFLICT(team_id) DO UPDATE SET preset = excluded.preset, name = excluded.name, pos = excluded.pos, updated_at = excluded.updated_at`
+          ).run(teamId, preset, fname, JSON.stringify(pos), ts);
           prefs += 1;
         }
 
