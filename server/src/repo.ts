@@ -35,6 +35,7 @@ export interface PlayerRow {
   spike: number;
   block: number;
   defense: number;
+  note: string;
   created_at: number;
   updated_at: number;
 }
@@ -48,6 +49,7 @@ export interface Player {
   height: number;
   gender: string;
   skills: Record<string, number>;
+  note: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -69,6 +71,7 @@ export function toPlayer(r: PlayerRow): Player {
       block: r.block,
       defense: r.defense
     },
+    note: r.note || '',
     createdAt: r.created_at,
     updatedAt: r.updated_at
   };
@@ -90,18 +93,42 @@ export function getPlayer(teamId: string, id: string): Player | null {
 
 /* ══════════ 设置 ══════════ */
 
-export function getSettings(teamId: string): { template: TemplateItem[]; theme: string } {
-  const row = db.prepare('SELECT template, theme FROM team_settings WHERE team_id = ?').get(teamId) as
-    | { template: string; theme: string }
+/** AI 助手配置（r30 起跟随球队上云；key 明文存库 —— 自部署单团队系统，可接受） */
+export interface AiConfig {
+  base: string;
+  model: string;
+  key: string;
+}
+
+export function getSettings(teamId: string): {
+  template: TemplateItem[];
+  theme: string;
+  ai: AiConfig | null;
+} {
+  const row = db.prepare('SELECT template, theme, ai FROM team_settings WHERE team_id = ?').get(teamId) as
+    | { template: string; theme: string; ai: string }
     | undefined;
-  if (!row) return { template: [], theme: 'aurora' };
+  if (!row) return { template: [], theme: 'aurora', ai: null };
   let template: TemplateItem[] = [];
   try {
     template = JSON.parse(row.template) as TemplateItem[];
   } catch {
     template = [];
   }
-  return { template, theme: row.theme };
+  let ai: AiConfig | null = null;
+  try {
+    const parsed = JSON.parse(row.ai || 'null') as Partial<AiConfig> | null;
+    if (parsed && typeof parsed === 'object') {
+      ai = {
+        base: String(parsed.base || 'https://api.deepseek.com'),
+        model: String(parsed.model || 'deepseek-chat'),
+        key: String(parsed.key || '')
+      };
+    }
+  } catch {
+    ai = null;
+  }
+  return { template, theme: row.theme, ai };
 }
 
 /* ══════════ 训练 / 出勤 ══════════ */

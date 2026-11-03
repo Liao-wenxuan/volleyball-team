@@ -52,6 +52,29 @@ router.put(
   })
 );
 
+/** 更新 AI 助手配置（r30 上云：换设备免重填 Key） */
+const aiSchema = z.object({
+  ai: z.object({
+    base: z.string().trim().max(120).default('https://api.deepseek.com'),
+    model: z.string().trim().min(1).max(60).default('deepseek-chat'),
+    key: z.string().trim().max(200).default('')
+  })
+});
+
+router.put(
+  '/ai',
+  requireRole('admin', 'coach'),
+  asyncHandler(async (req, res) => {
+    const r = req as unknown as AuthedRequest;
+    const b = parse(aiSchema, req.body);
+    db.prepare(
+      `INSERT INTO team_settings (team_id, template, theme, ai, updated_at) VALUES (?, '[]', 'aurora', ?, ?)
+       ON CONFLICT(team_id) DO UPDATE SET ai = excluded.ai, updated_at = excluded.updated_at`
+    ).run(r.teamId, JSON.stringify(b.ai), now());
+    res.json({ settings: getSettings(r.teamId) });
+  })
+);
+
 /** 更新主题 */
 router.put(
   '/theme',

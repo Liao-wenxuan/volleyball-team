@@ -77,6 +77,7 @@ interface CleanPlayer {
   grade: string;
   height: number;
   gender: string;
+  note: string;
   skills: Record<SkillKey, number>;
   createdAt: number;
   updatedAt: number;
@@ -106,6 +107,7 @@ function cleanPlayer(raw: unknown): CleanPlayer | null {
     grade: GRADES.includes(String(p.grade)) ? String(p.grade) : '大一',
     height: Number.isFinite(height) ? clamp(Math.trunc(height), 0, 250) : 0,
     gender: p.gender === '男' || p.gender === '女' ? p.gender : '',
+    note: str(p.note, 300),
     skills,
     createdAt: created,
     updatedAt: Number(p.updatedAt) || created
@@ -250,12 +252,12 @@ router.post(
     const ts = now();
 
     const insPlayer = db.prepare(
-      `INSERT INTO players (id, team_id, user_id, name, number, position, grade, height, gender,
+      `INSERT INTO players (id, team_id, user_id, name, number, position, grade, height, gender, note,
                             serve, receive, "set_", spike, block, defense, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     const updPlayer = db.prepare(
-      `UPDATE players SET position = ?, grade = ?, height = ?,
+      `UPDATE players SET position = ?, grade = ?, height = ?, note = ?,
               serve = ?, receive = ?, "set_" = ?, spike = ?, block = ?, defense = ?, updated_at = ?
         WHERE team_id = ? AND id = ?`
     );
@@ -336,7 +338,7 @@ router.post(
         if (hit) {
           idMap.set(p.id, hit.id);
           updPlayer.run(
-            p.position, p.grade, p.height,
+            p.position, p.grade, p.height, p.note,
             p.skills.serve, p.skills.receive, p.skills.set, p.skills.spike, p.skills.block, p.skills.defense,
             p.updatedAt, teamId, hit.id
           );
@@ -354,11 +356,24 @@ router.post(
           }
           insPlayer.run(
             nid, teamId, bind,
-            p.name, p.number, p.position, p.grade, p.height, p.gender,
+            p.name, p.number, p.position, p.grade, p.height, p.gender, p.note,
             p.skills.serve, p.skills.receive, p.skills.set, p.skills.spike, p.skills.block, p.skills.defense,
             p.createdAt, p.updatedAt
           );
           added += 1;
+        }
+      }
+
+      /* ── 2.5 老格式点评字典（data.shareNotes = { 备份playerId: 点评 }） ──
+       * 新备份点评直接在 players[].note 里，上面已随队员写入；
+       * 老备份（r30 之前导出）点评单独存，这里按 idMap 翻译后补写。 */
+      const incNotes = data.shareNotes as Record<string, unknown> | undefined;
+      if (incNotes && typeof incNotes === 'object') {
+        const updNote = db.prepare('UPDATE players SET note = ? WHERE team_id = ? AND id = ?');
+        for (const [pid, txt] of Object.entries(incNotes)) {
+          const nid = idMap.get(pid);
+          const t = typeof txt === 'string' ? txt.trim().slice(0, 300) : '';
+          if (nid && t) updNote.run(t, teamId, nid);
         }
       }
 

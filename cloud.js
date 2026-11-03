@@ -208,7 +208,8 @@
       formation: formation.formation,
       formations: Array.isArray(lib.formations) ? lib.formations : [],
       template: me.settings.template,
-      theme: me.settings.theme
+      theme: me.settings.theme,
+      ai: me.settings.ai
     });
   }
 
@@ -877,7 +878,8 @@
     formation: (f) => api('/api/formation', { method: 'PUT', body: { preset: f.preset, pos: f.pos } }),
     formationLibrary: (list) => api('/api/formation/library', { method: 'PUT', body: { formations: list } }),
     template: (t) => api('/api/settings/template', { method: 'PUT', body: { template: t } }),
-    theme: (themeId) => api('/api/settings/theme', { method: 'PUT', body: { theme: themeId } })
+    theme: (themeId) => api('/api/settings/theme', { method: 'PUT', body: { theme: themeId } }),
+    settingsAi: (ai) => api('/api/settings/ai', { method: 'PUT', body: { ai } })
   };
 
   const push = {};

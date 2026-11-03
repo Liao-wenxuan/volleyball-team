@@ -256,6 +256,25 @@ function migrateAdminV2() {
 
 migrateAdminV2();
 
+/**
+ * r30：队员点评 + AI 配置上云。
+ * - players.note：队员点评（扫码导入那条链之前只写本机，换设备就没了）
+ * - team_settings.ai：AI 助手配置（base/model/key，之前也是只存本机，换设备要重填 Key）
+ * 两个都只 ADD COLUMN，老库幂等。
+ */
+function migrateNotesV2() {
+  if (!columnNames('players').includes('note')) {
+    db.exec("ALTER TABLE players ADD COLUMN note TEXT NOT NULL DEFAULT ''");
+    console.log('[db] r30 迁移：players 已补 note 列');
+  }
+  if (!columnNames('team_settings').includes('ai')) {
+    db.exec("ALTER TABLE team_settings ADD COLUMN ai TEXT NOT NULL DEFAULT ''");
+    console.log('[db] r30 迁移：team_settings 已补 ai 列');
+  }
+}
+
+migrateNotesV2();
+
 /** 跟前端一致的短 id：p_xxx / s_xxx / l_xxx */
 export function newId(prefix: string): string {
   return prefix + '_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);

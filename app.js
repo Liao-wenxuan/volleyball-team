@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-02 · r29'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-03 · r30'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -185,6 +185,7 @@
       gender: p.gender === '男' || p.gender === '女' ? p.gender : '',
       height: Number.isFinite(Number(p.height)) ? Number(p.height) : 0,
       skills: normalizeSkills(p.skills),
+      note: String(p.note || '').trim().slice(0, 300),
       createdAt: Number(p.createdAt) || Date.now(),
       updatedAt: Number(p.updatedAt) || Number(p.createdAt) || Date.now()
     };
@@ -2825,15 +2826,23 @@
     let arr;
     try { arr = JSON.parse(text.slice(a, b + 1)); } catch (e) { throw new Error('返回内容解析失败'); }
     let n = 0;
+    const noteUpdates = [];
     (Array.isArray(arr) ? arr : []).forEach((it) => {
       const pl = data.players[it && it.i];
       if (!pl || typeof it.t !== 'string' || !it.t.trim()) return;
       if (!db.shareNotes) db.shareNotes = {};
       db.shareNotes[pl.id] = it.t.trim().slice(0, 150); // 50 字中文 ≈ 150 字节，再长二维码就扫不动了
+      noteUpdates.push([pl.id, it.t.trim().slice(0, 150)]);
       n += 1;
     });
     if (!n) throw new Error('一条点评都没解析出来');
     save();
+    // r30：点评上云（players.note），换设备/换标签不再丢
+    if (CloudOn()) {
+      noteUpdates.forEach(([pid, txt]) => {
+        cloudFire(window.XGYCloud.push.playerUpdate(pid, { note: txt }), null);
+      });
+    }
     return n;
   }
 
@@ -3150,6 +3159,7 @@
         grade: pair.inc.grade,
         height: pair.inc.height,
         skills: pair.inc.skills,
+        note: pair.inc.note || p.note || '',
         updatedAt: Math.max(Number(p.updatedAt) || 0, Number(pair.inc.updatedAt) || 0)
       };
     }).concat(added);
@@ -3204,12 +3214,13 @@
     logs.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || (Number(a.at) || 0) - (Number(b.at) || 0));
     out.skillLogs = logs;
 
-    /* 4) AI 点评：有新的就换成新的 */
+    /* 4) AI 点评：有新的就换成新的（老格式在 shareNotes 字典，新格式在 players[].note） */
     const notes = { ...(db.shareNotes || {}) };
     Object.keys(inc.shareNotes || {}).forEach((pid) => {
       const nid = idMap.get(pid);
       if (nid && inc.shareNotes[pid]) notes[nid] = inc.shareNotes[pid];
     });
+    matched.forEach((m) => { if (m.inc.note) notes[m.cur.id] = m.inc.note; });
     out.shareNotes = notes;
 
     /* 训练模板 / 主题 / 阵型库属于这台设备自己的偏好，合并时不动 */
@@ -4205,6 +4216,17 @@
   function applyServerState(payload) {
     db.players = (payload.players || []).map(normalizePlayer).filter((p) => p.name);
     db.skillLogs = (payload.skillLogs || []).map(normalizeLog).filter(Boolean);
+    // r30：点评以服务器为准重建镜像（分享链接 / AI 上下文都读 shareNotes）
+    db.shareNotes = {};
+    db.players.forEach((p) => { if (p.note) db.shareNotes[p.id] = p.note; });
+    // AI 配置跟随球队（换设备免重填 Key）；aiChat 是临时工作区，刻意不上云
+    if (payload.ai && typeof payload.ai === 'object') {
+      db.settings.ai = {
+        base: String(payload.ai.base || 'https://api.deepseek.com'),
+        model: String(payload.ai.model || 'deepseek-chat'),
+        key: String(payload.ai.key || '')
+      };
+    }
     if (Array.isArray(payload.template)) {
       db.settings.template = payload.template.map((t, i) => ({
         id: t.id || uid('t'),
@@ -4437,6 +4459,7 @@ ${aiContext()}`;
       if (!cfg.key) { toast('API Key 还没填', 'warn'); return; }
       db.aiChat = [];
       save();
+      if (CloudOn()) cloudFire(window.XGYCloud.push.settingsAi({ base: cfg.base, model: cfg.model, key: cfg.key }), null);
       state.ai = { messages: [], busy: false, abort: null };
       toast('AI 助手已就绪');
       renderAiPage();
