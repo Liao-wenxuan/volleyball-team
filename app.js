@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-03 · r32.2'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-03 · r32.3'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -2351,9 +2351,15 @@
       let players = db.players.filter((p) => ['present', 'late'].includes(s.attendance[p.id]));
       const unmarked = !hasMarks;
       if (unmarked) players = db.players.slice();
+      // 部分登记：只标过一部分人的考勤时，明确告诉用户还有多少人被隐藏、去哪补，
+      // 否则看起来像「弹窗丢了数据」（2026-11-03 用户反馈 11-01 场次只剩 1 人）
+      const noRecord = hasMarks ? db.players.filter((p) => !s.attendance[p.id]).length : 0;
       $('#batchHint').textContent = unmarked
         ? `这次训练的考勤还没有登记，默认显示全部 ${db.players.length} 名队员。`
-        : (players.length ? `按考勤筛选出 ${players.length} 名参训队员（出勤 / 迟到）。` : '这次训练的考勤里没有出勤或迟到的队员。');
+        : (players.length
+          ? `按考勤筛选出 ${players.length} 名参训队员（出勤 / 迟到）。` +
+            (noRecord ? `另有 ${noRecord} 人没登过考勤，没显示；要给他们调整先去训练页补考勤。` : '')
+          : '这次训练的考勤里没有出勤或迟到的队员。');
       if (!players.length) { $('#batchTable').innerHTML = miniEmpty('这次训练没有参训队员可以调整。'); return; }
       $('#batchTable').innerHTML = `<table class="batch-table">
         <thead><tr><th>队员</th>${SKILLS.map((sk) => `<th>${sk.label}</th>`).join('')}</tr></thead>
