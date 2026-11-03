@@ -18,6 +18,7 @@ import skillRoutes from './routes/skills';
 import formationRoutes from './routes/formation';
 import settingsRoutes from './routes/settings';
 import importRoutes from './routes/import';
+import meRoutes from './routes/me';
 
 const app = express();
 const PORT = Number(process.env.PORT || 8787);
@@ -44,6 +45,7 @@ app.use('/api/skills', skillRoutes);
 app.use('/api/formation', formationRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/me', meRoutes);
 
 app.use('/api', (_req, _res, next) => next(new HttpError(404, '接口不存在', 'not_found')));
 
@@ -53,6 +55,20 @@ const adminPage = path.join(__dirname, '..', 'public', 'admin.html');
 const sendAdmin = (_req: express.Request, res: express.Response) => res.sendFile(adminPage);
 app.get('/admin', sendAdmin);
 app.get('/admin.html', sendAdmin);
+
+// 队员端「我的」：手机一屏页。跟管理端同理挂显式路由；
+// sw 注册在 /m/sw.js，作用域天然是 /m/，不会去抢教练端的离线壳。
+const mDir = path.join(__dirname, '..', 'public');
+const sendM = (_req: express.Request, res: express.Response) => res.sendFile(path.join(mDir, 'm.html'));
+app.get('/m', sendM);
+app.get('/m/', sendM);
+app.get('/m.html', sendM);
+app.get('/m/manifest.webmanifest', (_req, res) => {
+  res.type('application/manifest+json').sendFile(path.join(mDir, 'm-manifest.webmanifest'));
+});
+app.get('/m/sw.js', (_req, res) => {
+  res.type('application/javascript').sendFile(path.join(mDir, 'm-sw.js'));
+});
 
 // 可选：生产模式下直接托管打包好的前端单文件目录
 const staticDir = process.env.STATIC_DIR;

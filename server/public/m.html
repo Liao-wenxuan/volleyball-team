@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<title>我的排球 · 训练档案</title>
+<link rel="manifest" href="/m/manifest.webmanifest">
+<link rel="icon" href="/assets/icon-192.png">
+<style>
+  /* ═══ 基座：暗色玻璃拟态，与教练端同一套视觉语言（紫/青/琥珀） ═══ */
+  :root {
+    --bg: #0b1020; --bg-2: #080c18;
+    --violet: #7b6cff; --violet-2: #a89bff;
+    --cyan: #46e0ff; --amber: #ffbb55; --green: #37e39b; --red: #ff6b8a;
+    --ink: #e8ecf8; --ink-2: #9aa5c4; --ink-3: #66709a;
+    --card: rgba(255,255,255,.04); --card-2: rgba(255,255,255,.07);
+    --line: rgba(255,255,255,.09); --line-2: rgba(255,255,255,.16);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    min-height: 100dvh; color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", sans-serif;
+    background:
+      radial-gradient(90rem 40rem at 15% -10%, rgba(123,108,255,.16), transparent 60%),
+      radial-gradient(70rem 36rem at 110% 15%, rgba(70,224,255,.10), transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 45%, var(--bg) 100%);
+    background-attachment: fixed;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 20px 16px calc(28px + env(safe-area-inset-bottom)); }
+
+  /* ═══ 通用组件 ═══ */
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    padding: 16px; margin-bottom: 14px;
+  }
+  .card h3 { font-size: 12px; font-weight: 700; letter-spacing: .14em; color: var(--violet-2); margin-bottom: 12px; }
+  .btn {
+    display: block; width: 100%; border: none; cursor: pointer; color: #fff;
+    font-size: 16px; font-weight: 700; padding: 14px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--violet), #5a7dff);
+    box-shadow: 0 12px 30px -14px rgba(123,108,255,.7);
+  }
+  .btn:disabled { opacity: .5; }
+  .btn-ghost {
+    display: inline-block; background: none; border: 1px solid var(--line-2); color: var(--ink-2);
+    font-size: 13px; padding: 8px 14px; border-radius: 10px; cursor: pointer;
+  }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; font-weight: 600; }
+  .field input {
+    width: 100%; padding: 13px 14px; font-size: 16px; color: var(--ink);
+    background: rgba(0,0,0,.25); border: 1px solid var(--line); border-radius: 12px; outline: none;
+  }
+  .field input:focus { border-color: rgba(123,108,255,.55); box-shadow: 0 0 0 3px rgba(123,108,255,.14); }
+  .err { display: none; font-size: 13px; color: var(--red); background: rgba(255,107,138,.09);
+    border: 1px solid rgba(255,107,138,.3); padding: 10px 12px; border-radius: 10px; margin-bottom: 14px; }
+  .muted { color: var(--ink-2); font-size: 13px; line-height: 1.6; }
+
+  /* ═══ 登录页 ═══ */
+  #viewLogin { max-width: 360px; margin: 0 auto; padding-top: 12vh; }
+  .logo { text-align: center; margin-bottom: 30px; }
+  .logo .ball { font-size: 44px; }
+  .logo h1 { font-size: 20px; margin-top: 10px; letter-spacing: .06em; }
+  .logo p { font-size: 11px; letter-spacing: .3em; color: var(--ink-3); margin-top: 6px; }
+
+  /* ═══ 主视图 ═══ */
+  .top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .avatar {
+    width: 52px; height: 52px; border-radius: 16px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 800; color: #fff;
+    background: linear-gradient(135deg, var(--violet), var(--cyan));
+    box-shadow: 0 10px 24px -10px rgba(123,108,255,.8);
+  }
+  .top .who { flex: 1; min-width: 0; }
+  .top .who b { font-size: 18px; }
+  .top .who .sub { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+  .pos-chip {
+    flex: none; font-size: 11px; font-weight: 700; color: var(--cyan);
+    background: rgba(70,224,255,.1); border: 1px solid rgba(70,224,255,.3);
+    padding: 4px 10px; border-radius: 999px;
+  }
+  .team-line { font-size: 11px; letter-spacing: .18em; color: var(--ink-3); margin-bottom: 14px; font-weight: 700; }
+
+  /* 下次训练 */
+  .next-main { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .next-main .d { font-size: 30px; font-weight: 800;
+    background: linear-gradient(90deg, var(--violet-2), var(--cyan));
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .next-main .t { font-size: 14px; color: var(--ink-2); font-weight: 600; }
+  .next-meta { margin-top: 8px; font-size: 13px; color: var(--ink-2); }
+  .next-meta b { color: var(--ink); font-weight: 600; }
+  .state-chip { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; margin-left: 6px; vertical-align: 2px; }
+  .st-present { color: var(--green); background: rgba(55,227,155,.1); border: 1px solid rgba(55,227,155,.3); }
+  .st-late    { color: var(--amber); background: rgba(255,187,85,.1); border: 1px solid rgba(255,187,85,.3); }
+  .st-leave   { color: var(--cyan);  background: rgba(70,224,255,.08); border: 1px solid rgba(70,224,255,.28); }
+  .st-absent  { color: var(--red);   background: rgba(255,107,138,.1); border: 1px solid rgba(255,107,138,.3); }
+  .st-none    { color: var(--ink-3); background: rgba(255,255,255,.05); border: 1px solid var(--line); }
+
+  /* 出勤率 */
+  .att-row { display: flex; align-items: center; gap: 18px; }
+  .ring { flex: none; position: relative; width: 96px; height: 96px; }
+  .ring svg { transform: rotate(-90deg); }
+  .ring .val { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring .val b { font-size: 22px; }
+  .ring .val span { font-size: 10px; color: var(--ink-3); }
+  .att-counts { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .att-counts .c { background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+  .att-counts .c b { font-size: 17px; display: block; }
+  .att-counts .c span { font-size: 11px; color: var(--ink-2); }
+  .att-counts .c.k-present b { color: var(--green); }
+  .att-counts .c.k-late b { color: var(--amber); }
+  .att-counts .c.k-leave b { color: var(--cyan); }
+  .att-counts .c.k-absent b { color: var(--red); }
+
+  /* 雷达 */
+  .radar-box { display: flex; justify-content: center; }
+  .radar-box svg { max-width: 100%; }
+
+  /* 点评 */
+  .note-text { font-size: 14px; line-height: 1.8; color: var(--ink); white-space: pre-wrap; }
+  .note-empty { font-size: 13px; color: var(--ink-3); }
+
+  /* 近 5 次 */
+  .rec { display: flex; align-items: center; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--line); }
+  .rec:last-child { border-bottom: none; }
+  .rec .date { flex: none; width: 76px; }
+  .rec .date b { font-size: 14px; display: block; }
+  .rec .date span { font-size: 11px; color: var(--ink-3); }
+  .rec .info { flex: 1; min-width: 0; font-size: 13px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rec .info.cancelled { color: var(--amber); }
+
+  .foot { text-align: center; padding-top: 8px; }
+  .foot .muted { font-size: 11px; }
+  .foot .actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+
+  /* 改密码视图 */
+  #viewPw { max-width: 360px; margin: 0 auto; padding-top: 10vh; }
+  #viewPw h2 { font-size: 18px; margin-bottom: 8px; }
+
+  #loading { text-align: center; padding-top: 40vh; color: var(--ink-3); font-size: 14px; letter-spacing: .2em; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div id="loading">加载中…</div>
+
+  <!-- 登录 -->
+  <div id="viewLogin" class="hidden">
+    <div class="logo">
+      <div class="ball">🏐</div>
+      <h1>我的排球</h1>
+      <p>MY VOLLEYBALL</p>
+    </div>
+    <div class="err" id="loginErr"></div>
+    <form id="loginForm">
+      <div class="field"><label>用户名</label><input id="inUser" autocomplete="username" required></div>
+      <div class="field"><label>密码</label><input id="inPass" type="password" autocomplete="current-password" required></div>
+      <button class="btn" id="loginBtn" type="submit">登 录</button>
+    </form>
+    <p class="muted" style="text-align:center;margin-top:16px">账号由教练 / 管理员发放，没有注册入口</p>
+  </div>
+
+  <!-- 首次登录强制改密 -->
+  <div id="viewPw" class="hidden">
+    <h2>设置新密码</h2>
+    <p class="muted" style="margin-bottom:18px">首次登录需要把初始密码换成自己的密码。</p>
+    <div class="err" id="pwErr"></div>
+    <form id="pwForm">
+      <div class="field"><label>当前密码（初始密码）</label><input id="pwOld" type="password" required></div>
+      <div class="field"><label>新密码（至少 8 位）</label><input id="pwNew" type="password" minlength="8" required></div>
+      <div class="field"><label>再输一遍新密码</label><input id="pwNew2" type="password" minlength="8" required></div>
+      <button class="btn" id="pwBtn" type="submit">保存并进入</button>
+    </form>
+  </div>
+
+  <!-- 主视图 -->
+  <div id="viewMain" class="hidden">
+    <div class="wrap">
+      <div class="team-line" id="teamLine"></div>
+      <div class="top">
+        <div class="avatar" id="pAvatar">?</div>
+        <div class="who">
+          <b id="pName">—</b>
+          <div class="sub" id="pSub"></div>
+        </div>
+        <div class="pos-chip" id="pPos"></div>
+      </div>
+
+      <div class="card">
+        <h3>下次训练</h3>
+        <div id="nextBody"></div>
+      </div>
+
+      <div class="card">
+        <h3>本季出勤</h3>
+        <div class="att-row" id="attBody"></div>
+      </div>
+
+      <div class="card">
+        <h3>六项技能</h3>
+        <div class="radar-box" id="radarBody"></div>
+      </div>
+
+      <div class="card">
+        <h3>教练点评</h3>
+        <div id="noteBody"></div>
+      </div>
+
+      <div class="card">
+        <h3>最近训练</h3>
+        <div id="recBody"></div>
+      </div>
+
+      <div class="foot">
+        <div class="muted">数据由教练记录 · 有疑问直接找教练</div>
+        <div class="actions">
+          <button class="btn-ghost" id="btnPw">修改密码</button>
+          <button class="btn-ghost" id="btnOut">退出登录</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主动改密码（非首次） -->
+  <div id="viewChange" class="hidden">
+    <div style="max-width:360px;margin:0 auto;padding-top:10vh">
+      <h2 style="font-size:18px;margin-bottom:18px">修改密码</h2>
+      <div class="err" id="chErr"></div>
+      <form id="chForm">
+        <div class="field"><label>当前密码</label><input id="chOld" type="password" required></div>
+        <div class="field"><label>新密码（至少 8 位）</label><input id="chNew" type="password" minlength="8" required></div>
+        <div class="field"><label>再输一遍新密码</label><input id="chNew2" type="password" minlength="8" required></div>
+        <button class="btn" id="chBtn" type="submit">保存</button>
+      </form>
+      <div style="text-align:center;margin-top:14px"><button class="btn-ghost" id="chBack">返回</button></div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+  const TOKEN_KEY = 'xgy_m_token';
+  const $ = (id) => document.getElementById(id);
+  const show = (id) => { ['loading','viewLogin','viewPw','viewMain','viewChange'].forEach((v) => $(v).classList.toggle('hidden', v !== id)); };
+  const STATE_CN = { present: '出勤', late: '迟到', leave: '请假', absent: '缺席' };
+  const SKILLS = [
+    ['serve', '发球'], ['receive', '一传'], ['set', '二传'],
+    ['spike', '扣球'], ['block', '拦网'], ['defense', '防守']
+  ];
+  const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+  let token = localStorage.getItem(TOKEN_KEY) || '';
+
+  async function api(path, opts) {
+    const r = await fetch(path, Object.assign({
+      headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { Authorization: 'Bearer ' + token } : {})
+    }, opts || {}));
+    let data = {};
+    try { data = await r.json(); } catch (e) { /* 空 */ }
+    if (r.status === 401) { localStorage.removeItem(TOKEN_KEY); token = ''; throw new Error(data.message || '登录已过期'); }
+    if (!r.ok) throw new Error(data.message || ('请求失败 ' + r.status));
+    return data;
+  }
+
+  /* ═══ 登录 ═══ */
+  $('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('loginBtn');
+    btn.disabled = true; btn.textContent = '登录中…'; $('loginErr').style.display = 'none';
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: $('inUser').value.trim(), password: $('inPass').value })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || '用户名或密码不对');
+      token = data.token;
+      localStorage.setItem(TOKEN_KEY, token);
+      if (data.mustChangePassword) { show('viewPw'); return; }
+      await render();
+    } catch (err) {
+      $('loginErr').textContent = err.message; $('loginErr').style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = '登 录';
+    }
+  });
+
+  /* ═══ 首登强制改密 ═══ */
+  $('pwForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if ($('pwNew').value !== $('pwNew2').value) { $('pwErr').textContent = '两次输入的新密码不一样'; $('pwErr').style.display = 'block'; return; }
+    $('pwErr').style.display = 'none';
+    try {
+      await api('/api/auth/password', { method: 'POST', body: JSON.stringify({ oldPassword: $('pwOld').value, newPassword: $('pwNew').value }) });
+      toast('密码已更新');
+      await render();
+    } catch (err) { $('pwErr').textContent = err.message; $('pwErr').style.display = 'block'; }
+  });
+
+  /* ═══ 主动改密 ═══ */
+  $('btnPw').onclick = () => { $('chErr').style.display = 'none'; $('chForm').reset(); show('viewChange'); };
+  $('chBack').onclick = () => show('viewMain');
+  $('chForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if ($('chNew').value !== $('chNew2').value) { $('chErr').textContent = '两次输入的新密码不一样'; $('chErr').style.display = 'block'; return; }
+    try {
+      await api('/api/auth/password', { method: 'POST', body: JSON.stringify({ oldPassword: $('chOld').value, newPassword: $('chNew').value }) });
+      toast('密码已更新'); show('viewMain');
+    } catch (err) { $('chErr').textContent = err.message; $('chErr').style.display = 'block'; }
+  });
+
+  $('btnOut').onclick = () => { localStorage.removeItem(TOKEN_KEY); token = ''; $('inPass').value = ''; show('viewLogin'); };
+
+  function toast(msg) {
+    const el = document.createElement('div');
+    el.textContent = msg;
+    el.style.cssText = 'position:fixed;left:50%;bottom:32px;transform:translateX(-50%);background:rgba(20,26,48,.92);border:1px solid rgba(255,255,255,.16);color:#fff;font-size:13px;padding:10px 18px;border-radius:999px;z-index:9;backdrop-filter:blur(10px)';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2200);
+  }
+
+  /* ═══ 渲染主视图 ═══ */
+  async function render() {
+    let data;
+    try { data = await api('/api/me/summary'); }
+    catch (err) { $('loginErr').textContent = err.message; $('loginErr').style.display = 'block'; show('viewLogin'); return; }
+
+    if (!data.player) {
+      // 账号没绑球员记录：只给退出，不给数据
+      $('teamLine').textContent = data.team || '';
+      $('nextBody').innerHTML = '<p class="muted">这个账号还没绑定球员档案，请联系教练在管理端重新发号绑定。</p>';
+      $('attBody').innerHTML = ''; $('radarBody').innerHTML = ''; $('noteBody').innerHTML = ''; $('recBody').innerHTML = '';
+      $('pAvatar').textContent = (data.team || '队').charAt(0);
+      $('pName').textContent = '未绑定球员';
+      $('pSub').textContent = ''; $('pPos').style.display = 'none';
+      show('viewMain');
+      return;
+    }
+
+    const p = data.player;
+    $('teamLine').textContent = (data.team || '排球队') + ' · MEMBER';
+    $('pAvatar').textContent = p.name.charAt(0);
+    $('pName').textContent = p.name;
+    const no = p.number ? '#' + p.number : '';
+    $('pSub').textContent = [no, p.grade, p.height ? p.height + 'cm' : ''].filter(Boolean).join(' · ');
+    const pos = $('pPos');
+    pos.style.display = ''; pos.textContent = p.position || '—';
+
+    renderNext(data.next);
+    renderAtt(data.stats);
+    renderRadar(p.skills);
+    renderNote(p.note);
+    renderRecent(data.recent);
+    show('viewMain');
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/m/sw.js').catch(() => {});
+  }
+
+  function stateChip(st) {
+    if (!st) return '<span class="state-chip st-none">未登记</span>';
+    return '<span class="state-chip st-' + st + '">' + (STATE_CN[st] || st) + '</span>';
+  }
+
+  function renderNext(next) {
+    const body = $('nextBody');
+    if (!next) { body.innerHTML = '<p class="muted">暂时没有安排中的训练，等教练通知。</p>'; return; }
+    const d = new Date(next.date + 'T00:00:00');
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const diff = Math.round((d - today) / 86400000);
+    const when = diff <= 0 ? '今天' : diff === 1 ? '明天' : diff + ' 天后';
+    body.innerHTML =
+      '<div class="next-main"><span class="d">' + when + '</span>' +
+      '<span class="t">' + WEEK_CN[d.getDay()] + ' · ' + next.start + '–' + next.end + '</span>' +
+      stateChip(next.state) + '</div>' +
+      '<div class="next-meta">' + (next.venue ? '📍 <b>' + esc(next.venue) + '</b> · ' : '') + '📅 ' + esc(next.date) + '</div>';
+  }
+
+  function renderAtt(stats) {
+    const rate = stats.rate;
+    const pct = rate == null ? 0 : rate;
+    const C = 2 * Math.PI * 40;
+    const col = pct >= 85 ? 'var(--green)' : pct >= 60 ? 'var(--amber)' : 'var(--red)';
+    $('attBody').innerHTML =
+      '<div class="ring"><svg width="96" height="96" viewBox="0 0 96 96">' +
+      '<circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="9"/>' +
+      '<circle cx="48" cy="48" r="40" fill="none" stroke="' + col + '" stroke-width="9" stroke-linecap="round" ' +
+      'stroke-dasharray="' + (C * pct / 100).toFixed(1) + ' ' + C.toFixed(1) + '"/>' +
+      '</svg><div class="val"><b>' + (rate == null ? '—' : rate + '%') + '</b><span>出勤率</span></div></div>' +
+      '<div class="att-counts">' +
+      '<div class="c k-present"><b>' + stats.present + '</b><span>出勤</span></div>' +
+      '<div class="c k-late"><b>' + stats.late + '</b><span>迟到</span></div>' +
+      '<div class="c k-leave"><b>' + stats.leave + '</b><span>请假</span></div>' +
+      '<div class="c k-absent"><b>' + stats.absent + '</b><span>缺席</span></div>' +
+      '</div>';
+  }
+
+  function renderRadar(skills) {
+    const CX = 150, CY = 130, R = 92, N = 6;
+    const pt = (i, v) => {
+      const ang = -Math.PI / 2 + i * 2 * Math.PI / N;
+      return [CX + Math.cos(ang) * R * (v / 10), CY + Math.sin(ang) * R * (v / 10)];
+    };
+    let grid = '';
+    [2.5, 5, 7.5, 10].forEach((lv) => {
+      const pts = SKILLS.map((_, i) => pt(i, lv).map((x) => x.toFixed(1)).join(',')).join(' ');
+      grid += '<polygon points="' + pts + '" fill="none" stroke="rgba(255,255,255,' + (lv === 10 ? .14 : .07) + ')" stroke-width="1"/>';
+    });
+    let axes = '';
+    for (let i = 0; i < N; i++) {
+      const [x, y] = pt(i, 10);
+      axes += '<line x1="' + CX + '" y1="' + CY + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="rgba(255,255,255,.07)"/>';
+    }
+    const vals = SKILLS.map(([k]) => Math.max(0, Math.min(10, Number(skills && skills[k]) || 0)));
+    const poly = vals.map((v, i) => pt(i, v).map((x) => x.toFixed(1)).join(',')).join(' ');
+    const dots = vals.map((v, i) => { const [x, y] = pt(i, v); return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" fill="#a89bff"/>'; }).join('');
+    const labels = SKILLS.map(([k, label], i) => {
+      const [x, y] = pt(i, 12.6);
+      return '<text x="' + x.toFixed(1) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="middle" font-size="12" fill="#9aa5c4">' + label +
+        ' <tspan fill="#e8ecf8" font-weight="700">' + (vals[i] % 1 ? vals[i].toFixed(1) : vals[i]) + '</tspan></text>';
+    }).join('');
+    $('radarBody').innerHTML =
+      '<svg width="300" height="252" viewBox="0 0 300 252">' + grid + axes +
+      '<polygon points="' + poly + '" fill="rgba(123,108,255,.22)" stroke="url(#rg)" stroke-width="2" stroke-linejoin="round"/>' +
+      '<defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="#a89bff"/><stop offset="1" stop-color="#46e0ff"/></linearGradient></defs>' +
+      dots + labels + '</svg>';
+  }
+
+  function renderNote(note) {
+    $('noteBody').innerHTML = note
+      ? '<p class="note-text">' + esc(note) + '</p>'
+      : '<p class="note-empty">教练还没有写点评，训练够了自然会有。</p>';
+  }
+
+  function renderRecent(recent) {
+    const body = $('recBody');
+    if (!recent || !recent.length) { body.innerHTML = '<p class="note-empty">还没有训练记录，第一场训练之后这里就有了。</p>'; return; }
+    body.innerHTML = recent.map((r) => {
+      const d = new Date(r.date + 'T00:00:00');
+      const st = r.status === 'cancelled'
+        ? '<span class="state-chip st-late">已取消' + (r.cancelReason ? ' · ' + esc(r.cancelReason) : '') + '</span>'
+        : stateChip(r.state);
+      return '<div class="rec"><div class="date"><b>' + (d.getMonth() + 1) + '月' + d.getDate() + '日</b>' +
+        '<span>' + WEEK_CN[d.getDay()] + ' ' + r.start + '</span></div>' +
+        '<div class="info' + (r.status === 'cancelled' ? ' cancelled' : '') + '">' + (r.venue ? esc(r.venue) : '训练') + '</div>' +
+        '<div>' + st + '</div></div>';
+    }).join('');
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  /* ═══ 入口 ═══ */
+  (async function boot() {
+    if (!token) { show('viewLogin'); return; }
+    try { await render(); }
+    catch (err) { $('loginErr').textContent = err.message; $('loginErr').style.display = 'block'; show('viewLogin'); }
+  })();
+})();
+</script>
+</body>
+</html>
