@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { db, newId, now, dateKey, mondayOf, parseKey } from '../db';
 import { HttpError, asyncHandler, parse } from '../http';
 import { requireAuth, requireRole, type AuthedRequest } from '../auth';
-import { STATES, ensureWeek, getSession } from '../repo';
+import { STATES, ensureWeek, getSession, listAllSessions } from '../repo';
 
 const router = Router();
 // 这个路由挂在 /api 根上，不能 router.use(requireAuth)：那会把所有 /api/* 都拦成 401，
@@ -11,6 +11,18 @@ const router = Router();
 router.use(['/weeks', '/sessions'], requireAuth);
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** 全量周数据：登录时一次拉齐所有历史周（新设备的赛季统计不缺数据）。
+ *  必须注册在 /weeks/:key 之前，否则 "all" 会被当成日期参数吃掉。 */
+router.get('/weeks/all', (req, res) => {
+  const r = req as unknown as AuthedRequest;
+  const weeks: Record<string, unknown[]> = {};
+  for (const s of listAllSessions(r.teamId)) {
+    const key = dateKey(mondayOf(parseKey(s.date)));
+    (weeks[key] ||= []).push(s);
+  }
+  res.json({ weeks });
+});
 
 /** 拿一周的训练；这一周还没建过就按模板生成 */
 router.get('/weeks/:key', (req, res) => {

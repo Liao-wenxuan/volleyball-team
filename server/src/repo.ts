@@ -195,6 +195,14 @@ export function listSessionsBetween(teamId: string, from: string, to: string): S
   return hydrate(rows);
 }
 
+/** 全量训练：登录时一次拉齐所有历史周，新设备的赛季统计才不缺数据 */
+export function listAllSessions(teamId: string): Session[] {
+  const rows = db
+    .prepare('SELECT * FROM sessions WHERE team_id = ? ORDER BY date, start')
+    .all(teamId) as SessionRow[];
+  return hydrate(rows);
+}
+
 /**
  * 这一周还没建训练的话，按模板生成一遍。
  *

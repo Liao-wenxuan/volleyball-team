@@ -191,12 +191,14 @@
 
   /* ── 拉取 ── */
   async function pullCore() {
-    const [players, logs, formation, lib, me] = await Promise.all([
+    const [players, logs, formation, lib, me, allWeeks] = await Promise.all([
       api('/api/players'),
       api('/api/skills/logs?limit=500'),
       api('/api/formation'),
       api('/api/formation/library'),
-      api('/api/auth/me')
+      api('/api/auth/me'),
+      // 全量周数据一次拉齐：周数据之前只懒加载当前周，新设备的赛季统计会缺历史周
+      api('/api/weeks/all')
     ]);
     // 角色以服务器为准（比如被队长改过角色）
     role = me.role || role;
@@ -209,7 +211,8 @@
       formations: Array.isArray(lib.formations) ? lib.formations : [],
       template: me.settings.template,
       theme: me.settings.theme,
-      ai: me.settings.ai
+      ai: me.settings.ai,
+      weeks: allWeeks.weeks
     });
   }
 

@@ -3427,12 +3427,14 @@ try {
 
   /* ── 拉取 ── */
   async function pullCore() {
-    const [players, logs, formation, lib, me] = await Promise.all([
+    const [players, logs, formation, lib, me, allWeeks] = await Promise.all([
       api('/api/players'),
       api('/api/skills/logs?limit=500'),
       api('/api/formation'),
       api('/api/formation/library'),
-      api('/api/auth/me')
+      api('/api/auth/me'),
+      // 全量周数据一次拉齐：周数据之前只懒加载当前周，新设备的赛季统计会缺历史周
+      api('/api/weeks/all')
     ]);
     // 角色以服务器为准（比如被队长改过角色）
     role = me.role || role;
@@ -3445,7 +3447,8 @@ try {
       formations: Array.isArray(lib.formations) ? lib.formations : [],
       template: me.settings.template,
       theme: me.settings.theme,
-      ai: me.settings.ai
+      ai: me.settings.ai,
+      weeks: allWeeks.weeks
     });
   }
 
@@ -6175,7 +6178,7 @@ try {
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-03 · r30'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-03 · r31'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -10409,6 +10412,15 @@ try {
         const pos = normalizeFormation({ version: 1, preset: 'custom', pos: f.pos }).pos;
         return { id: f.id || uid('f'), name: String(f.name || '未命名').slice(0, 16), pos, at: Number(f.at) || Date.now() };
       }).filter(Boolean);
+    }
+    // 全量周数据：登录时一次拉齐所有历史周，赛季统计不再只算「翻过的周」
+    if (payload.weeks && typeof payload.weeks === 'object') {
+      Object.keys(payload.weeks).forEach((k) => {
+        const arr = payload.weeks[k];
+        if (Array.isArray(arr) && arr.length) {
+          db.weeks[k] = arr.map(normalizeSession).filter(Boolean).sort(sessionSort);
+        }
+      });
     }
     save();
   }

@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-03 · r30'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-03 · r31'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -4251,6 +4251,15 @@
         const pos = normalizeFormation({ version: 1, preset: 'custom', pos: f.pos }).pos;
         return { id: f.id || uid('f'), name: String(f.name || '未命名').slice(0, 16), pos, at: Number(f.at) || Date.now() };
       }).filter(Boolean);
+    }
+    // 全量周数据：登录时一次拉齐所有历史周，赛季统计不再只算「翻过的周」
+    if (payload.weeks && typeof payload.weeks === 'object') {
+      Object.keys(payload.weeks).forEach((k) => {
+        const arr = payload.weeks[k];
+        if (Array.isArray(arr) && arr.length) {
+          db.weeks[k] = arr.map(normalizeSession).filter(Boolean).sort(sessionSort);
+        }
+      });
     }
     save();
   }
