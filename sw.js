@@ -28,7 +28,7 @@
 // v22: 用户管理（角色/邀请码/成员管理/改密码/切队）
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v36';
+const VERSION = 'v37';
 const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',

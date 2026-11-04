@@ -2048,7 +2048,26 @@ html[data-mode="light"] .step-round:hover,
 html[data-mode="light"] .batch-stepper button:hover,
 html[data-mode="light"] .fx-fsbtn:hover,
 html[data-mode="light"] .m-cell:hover,
-html[data-mode="light"] .help-body b{color:var(--text)}
+html[data-mode="light"] .help-body b,
+html[data-mode="light"] .imp-lead b,
+html[data-mode="light"] .imp-steps b,
+html[data-mode="light"] .imp-opt strong,
+html[data-mode="light"] .btn-mini.primary,
+html[data-mode="light"] .fx-act:hover,
+html[data-mode="light"] .fx-act.ok{color:var(--text)}
+/* .imp-row b 放组外：它的深色默认是 #fff，浅色下换 --text；
+   imp-mut 变体的弱化色要在其后重申，避免被组规则盖掉 */
+html[data-mode="light"] .imp-row b{color:var(--text)}
+html[data-mode="light"] .imp-row.imp-mut b{color:var(--muted)}
+/* 危险按钮 hover：浅色下底是淡粉，白字看不见，换深红字 */
+html[data-mode="light"] .btn-danger-ghost:hover{color:var(--red)}
+/* 琥珀提示条：浅色下淡琥珀字对比不够，换深琥珀 */
+html[data-mode="light"] .imp-alert,
+html[data-mode="light"] .imp-hint{color:#8a5c10;border-color:rgba(154,106,26,.3)}
+html[data-mode="light"] .imp-alert b,
+html[data-mode="light"] .imp-hint b{color:#a9720e}
+/* 战术板坐标气泡：底跟随主题，字也要跟 */
+html[data-mode="light"] .fx-coord{color:var(--text-2)}
 
 /* 主题卡：浅色标记 */
 .tc-tag{
