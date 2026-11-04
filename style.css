@@ -250,9 +250,67 @@ svg{display:block}
 .season-bar{display:block;height:4px;border-radius:4px;background:var(--ov080);overflow:hidden}
 .season-bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--violet),var(--cyan))}
 
+/* ══════════ 侧边栏身份卡（纯展示，无点击行为）══════════
+   设计：全息描边缓慢流转 + 指针聚光 + 微倾视差 + 头像能量环 + 呼吸状态点 + 掠过的高光。
+   交互只是「手感」，不做任何业务动作——保持纯展示语义。 */
+@property --ucAng{syntax:'<angle>';inherits:false;initial-value:0deg}
 .user-chip{
-  display:flex;align-items:center;gap:10px;padding:9px;border-radius:15px;text-align:left;
-  border:1px solid var(--ov070);background:var(--ov030);
+  --mx:50%;--my:50%;--rx:0deg;--ry:0deg;
+  position:relative;isolation:isolate;display:flex;align-items:center;gap:11px;
+  padding:10px 11px;border-radius:16px;text-align:left;overflow:hidden;
+  border:1px solid transparent;
+  background:
+    linear-gradient(150deg,var(--ov100),var(--ov030)) padding-box,
+    conic-gradient(from var(--ucAng,0deg),
+      rgba(var(--violet-rgb),.55),rgba(var(--cyan-rgb),.42) 26%,rgba(255,255,255,.07) 52%,
+      rgba(var(--violet-rgb),.26) 76%,rgba(var(--violet-rgb),.55)) border-box;
+  box-shadow:0 12px 28px -24px #000,inset 0 1px 0 var(--ov120);
+  transform:perspective(640px) rotateX(var(--rx)) rotateY(var(--ry));
+  transition:transform .3s var(--ease),box-shadow .45s;
+  animation:ucAng 9s linear infinite,ucIn .55s var(--ease) both;
+}
+@keyframes ucAng{to{--ucAng:360deg}}
+@keyframes ucIn{from{opacity:0}to{opacity:1}}
+/* 指针聚光：跟随鼠标的柔光点，只在悬停时出现 */
+.user-chip::before{
+  content:"";position:absolute;inset:0;z-index:0;opacity:0;transition:opacity .35s;pointer-events:none;
+  background:radial-gradient(130px 96px at var(--mx) var(--my),rgba(var(--violet-rgb),.30),transparent 72%);
+}
+/* 掠过卡面的高光 */
+.user-chip::after{
+  content:"";position:absolute;top:-25%;bottom:-25%;left:-75%;width:55%;z-index:2;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.13),transparent);
+  transform:skewX(-16deg);transition:left .72s var(--ease);
+}
+.user-chip:hover{box-shadow:0 18px 34px -26px rgba(var(--violet-rgb),.85),inset 0 1px 0 var(--ov180)}
+.user-chip:hover::before{opacity:1}
+.user-chip:hover::after{left:130%}
+/* 头像 + 缓慢旋转的能量环 */
+.u-orb{position:relative;z-index:1;flex:none;width:38px;height:38px;display:grid;place-items:center;border-radius:50%}
+.u-orb::before{
+  content:"";position:absolute;inset:-3px;border-radius:50%;opacity:.6;transition:opacity .35s;
+  background:conic-gradient(from var(--ucAng,0deg),
+    rgba(var(--violet-rgb),1),rgba(var(--cyan-rgb),.95) 34%,transparent 58%,rgba(var(--violet-rgb),.8));
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1.5px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1.5px));
+}
+.u-orb::after{
+  content:"";position:absolute;inset:-9px;z-index:-1;border-radius:50%;opacity:0;transition:opacity .4s;
+  background:radial-gradient(circle,rgba(var(--violet-rgb),.4),transparent 68%);filter:blur(7px);
+}
+.user-chip:hover .u-orb::before{opacity:1}
+.user-chip:hover .u-orb::after{opacity:.9}
+.user-chip .u-avatar{width:32px;height:32px;font-size:12.5px}
+/* 在线状态点：云端连通时绿色呼吸，本机模式为静默灰 */
+.u-dot{
+  position:absolute;right:-1px;bottom:0;width:9px;height:9px;border-radius:50%;
+  background:#8b93a7;box-shadow:0 0 0 2px var(--bg-2);transition:background .3s;
+}
+.user-chip[data-state="cloud"] .u-dot{background:var(--green);animation:ucBeat 2.6s ease-out infinite}
+@keyframes ucBeat{
+  0%{box-shadow:0 0 0 2px var(--bg-2),0 0 0 0 rgba(55,227,155,.5)}
+  70%{box-shadow:0 0 0 2px var(--bg-2),0 0 0 9px rgba(55,227,155,0)}
+  100%{box-shadow:0 0 0 2px var(--bg-2),0 0 0 0 rgba(55,227,155,0)}
 }
 .u-avatar{
   width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;
@@ -262,9 +320,22 @@ svg{display:block}
 }
 .u-avatar.lg{width:38px;height:38px;font-size:14px}
 .u-avatar.xl{width:52px;height:52px;font-size:18px}
-.u-info{display:flex;flex-direction:column;gap:2px;min-width:0}
-.u-info strong{font-size:12.5px;font-weight:600}
+.u-info{position:relative;z-index:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.u-info strong{font-size:12.5px;font-weight:600;transition:color .3s}
+/* 悬停时姓名走一遍渐变流光 */
+.user-chip:hover .u-info strong{
+  background:linear-gradient(96deg,var(--text),var(--violet-2) 30%,var(--cyan) 56%,var(--text) 82%);
+  background-size:220% 100%;
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+  animation:ucShine 2.8s linear infinite;
+}
+@keyframes ucShine{from{background-position:120% 0}to{background-position:-70% 0}}
 .u-info em{font-style:normal;font-size:10px;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){
+  .user-chip,.u-orb::before,.user-chip::after{animation:none!important;transition:none!important}
+  .user-chip:hover .u-info strong{background:none;color:var(--text);-webkit-text-fill-color:currentColor;animation:none}
+}
 .sidebar-note{font-size:9.5px;color:rgba(127,137,163,.55);text-align:center;letter-spacing:.06em}
 
 .scrim{
@@ -2089,6 +2160,23 @@ html[data-mode="light"] .drawer{box-shadow:-40px 0 90px -50px rgba(23,37,63,.6)}
 html[data-mode="light"] .confirm-box,
 html[data-mode="light"] .modal,
 html[data-mode="light"] .drawer{box-shadow:0 40px 80px -40px rgba(23,37,63,.55)}
+/* 浅色主题下的身份卡：白瓷底 + 收着点儿的全息边，聚光换成淡紫 */
+html[data-mode="light"] .user-chip{
+  background:
+    linear-gradient(150deg,rgba(255,255,255,.97),rgba(255,255,255,.64)) padding-box,
+    conic-gradient(from var(--ucAng,0deg),
+      rgba(var(--violet-rgb),.45),rgba(var(--cyan-rgb),.38) 28%,rgba(23,37,63,.10) 54%,
+      rgba(var(--violet-rgb),.26) 78%,rgba(var(--violet-rgb),.45)) border-box;
+  box-shadow:0 12px 26px -22px rgba(23,37,63,.55),inset 0 1px 0 #fff;
+}
+html[data-mode="light"] .user-chip::before{
+  background:radial-gradient(130px 96px at var(--mx) var(--my),rgba(var(--violet-rgb),.16),transparent 72%);
+}
+html[data-mode="light"] .user-chip:hover{box-shadow:0 18px 30px -24px rgba(var(--violet-rgb),.55),inset 0 1px 0 #fff}
+html[data-mode="light"] .u-dot{box-shadow:0 0 0 2px #fff}
+html[data-mode="light"] .user-chip:hover .u-info strong{
+  background-image:linear-gradient(96deg,var(--text),var(--violet) 32%,var(--violet-2) 58%,var(--text) 84%);
+}
 
 /* ══════════ 云端同步 ══════════ */
 #cloudBtn{position:relative}

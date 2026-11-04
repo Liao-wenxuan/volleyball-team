@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-04 · r35.6'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-04 · r35.7'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -4081,6 +4081,32 @@
         else if (action === 'clear-filter') { state.rosterFilter = '全部'; state.rosterSearch = ''; $('#rosterSearch').value = ''; renderRoster(); }
       }
     });
+
+    // 侧边栏身份卡：指针聚光 + 微倾视差。纯装饰，不绑定任何点击。
+    const chip = $('#userChip');
+    if (chip) {
+      let raf = 0, px = 0.5, py = 0.5;
+      const paint = () => {
+        raf = 0;
+        chip.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+        chip.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+        chip.style.setProperty('--ry', ((px - 0.5) * 9).toFixed(2) + 'deg');
+        chip.style.setProperty('--rx', ((0.5 - py) * 7).toFixed(2) + 'deg');
+      };
+      chip.addEventListener('pointermove', (e) => {
+        const r = chip.getBoundingClientRect();
+        px = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+        py = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+        if (!raf) raf = requestAnimationFrame(paint);
+      });
+      chip.addEventListener('pointerleave', () => {
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+        chip.style.setProperty('--mx', '50%');
+        chip.style.setProperty('--my', '50%');
+        chip.style.setProperty('--rx', '0deg');
+        chip.style.setProperty('--ry', '0deg');
+      });
+    }
 
     $('#menuBtn').onclick = () => { $('#sidebar').classList.add('open'); $('#scrim').classList.add('show'); };
     $('#scrim').onclick = closeSidebar;

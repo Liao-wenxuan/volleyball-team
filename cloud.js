@@ -957,6 +957,13 @@
     if (chipName) chipName.textContent = on && user ? user.name : '管理员';
     const chipSub = document.getElementById('chipSub');
     if (chipSub) chipSub.textContent = on ? (ROLE_LABEL[role] || '已登录') : '本地账号';
+    // 身份卡状态灯：云端连通→绿色呼吸，本机模式→静默灰（悬停有说明）
+    const chipEl = document.getElementById('userChip');
+    if (chipEl) chipEl.dataset.state = on ? 'cloud' : 'local';
+    const chipDot = document.getElementById('chipDot');
+    if (chipDot) chipDot.title = on ? '已连接云端：数据实时同步到服务器' : '本机模式：数据只存在这台设备';
+    const sideNote = document.getElementById('sidebarNote');
+    if (sideNote) sideNote.textContent = on ? '数据实时同步至云端' : '数据保存在本机浏览器';
     const lo = document.getElementById('menuLogout');
     if (lo) lo.hidden = !on;
   }

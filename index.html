@@ -81,11 +81,14 @@ try {
     </div>
   </div>
 
-  <div class="user-chip" id="userChip">
-    <span class="u-avatar" id="chipAvatar" style="--a:var(--violet);--b:var(--cyan)">管</span>
+  <div class="user-chip" id="userChip" data-state="local">
+    <span class="u-orb">
+      <span class="u-avatar" id="chipAvatar" style="--a:var(--violet);--b:var(--cyan)">管</span>
+      <i class="u-dot" id="chipDot" title="本机模式：数据只存在这台设备"></i>
+    </span>
     <span class="u-info"><strong id="chipName">管理员</strong><em id="chipSub">本地账号</em></span>
   </div>
-  <p class="sidebar-note">数据保存在本机浏览器</p>
+  <p class="sidebar-note" id="sidebarNote">数据保存在本机浏览器</p>
 </aside>
 <div class="scrim" id="scrim"></div>
 
