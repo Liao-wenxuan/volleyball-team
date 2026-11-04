@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-04 · r35.5'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-04 · r35.6'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -4084,6 +4084,11 @@
 
     $('#menuBtn').onclick = () => { $('#sidebar').classList.add('open'); $('#scrim').classList.add('show'); };
     $('#scrim').onclick = closeSidebar;
+    // 跨越 900px 断点时清残留：拉宽回常驻布局时，把还开着的抽屉和遮罩一并收掉；
+    // 缩窄无需处理（常驻侧边栏由媒体查询自然接管为抽屉态）
+    const narrowMQ = window.matchMedia('(max-width: 900px)');
+    const onNarrowChange = (mq) => { if (!mq.matches) closeSidebar(); };
+    narrowMQ.addEventListener ? narrowMQ.addEventListener('change', onNarrowChange) : narrowMQ.addListener(onNarrowChange);
 
     const togglePop = (btnId, popId) => {
       const btn = $(btnId);

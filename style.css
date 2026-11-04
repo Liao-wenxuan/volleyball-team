@@ -282,7 +282,6 @@ svg{display:block}
   backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
   border-bottom:1px solid var(--ov055);
 }
-.menu-btn{display:none}
 .crumb{display:flex;flex-direction:column;gap:4px;min-width:0}
 .crumb span{font-size:9px;letter-spacing:.16em;color:var(--violet-2);font-weight:700}
 .crumb h1{font-size:18px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
@@ -307,6 +306,8 @@ kbd{
 }
 .icon-btn:hover{background:var(--ov090);color:#fff;border-color:var(--ov200);transform:translateY(-1px)}
 .icon-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* 汉堡按钮默认隐藏（写在 icon-btn 之后，靠同优先级后者胜出；曾被 285 行的同优先级规则提前覆盖导致宽屏也显示） */
+.icon-btn.menu-btn{display:none}
 .bell-dot{position:absolute;top:9px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 0 3px var(--chrome-top-a),0 0 10px var(--red);animation:dotPulse 2.4s infinite}
 .bell-dot.hide{display:none}
 @keyframes dotPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}
@@ -1298,11 +1299,16 @@ body:not(.cloud-on) [data-cloud-only]{display:none!important}
   .gp-note{display:none}
   .gp-label{margin-top:12px}
 }
-@media (max-width:1024px){
+/* 侧边栏抽屉断点：≤900px 收起 + 汉堡按钮弹出；>900px 常驻、无汉堡按钮。
+   900 定位：主流平板竖屏（768/810/820）仍走抽屉，小屏笔记本（1280/1366 物理分辨率、
+   Windows 125% 缩放后约 1090 有效宽）能拿到常驻侧边栏，不再误弹三条杠。 */
+@media (max-width:900px){
   .sidebar{transform:translateX(-102%)}
   .sidebar.open{transform:none;box-shadow:40px 0 100px -40px #000}
   .main{margin-left:0}
-  .menu-btn{display:grid}
+  .icon-btn.menu-btn{display:grid}
+}
+@media (max-width:1024px){
   .hero{grid-template-columns:1fr;padding:32px}
   .hero-visual{display:none}
   .hero::before{font-size:150px;bottom:-40px}
