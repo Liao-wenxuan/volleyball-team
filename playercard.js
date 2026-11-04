@@ -229,7 +229,7 @@ body{
   /* ══════════ 单文件里的运行时代码 ══════════
    * 整个函数会被 toString() 内联进导出文件，所以：
    *   1. 不能引用这个文件里的任何外部变量（全部在函数内自备）
-   *   2. 不能出现字面量 </script>（用 '<\/script>' 代替）
+   *   2. 不能出现字面量 <\/script>（用 '<\/script>' 代替）
    */
   function cardRuntime() {
     var D = { players: [], sessions: [], next: [], team: '排球队', at: Date.now() };
@@ -655,7 +655,7 @@ body{
     const d = new Date(at);
     const pad = (n) => String(n).padStart(2, '0');
     const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    // JSON 里的 < 必须转义，否则队员名字里带 </script> 就能提前闭合脚本标签
+    // JSON 里的 < 必须转义，否则队员名字里带 <\/script> 就能提前闭合脚本标签
     const data = JSON.stringify(payload).replace(/</g, '\\u003c').replace(/\u2028|\u2029/g, '');
     const runtime = cardRuntime.toString();
 
@@ -673,8 +673,8 @@ body{
 <body>
 <div class="wrap" id="app"></div>
 <div class="toast" id="toast"></div>
-<script id="card-data" type="application/json">${data}</script>
-<script>(${runtime})();</script>
+<script id="card-data" type="application/json">${data}<\/script>
+<script>(${runtime})();<\/script>
 </body>
 </html>`;
   }

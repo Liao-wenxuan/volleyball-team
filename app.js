@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-04 · r35.4'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-04 · r35.5'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -958,7 +958,7 @@
     }).join('');
     const open = state.stackOpen;
     stack.classList.toggle('open', open);
-    stack.style.height = open ? `${Math.max(96, logs.length * 96)}px` : '96px';
+    btn.hidden = logs.length <= 3; // 不超过 3 条时全都能看到，展开按钮没意义
     btn.classList.toggle('on', open);
     btn.querySelector('span').textContent = open ? '收起' : '展开';
   }
@@ -4183,9 +4183,7 @@
     $('#stackToggle').onclick = () => {
       state.stackOpen = !state.stackOpen;
       const stack = $('#stack');
-      const count = Number(stack.dataset.count || 0);
       stack.classList.toggle('open', state.stackOpen);
-      stack.style.height = state.stackOpen ? `${Math.max(96, count * 96)}px` : '96px';
       const btn = $('#stackToggle');
       btn.classList.toggle('on', state.stackOpen);
       btn.querySelector('span').textContent = state.stackOpen ? '收起' : '展开';

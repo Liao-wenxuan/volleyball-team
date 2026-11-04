@@ -683,28 +683,19 @@ body:not(.cloud-on) [data-cloud-only]{display:none!important}
 .ring-legend div{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted)}
 .ring-legend b{margin-left:auto;font-size:11px;color:var(--text-2);font-weight:600}
 
-/* ── 堆叠卡片 ── */
+/* ── 最近技能调整：平铺列表（折叠显示前 3 条，展开显示全部） ── */
 .stack-panel{display:flex;flex-direction:column;overflow:hidden}
-.stack{position:relative;height:96px;transition:height .6s var(--ease);margin-bottom:4px;overflow:hidden}
-.stack.open{height:300px}
+.stack{position:relative;display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+.stack:not(.open) .stack-card:nth-child(n+4){display:none}
 .stack-card{
-  position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:12px;
-  height:86px;padding:12px 14px;border-radius:16px;
+  position:relative;display:flex;align-items:center;gap:12px;
+  min-height:64px;padding:10px 14px;border-radius:14px;
   background:linear-gradient(145deg,var(--ov100),var(--ov030));
   border:1px solid var(--ov120);
-  box-shadow:0 16px 30px -22px rgba(0,0,0,.9),inset 0 1px 0 var(--ov160);
-  transition:transform .6s var(--ease),box-shadow .4s,background .3s;
-  transform-origin:center top;backdrop-filter:blur(10px);
+  box-shadow:0 10px 22px -20px rgba(0,0,0,.8),inset 0 1px 0 var(--ov160);
+  transition:background .3s,border-color .3s;
 }
-.stack.open .stack-card{box-shadow:0 10px 24px -18px rgba(0,0,0,.8),inset 0 1px 0 var(--ov130)}
-.stack.open .stack-card:hover{background:linear-gradient(145deg,var(--ov140),var(--ov050));border-color:var(--ov200)}
-.stack-card:nth-child(1){z-index:4;transform:translateY(0) scale(1)}
-.stack-card:nth-child(2){z-index:3;transform:translateY(100%) scale(.95)}
-.stack-card:nth-child(3){z-index:2;transform:translateY(200%) scale(.9)}
-.stack.open .stack-card:nth-child(1){transform:translateY(0) scale(1)}
-.stack.open .stack-card:nth-child(2){transform:translateY(96px) scale(1)}
-.stack.open .stack-card:nth-child(3){transform:translateY(192px) scale(1)}
-.stack-card{transition:transform .6s var(--ease)}
+.stack-card:hover{background:linear-gradient(145deg,var(--ov140),var(--ov050));border-color:var(--ov200)}
 .sc-date{width:40px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:6px 0;border-radius:11px;background:rgba(var(--violet-rgb),.14);border:1px solid rgba(var(--violet-rgb),.2)}
 .sc-date b{font-size:15px;font-weight:750;line-height:1}
 .sc-date em{font-style:normal;font-size:8.5px;color:var(--violet-2)}
@@ -2066,6 +2057,9 @@ html[data-mode="light"] .imp-alert b,
 html[data-mode="light"] .imp-hint b{color:#a9720e}
 /* 战术板坐标气泡：底跟随主题，字也要跟 */
 html[data-mode="light"] .fx-coord{color:var(--text-2)}
+/* 技能调整卡右侧的当前分：语义绿/红在浅底上太淡，加深保证可读 */
+html[data-mode="light"] .sc-count{color:#0c8a56;background:rgba(18,183,106,.14)}
+html[data-mode="light"] .sc-count.down{color:#c53052;background:rgba(255,107,138,.14)}
 
 /* 主题卡：浅色标记 */
 .tc-tag{
