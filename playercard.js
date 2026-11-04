@@ -48,9 +48,10 @@ body{
   color:var(--tx); min-height:100vh;
   font:15px/1.6 system-ui,-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
   -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
 }
 .mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;letter-spacing:.02em}
-.wrap{max-width:600px;margin:0 auto;padding:20px 16px 48px}
+.wrap{max-width:600px;margin:0 auto;padding:20px 16px calc(44px + env(safe-area-inset-bottom,0px))}
 .top{display:flex;align-items:center;gap:10px;margin-bottom:20px}
 .ball{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:19px;
   background:linear-gradient(140deg,rgba(123,108,255,.32),rgba(70,224,255,.18));
@@ -65,7 +66,13 @@ body{
 .card-t em{font-size:10px;font-style:normal;color:var(--dim2);letter-spacing:.14em}
 
 /* ── 进门 ── */
-.gate{padding-top:6vh;text-align:center}
+.gate{padding-top:5vh;text-align:center}
+/* 表单别跟着容器拉满：宽屏下 420px 居中，窄屏自然占满 */
+.gate .field,.gate .btn{max-width:420px;margin-left:auto;margin-right:auto}
+.gate .btn{display:block}
+@media (min-width:700px) and (min-height:860px){
+  .gate{padding-top:11vh}
+}
 .gate h1{font-size:26px;margin:0 0 8px;letter-spacing:-.01em;font-weight:800;font-style:normal;-webkit-font-smoothing:antialiased}
 .gate p.s{color:var(--dim);margin:0 0 26px;font-size:13px}
 .field{text-align:left;margin-bottom:12px}
@@ -116,7 +123,6 @@ body{
 /* ── 技能 ── */
 .skill-wrap{display:flex;gap:8px;align-items:center}
 .radar{flex:0 0 208px;width:208px;height:208px}
-@media (max-width:430px){.skill-wrap{flex-direction:column}.radar{width:230px;height:230px;flex:none}}
 .rg{fill:none;stroke:rgba(255,255,255,.10);stroke-width:1}
 .ra{stroke:rgba(255,255,255,.08);stroke-width:1}
 .rp{fill:rgba(123,108,255,.22);stroke:#8f83ff;stroke-width:1.6;stroke-linejoin:round}
@@ -127,8 +133,8 @@ body{
 .bars{flex:1;display:grid;gap:7px;min-width:0}
 .bar{display:grid;grid-template-columns:34px 1fr 44px;gap:8px;align-items:center}
 .bar i{font-size:11px;color:var(--dim);font-style:normal;white-space:nowrap}
-.bar .track{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
-.bar .fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#7b6cff,#46e0ff)}
+.bar .track{display:block;height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.bar .fill{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#7b6cff,#46e0ff)}
 .bar .val{font-size:11px;color:var(--dim);text-align:right;font-family:ui-monospace,monospace}
 .bar .val.up{color:var(--green)}
 .bar.weak .fill{background:linear-gradient(90deg,#ffc46b,#ff8a5c)}
@@ -193,6 +199,30 @@ body{
   background:#161a26;border:1px solid var(--line);color:var(--tx);padding:11px 18px;border-radius:12px;
   font-size:13px;transition:.22s;pointer-events:none;z-index:99;box-shadow:0 16px 40px -18px #000}
 .toast.on{opacity:1;transform:translate(-50%,0)}
+/* ══════════ 移动端适配 ══════════ */
+@media (max-width:430px){
+  /* 雷达随屏宽缩放（viewBox 208，等比缩不糊） */
+  .skill-wrap{flex-direction:column}
+  .radar{width:min(244px,74vw);height:auto;flex:none;margin:0 auto;display:block}
+  /* 竖排后 bars 会被 align-items:center 收缩，1fr 进度条被挤成 0 宽——必须显式撑满 */
+  .bars{width:100%;flex:none}
+  /* 头部：快照时间窄屏挪到下一行，不再跟姓名抢宽度 */
+  .hero{flex-wrap:wrap}
+  .snap{width:100%;text-align:left;margin-top:4px;letter-spacing:.06em}
+  .no{width:54px;height:54px;flex:0 0 54px;font-size:21px;border-radius:17px}
+  .hero-mid h1{font-size:21px}
+  .tl-row{grid-template-columns:64px 1fr auto}
+  .rcpt-code{font-size:17px;letter-spacing:.12em}
+  /* 大标题在窄屏略收，避免两行 */
+  .gate h1{font-size:23px}
+}
+@media (max-width:360px){
+  .wrap{padding:14px 12px calc(36px + env(safe-area-inset-bottom,0px))}
+  .card{padding:15px;border-radius:17px}
+  .g4{padding:8px 9px}
+  .field input{height:48px;font-size:16px}
+  .btn{height:48px;font-size:15px}
+}
 @media print{body{background:#fff;color:#000}.card{border-color:#ddd;background:#fff}.btn,.foot{display:none}}
 `;
 
@@ -635,6 +665,7 @@ body{
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07080d">
 <meta name="generator" content="XGY Volleyball · playercard r35">
 <title>${escHTML(team)} · 训练档案</title>
 <style>${CSS}</style>
