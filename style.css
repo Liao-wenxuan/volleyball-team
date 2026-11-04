@@ -2286,6 +2286,21 @@ html[data-mode="light"] .pwa-install{background:rgba(255,255,255,.94);border-col
 }
 
 /* ══════════ 分享队伍动态弹窗 ══════════ */
+/* 单文件档案（r35）：主推「发个文件」，二维码降成备选 */
+.share-file{margin:0 0 14px;padding:14px;border-radius:14px;border:1px solid var(--line);
+  background:linear-gradient(150deg,rgba(var(--violet-rgb),.10),var(--ov030))}
+.share-file-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px}
+.share-file-hd b{font-size:13px;color:var(--text)}
+.share-file-hd em{font-style:normal;font-size:9px;letter-spacing:.16em;color:var(--muted);white-space:nowrap}
+.share-file p{margin:0 0 11px;font-size:11.5px;line-height:1.8;color:var(--text-2)}
+.share-file p b{color:var(--violet-2)}
+.share-file-btn{display:block;width:100%;padding:11px;border:0;border-radius:10px;cursor:pointer;
+  font-size:13px;font-weight:600;font-family:inherit;color:#fff;
+  background:linear-gradient(135deg,var(--violet),var(--violet-deep));
+  box-shadow:0 12px 26px -14px rgba(var(--violet-rgb),.9);transition:transform .12s,filter .16s}
+.share-file-btn:hover{filter:brightness(1.08)}
+.share-file-btn:active{transform:translateY(1px)}
+.share-file-tip{display:block;font-style:normal;margin-top:8px;font-size:10.5px;line-height:1.6;color:var(--muted)}
 .share-qr{display:flex;flex-direction:column;align-items:center;gap:9px;margin:0 0 14px;padding:16px 16px 13px;
   border-radius:14px;background:#fff;border:1px solid var(--line)}
 .share-qr canvas{display:block;width:min(252px,62vw);height:auto;cursor:zoom-in;border-radius:4px}

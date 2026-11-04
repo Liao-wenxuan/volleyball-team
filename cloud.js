@@ -762,6 +762,7 @@
       <div class="cloud-section">账号（${accounts.length}）</div>
       ${rows || '<p class="form-note">还没有其他账号。</p>'}
       <div class="cloud-section">发放新账号</div>
+      <p class="form-note">队员看数据<b>不用发账号</b>了：去「分享队伍动态」点「下载档案文件」发给队员就行。下面的「队员」身份只留给老账号场景。</p>
       <form id="accForm"><div class="form-grid">
         ${field('用户名', '<input name="username" required autocapitalize="none" spellcheck="false" placeholder="学号或姓名拼音">')}
         ${field('姓名', '<input name="name" required maxlength="20" placeholder="张辰">')}

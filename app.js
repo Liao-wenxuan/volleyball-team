@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-04 · r34'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-04 · r35'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -2886,8 +2886,17 @@
   async function openShareModal() {
     if (!db.players.length) { toast('还没有队员，先录入队员再分享', 'warn'); return; }
     const hasAi = !!aiCfg().key;
+    // 先试组成一次，只为了在按钮上显示体积；真正下载时会用最新数据重拼
+    let pcSize = 0;
+    try { pcSize = window.XGYPlayerCard ? window.XGYPlayerCard.build(sharePayload()).length : 0; } catch (e) { pcSize = 0; }
     const body = `<div class="share-wrap">
-      <p class="share-hint">队员用<b>微信扫一扫</b>或长按识别下面的码，输入<b>姓名 + 球衣号码</b>，就能看到自己的出勤、进步、六维图和一段点评。数据全在码里，<b>不上传任何服务器</b>。</p>
+      <div class="share-file">
+        <div class="share-file-hd"><b>发档案文件给他</b><em>OFFLINE · NO LOGIN</em></div>
+        <p>下载一个 <b>.html</b> 文件发到群里，队员用浏览器打开、输<b>姓名 + 球衣号码</b>，就能看自己的出勤、六项技能、点评和近 8 次记录。<b>断网也能看</b>，数据全在文件里，不上传任何服务器。</p>
+        <button type="button" id="shareFile" class="share-file-btn">下载档案文件${pcSize ? ` · ${db.players.length} 人 · ${(pcSize / 1024).toFixed(1)} KB` : ''}</button>
+        <em class="share-file-tip">微信里发文件比发长链接好点开；手机上收到后选「用浏览器打开」。</em>
+      </div>
+      <p class="share-hint">或者发下面的码：队员<b>微信扫一扫</b>或长按识别，同样输<b>姓名 + 球衣号码</b>。数据全在码里，<b>不上传任何服务器</b>。</p>
       <div class="share-qr">
         <canvas id="shareQr" aria-label="队员端二维码"></canvas>
         <em id="shareQrTips" class="mono">生成中…</em>
@@ -2911,6 +2920,16 @@
     openModal('分享队伍动态', body, { mid: true });
     $('#shareClose').onclick = closeModal;
     $('#shareLink').onclick = (e) => e.target.select();
+    // 单文件档案：每次点击都重新拼，保证带上最新的考勤/技能/AI 点评
+    const fileBtn = $('#shareFile');
+    if (fileBtn) fileBtn.onclick = () => {
+      try {
+        const r = window.XGYPlayerCard.download(sharePayload());
+        toast(`已下载 ${r.name}（${(r.size / 1024).toFixed(1)} KB），微信发给队员就行`);
+      } catch (e) {
+        toast('导出失败：' + (e && e.message ? e.message : '未知错误'), 'warn');
+      }
+    };
     let url = '';
 
     // 把链接画成二维码：队员扫码进，不用看到那串长链接
