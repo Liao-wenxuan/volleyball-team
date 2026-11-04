@@ -19,6 +19,8 @@ import formationRoutes from './routes/formation';
 import settingsRoutes from './routes/settings';
 import importRoutes from './routes/import';
 import meRoutes from './routes/me';
+import syncRoutes from './routes/sync';
+import aiRoutes from './routes/ai';
 
 const app = express();
 const PORT = Number(process.env.PORT || 8787);
@@ -46,6 +48,8 @@ app.use('/api/formation', formationRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/me', meRoutes);
+app.use('/api/sync', syncRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.use('/api', (_req, _res, next) => next(new HttpError(404, '接口不存在', 'not_found')));
 

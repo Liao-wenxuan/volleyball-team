@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { db, now } from '../db';
 import { asyncHandler, parse } from '../http';
 import { requireAuth, requireRole, type AuthedRequest } from '../auth';
-import { getSettings } from '../repo';
+import { getSettings, AI_KEY_MASK } from '../repo';
 
 const router = Router();
 router.use(requireAuth);
@@ -67,10 +67,23 @@ router.put(
   asyncHandler(async (req, res) => {
     const r = req as unknown as AuthedRequest;
     const b = parse(aiSchema, req.body);
+    // 前端交回掩码 = 用户没改 Key（表单里那个 ••• 占位），保留库里的原值
+    let key = b.ai.key;
+    if (key === AI_KEY_MASK) {
+      const cur = db.prepare('SELECT ai FROM team_settings WHERE team_id = ?').get(r.teamId) as
+        | { ai: string }
+        | undefined;
+      try {
+        key = String((JSON.parse(cur?.ai || 'null') as { key?: string } | null)?.key || '');
+      } catch {
+        key = '';
+      }
+    }
+    const aiJson = JSON.stringify({ base: b.ai.base, model: b.ai.model, key });
     db.prepare(
       `INSERT INTO team_settings (team_id, template, theme, ai, updated_at) VALUES (?, '[]', 'aurora', ?, ?)
        ON CONFLICT(team_id) DO UPDATE SET ai = excluded.ai, updated_at = excluded.updated_at`
-    ).run(r.teamId, JSON.stringify(b.ai), now());
+    ).run(r.teamId, aiJson, now());
     res.json({ settings: getSettings(r.teamId) });
   })
 );

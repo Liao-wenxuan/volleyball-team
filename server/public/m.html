@@ -99,6 +99,14 @@
   .st-leave   { color: var(--cyan);  background: rgba(70,224,255,.08); border: 1px solid rgba(70,224,255,.28); }
   .st-absent  { color: var(--red);   background: rgba(255,107,138,.1); border: 1px solid rgba(255,107,138,.3); }
   .st-none    { color: var(--ink-3); background: rgba(255,255,255,.05); border: 1px solid var(--line); }
+  .next-actions { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+  .btn-leave { flex: 1; border: 1px solid rgba(255,107,138,.4); color: var(--red); background: rgba(255,107,138,.08);
+    font-size: 13px; font-weight: 700; padding: 10px 0; border-radius: 12px; cursor: pointer; }
+  .btn-leave:active { background: rgba(255,107,138,.18); }
+  .btn-leave.cancel { border-color: rgba(255,255,255,.18); color: var(--ink-2); background: rgba(255,255,255,.05); }
+  .btn-leave.cancel:active { background: rgba(255,255,255,.1); }
+  .btn-leave[disabled] { opacity: .5; cursor: default; }
+  .next-hint { font-size: 11px; color: var(--ink-3); margin-top: 8px; }
 
   /* 出勤率 */
   .att-row { display: flex; align-items: center; gap: 18px; }
@@ -371,11 +379,38 @@
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const diff = Math.round((d - today) / 86400000);
     const when = diff <= 0 ? '今天' : diff === 1 ? '明天' : diff + ' 天后';
+    // 请假口子：还没登记 → 能请假；已是自己请的假 → 能取消；教练已标出勤/迟到/缺席 → 找教练
+    let action = '';
+    if (!next.state) {
+      action = '<div class="next-actions"><button type="button" class="btn-leave" id="btnLeave" data-sid="' + esc(next.id) + '">🙅 我要请假</button></div>' +
+        '<div class="next-hint">请假会直接登记为「请假」，教练在考勤页看得到。</div>';
+    } else if (next.state === 'leave') {
+      action = '<div class="next-actions"><button type="button" class="btn-leave cancel" id="btnLeave" data-sid="' + esc(next.id) + '">取消请假</button></div>' +
+        '<div class="next-hint">这场你已经请了假，来不了就好好休息；又有空了可以取消。</div>';
+    }
     body.innerHTML =
       '<div class="next-main"><span class="d">' + when + '</span>' +
       '<span class="t">' + WEEK_CN[d.getDay()] + ' · ' + next.start + '–' + next.end + '</span>' +
       stateChip(next.state) + '</div>' +
-      '<div class="next-meta">' + (next.venue ? '📍 <b>' + esc(next.venue) + '</b> · ' : '') + '📅 ' + esc(next.date) + '</div>';
+      '<div class="next-meta">' + (next.venue ? '📍 <b>' + esc(next.venue) + '</b> · ' : '') + '📅 ' + esc(next.date) + '</div>' + action;
+    const btn = document.getElementById('btnLeave');
+    if (btn) {
+      btn.onclick = async () => {
+        const cancel = next.state === 'leave';
+        const ok = window.confirm(cancel ? '确定取消这场训练的请假吗？' : '确定这场训练请假吗？教练会在考勤页看到。');
+        if (!ok) return;
+        btn.disabled = true; btn.textContent = cancel ? '取消中…' : '提交中…';
+        try {
+          await api('/api/me/leave', { method: 'POST', body: JSON.stringify({ sessionId: next.id, cancel }) });
+          toast(cancel ? '已取消请假' : '已登记请假');
+          await render();
+        } catch (err) {
+          toast(err.message);
+          btn.disabled = false;
+          btn.textContent = cancel ? '取消请假' : '🙅 我要请假';
+        }
+      };
+    }
   }
 
   function renderAtt(stats) {
@@ -460,6 +495,29 @@
     try { await render(); }
     catch (err) { $('loginErr').textContent = err.message; $('loginErr').style.display = 'block'; show('viewLogin'); }
   })();
+
+  /* ═══ 轮询刷新（r34）：教练改了训练/考勤，队员页不用手动刷新 ═══
+   * 只在页面可见时每 15 秒拉一次 summary；数据有变化才重绘（对比 JSON 串，
+   * 便宜但可靠——summary 里没有任何瞬时字段）。从后台切回前台立刻查一次。 */
+  let lastSnap = '';
+  let pollBusy = false;
+  setInterval(async () => {
+    if (!token || document.hidden || pollBusy) return;
+    if (document.getElementById('viewMain').hidden) return; // 还在改密页时不打扰
+    pollBusy = true;
+    try {
+      const data = await api('/api/me/summary');
+      const snap = JSON.stringify(data);
+      if (snap !== lastSnap) {
+        lastSnap = snap;
+        await render();
+      }
+    } catch (err) { /* 断网静默，下轮再试；401 已在 api() 里踢回登录页 */ }
+    finally { pollBusy = false; }
+  }, 15000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && token) { lastSnap = ''; /* 强制下一轮重绘，顺便把倒计时天数刷准 */ }
+  });
 })();
 </script>
 </body>

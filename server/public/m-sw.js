@@ -5,7 +5,7 @@
  * - 同源静态资源（图标等）：网络优先，失败回缓存
  * - /api/*：一律不缓存（数据实时性优先）
  */
-const VERSION = 'm1';
+const VERSION = 'm2';
 const CACHE = `xgy-m-${VERSION}`;
 const SHELL = ['./', '/assets/icon-192.png', '/assets/icon-512.png'];
 

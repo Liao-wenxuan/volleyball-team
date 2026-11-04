@@ -6,9 +6,10 @@
  * 教练/管理员账号没绑球员记录时返回 player: null（页面给出提示）。
  */
 import { Router } from 'express';
-import { db, dateKey } from '../db';
+import { db, dateKey, now } from '../db';
+import { HttpError } from '../http';
 import { requireAuth, type AuthedRequest } from '../auth';
-import { listAllSessions, listLogs, toPlayer, type PlayerRow } from '../repo';
+import { listAllSessions, listLogs, toPlayer, getSession, type PlayerRow } from '../repo';
 
 const router = Router();
 router.use(requireAuth);
@@ -86,6 +87,7 @@ router.get('/summary', (req, res) => {
 
   const next = upcoming
     ? {
+        id: upcoming.id,
         date: upcoming.date,
         start: upcoming.start,
         end: upcoming.end,
@@ -102,6 +104,43 @@ router.get('/summary', (req, res) => {
     recent,
     logs
   });
+});
+
+/**
+ * 队员请假 / 取消请假。队员唯一的写权限口子，规则收紧：
+ * - 只能动「下一场还没开始的训练」（date > 今天，或今天但还没到开始时间）
+ * - 请假 = 把自己的考勤标成 leave；取消 = 删掉自己那条考勤，
+ *   且只有当前还是 leave（队员自己标的）时才允许删——教练已经改成别的状态就不能动
+ */
+router.post('/leave', (req, res) => {
+  const r = req as unknown as AuthedRequest;
+  const row = db
+    .prepare('SELECT id FROM players WHERE team_id = ? AND user_id = ?')
+    .get(r.teamId, r.user.id) as { id: string } | undefined;
+  if (!row) throw new HttpError(400, '账号没有绑定球员档案', 'no_player');
+
+  const session = getSession(r.teamId, String(req.body?.sessionId || ''));
+  if (!session) throw new HttpError(404, '训练不存在', 'not_found');
+  if (session.status !== 'scheduled') throw new HttpError(400, '这场训练已取消，不用请假', 'cancelled');
+  const today = dateKey(new Date());
+  const started = session.date < today || (session.date === today && session.start <= nowHHMM());
+  if (started) throw new HttpError(400, '训练已经开始或结束，不能请假了', 'too_late');
+
+  const cur = session.attendance[row.id] || null;
+  if (req.body?.cancel === true) {
+    if (cur !== 'leave') throw new HttpError(400, '只能取消你自己请的假', 'not_mine');
+    db.prepare('DELETE FROM attendance WHERE session_id = ? AND player_id = ?').run(session.id, row.id);
+  } else {
+    if (cur === 'present' || cur === 'late') {
+      throw new HttpError(400, '教练已把你登记为出勤，要请假直接联系教练', 'already_marked');
+    }
+    db.prepare(
+      `INSERT INTO attendance (session_id, player_id, state, updated_at) VALUES (?, ?, 'leave', ?)
+       ON CONFLICT(session_id, player_id) DO UPDATE SET state = 'leave', updated_at = excluded.updated_at`
+    ).run(session.id, row.id, now());
+  }
+
+  res.json({ ok: true, state: req.body?.cancel === true ? null : 'leave' });
 });
 
 function nowHHMM(): string {

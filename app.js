@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-03 · r33'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-04 · r34'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -4454,7 +4454,7 @@ ${aiContext()}`;
     const body = $('#aiPageBody');
     if (!body) return;
     $('#aiSub').textContent = cfg.key
-      ? '带着全队的真实数据回答：小结、阵容、点评，随口问也行。'
+      ? (CloudOn() ? '带着全队的真实数据回答；Key 由服务器保管，浏览器不碰明文。' : '带着全队的真实数据回答：小结、阵容、点评，随口问也行。')
       : '先填一个 API Key（只存本机），一分钟就能用。';
     if (!cfg.key) { renderAiSettings(); return; }
     const hasMsg = state.ai.messages.length > 0;
@@ -4487,8 +4487,11 @@ ${aiContext()}`;
   function aiSettingsHTML() {
     const cfg = aiCfg();
     const presetIdx = AI_PRESETS.findIndex((p) => p.base && p.base === cfg.base);
+    const cloudNote = CloudOn()
+      ? '云端模式：API Key 保存在球队的服务器上，请求由服务器转发给服务商，浏览器不接触明文 Key。已保存的 Key 显示为占位圆点，原样保存不会覆盖它，换填新 Key 才会更新。'
+      : '自带钥匙（BYOK）：API Key 只存在你这台设备的浏览器里，请求由浏览器直连你选的服务商，不经过任何中间服务器。';
     return `<div class="ai-panel reveal"><div class="ai-settings">
-      <div class="form-note" style="margin:2px 0 14px">自带钥匙（BYOK）：API Key 只存在你这台设备的浏览器里，请求由浏览器直连你选的服务商，不经过任何中间服务器。</div>
+      <div class="form-note" style="margin:2px 0 14px">${cloudNote}</div>
       <div class="field"><label>服务商</label><select id="aiPreset">${AI_PRESETS.map((p, i) => `<option value="${i}" ${i === (presetIdx < 0 ? AI_PRESETS.length - 1 : presetIdx) ? 'selected' : ''}>${p.label}</option>`).join('')}</select></div>
       <div class="field"><label>接口地址（Base URL）</label><input id="aiBase" value="${esc(cfg.base)}" placeholder="https://api.deepseek.com"></div>
       <div class="field"><label>模型</label><input id="aiModel" value="${esc(cfg.model)}" placeholder="deepseek-chat"></div>
@@ -4589,12 +4592,16 @@ ${aiContext()}`;
     state.ai.abort = new AbortController();
     let full = '';
     try {
-      const res = await fetch(aiUrl(cfg.base), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.key}` },
-        body: JSON.stringify({ model: cfg.model, messages, stream: true, temperature: 0.7 }),
-        signal: state.ai.abort.signal
-      });
+      // 云端模式：Key 只在服务器上，走 /api/ai/chat 代理（SSE 流原样透传）；
+      // 本地模式：浏览器带着本机存的 Key 直连服务商。
+      const res = CloudOn()
+        ? await window.XGYCloud.aiChat({ messages, temperature: 0.7 }, state.ai.abort.signal)
+        : await fetch(aiUrl(cfg.base), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.key}` },
+            body: JSON.stringify({ model: cfg.model, messages, stream: true, temperature: 0.7 }),
+            signal: state.ai.abort.signal
+          });
       if (!res.ok) {
         let detail = '';
         try { const j = await res.json(); detail = j.error && (j.error.message || j.error.code) || j.message || ''; } catch (err) { /* ignore */ }

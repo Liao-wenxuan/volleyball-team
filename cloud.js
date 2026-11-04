@@ -197,6 +197,7 @@
     sessDel(LS.role);
     localStorage.removeItem(LS.skip); // 主动退出 = 想换账号，下次必须重新登录
     user = null; team = null; role = null;
+    lastTouch = 0; // 换队登录后轮询要重新定基线，不然旧队的时间戳会误触发刷新
     paintBodyClass();
     paintCloudUI();
     // 内存里的 db 还是刚退出那个队的名单，切回本机那份
@@ -316,6 +317,7 @@
     paintCloudUI();
     hideGate();
     hooks.renderAll();
+    startSyncLoop();
     await offerImport(snap);
   }
 
@@ -962,6 +964,43 @@
     return hooks && hooks.currentMondayKey ? hooks.currentMondayKey() : '';
   }
 
+  /* ── 多端准实时同步（r34）──
+   * 每 15 秒问一次服务器「这队的数据最后改动时刻」，比自己上次看到的晚了就整份拉回。
+   * 只在页面可见、没有任何弹窗/抽屉打开时刷（body.lock 是现成的信号），
+   * 避免把用户正在填的表单冲掉。WebSocket/SSE 对这个写入频率是杀鸡用牛刀。 */
+  let lastTouch = 0;
+  let syncTimer = null;
+
+  async function syncPoll() {
+    if (!enabled() || document.hidden) return;
+    if (document.body.classList.contains('lock')) return; // 弹窗/抽屉开着：这次跳过
+    try {
+      const r = await api('/api/sync/check');
+      if (lastTouch === 0) { lastTouch = r.t || 0; return; } // 首轮只定基线
+      if ((r.t || 0) <= lastTouch) return;
+      lastTouch = r.t || 0;
+      await pullCore();
+      await syncWeek(currentMondayKey(), true);
+      hooks.renderAll();
+      hooks.toast('已同步其他设备的最新改动');
+    } catch (e) {
+      if (e && (e.code === 'token_expired' || e.code === 'unauthorized')) {
+        logout({ quiet: true });
+        showGate('登录已过期，请重新登录');
+      }
+      // 其他错误（断网等）静默，下轮再试
+    }
+  }
+
+  function startSyncLoop() {
+    if (syncTimer) clearInterval(syncTimer);
+    syncTimer = setInterval(syncPoll, 15000);
+    document.addEventListener('visibilitychange', () => {
+      // 从后台切回来立刻查一次，不用等下一个周期
+      if (!document.hidden && enabled()) syncPoll();
+    });
+  }
+
   function escHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -996,7 +1035,8 @@
             } else {
               hooks.toast(`云端暂时不可用：${e.message}（先用本机数据）`, 'warn');
             }
-          });
+          })
+          .then(() => startSyncLoop());
       }
     },
     enabled,
@@ -1013,6 +1053,15 @@
     fireAndSync,
     // 备份导入：云端模式下必须走服务端一个事务写库（本地模式不调这里）。
     // 以前导入只写 localStorage，reload 时被 pullCore 整份覆盖 —— 导入等于白做。
-    importBackup: guardWrite((mode, data) => api('/api/import', { method: 'POST', body: { mode, data } }))
+    importBackup: guardWrite((mode, data) => api('/api/import', { method: 'POST', body: { mode, data } })),
+    // AI 服务端代理（r34）：Key 只存服务器，浏览器只发 messages，SSE 流原样透传。
+    // 返回原始 Response，前端沿用现有流式解析。本地模式不调这个（浏览器直连）。
+    aiChat: (body, signal) =>
+      fetch(base() + '/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
+        body: JSON.stringify(body),
+        signal
+      })
   };
 })();

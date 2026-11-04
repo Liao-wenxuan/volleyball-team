@@ -3433,6 +3433,7 @@ try {
     sessDel(LS.role);
     localStorage.removeItem(LS.skip); // 主动退出 = 想换账号，下次必须重新登录
     user = null; team = null; role = null;
+    lastTouch = 0; // 换队登录后轮询要重新定基线，不然旧队的时间戳会误触发刷新
     paintBodyClass();
     paintCloudUI();
     // 内存里的 db 还是刚退出那个队的名单，切回本机那份
@@ -3552,6 +3553,7 @@ try {
     paintCloudUI();
     hideGate();
     hooks.renderAll();
+    startSyncLoop();
     await offerImport(snap);
   }
 
@@ -4198,6 +4200,43 @@ try {
     return hooks && hooks.currentMondayKey ? hooks.currentMondayKey() : '';
   }
 
+  /* ── 多端准实时同步（r34）──
+   * 每 15 秒问一次服务器「这队的数据最后改动时刻」，比自己上次看到的晚了就整份拉回。
+   * 只在页面可见、没有任何弹窗/抽屉打开时刷（body.lock 是现成的信号），
+   * 避免把用户正在填的表单冲掉。WebSocket/SSE 对这个写入频率是杀鸡用牛刀。 */
+  let lastTouch = 0;
+  let syncTimer = null;
+
+  async function syncPoll() {
+    if (!enabled() || document.hidden) return;
+    if (document.body.classList.contains('lock')) return; // 弹窗/抽屉开着：这次跳过
+    try {
+      const r = await api('/api/sync/check');
+      if (lastTouch === 0) { lastTouch = r.t || 0; return; } // 首轮只定基线
+      if ((r.t || 0) <= lastTouch) return;
+      lastTouch = r.t || 0;
+      await pullCore();
+      await syncWeek(currentMondayKey(), true);
+      hooks.renderAll();
+      hooks.toast('已同步其他设备的最新改动');
+    } catch (e) {
+      if (e && (e.code === 'token_expired' || e.code === 'unauthorized')) {
+        logout({ quiet: true });
+        showGate('登录已过期，请重新登录');
+      }
+      // 其他错误（断网等）静默，下轮再试
+    }
+  }
+
+  function startSyncLoop() {
+    if (syncTimer) clearInterval(syncTimer);
+    syncTimer = setInterval(syncPoll, 15000);
+    document.addEventListener('visibilitychange', () => {
+      // 从后台切回来立刻查一次，不用等下一个周期
+      if (!document.hidden && enabled()) syncPoll();
+    });
+  }
+
   function escHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -4232,7 +4271,8 @@ try {
             } else {
               hooks.toast(`云端暂时不可用：${e.message}（先用本机数据）`, 'warn');
             }
-          });
+          })
+          .then(() => startSyncLoop());
       }
     },
     enabled,
@@ -4249,7 +4289,16 @@ try {
     fireAndSync,
     // 备份导入：云端模式下必须走服务端一个事务写库（本地模式不调这里）。
     // 以前导入只写 localStorage，reload 时被 pullCore 整份覆盖 —— 导入等于白做。
-    importBackup: guardWrite((mode, data) => api('/api/import', { method: 'POST', body: { mode, data } }))
+    importBackup: guardWrite((mode, data) => api('/api/import', { method: 'POST', body: { mode, data } })),
+    // AI 服务端代理（r34）：Key 只存服务器，浏览器只发 messages，SSE 流原样透传。
+    // 返回原始 Response，前端沿用现有流式解析。本地模式不调这个（浏览器直连）。
+    aiChat: (body, signal) =>
+      fetch(base() + '/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
+        body: JSON.stringify(body),
+        signal
+      })
   };
 })();
 
@@ -6198,7 +6247,7 @@ try {
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-03 · r33'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-04 · r34'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -10635,7 +10684,7 @@ ${aiContext()}`;
     const body = $('#aiPageBody');
     if (!body) return;
     $('#aiSub').textContent = cfg.key
-      ? '带着全队的真实数据回答：小结、阵容、点评，随口问也行。'
+      ? (CloudOn() ? '带着全队的真实数据回答；Key 由服务器保管，浏览器不碰明文。' : '带着全队的真实数据回答：小结、阵容、点评，随口问也行。')
       : '先填一个 API Key（只存本机），一分钟就能用。';
     if (!cfg.key) { renderAiSettings(); return; }
     const hasMsg = state.ai.messages.length > 0;
@@ -10668,8 +10717,11 @@ ${aiContext()}`;
   function aiSettingsHTML() {
     const cfg = aiCfg();
     const presetIdx = AI_PRESETS.findIndex((p) => p.base && p.base === cfg.base);
+    const cloudNote = CloudOn()
+      ? '云端模式：API Key 保存在球队的服务器上，请求由服务器转发给服务商，浏览器不接触明文 Key。已保存的 Key 显示为占位圆点，原样保存不会覆盖它，换填新 Key 才会更新。'
+      : '自带钥匙（BYOK）：API Key 只存在你这台设备的浏览器里，请求由浏览器直连你选的服务商，不经过任何中间服务器。';
     return `<div class="ai-panel reveal"><div class="ai-settings">
-      <div class="form-note" style="margin:2px 0 14px">自带钥匙（BYOK）：API Key 只存在你这台设备的浏览器里，请求由浏览器直连你选的服务商，不经过任何中间服务器。</div>
+      <div class="form-note" style="margin:2px 0 14px">${cloudNote}</div>
       <div class="field"><label>服务商</label><select id="aiPreset">${AI_PRESETS.map((p, i) => `<option value="${i}" ${i === (presetIdx < 0 ? AI_PRESETS.length - 1 : presetIdx) ? 'selected' : ''}>${p.label}</option>`).join('')}</select></div>
       <div class="field"><label>接口地址（Base URL）</label><input id="aiBase" value="${esc(cfg.base)}" placeholder="https://api.deepseek.com"></div>
       <div class="field"><label>模型</label><input id="aiModel" value="${esc(cfg.model)}" placeholder="deepseek-chat"></div>
@@ -10770,12 +10822,16 @@ ${aiContext()}`;
     state.ai.abort = new AbortController();
     let full = '';
     try {
-      const res = await fetch(aiUrl(cfg.base), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.key}` },
-        body: JSON.stringify({ model: cfg.model, messages, stream: true, temperature: 0.7 }),
-        signal: state.ai.abort.signal
-      });
+      // 云端模式：Key 只在服务器上，走 /api/ai/chat 代理（SSE 流原样透传）；
+      // 本地模式：浏览器带着本机存的 Key 直连服务商。
+      const res = CloudOn()
+        ? await window.XGYCloud.aiChat({ messages, temperature: 0.7 }, state.ai.abort.signal)
+        : await fetch(aiUrl(cfg.base), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.key}` },
+            body: JSON.stringify({ model: cfg.model, messages, stream: true, temperature: 0.7 }),
+            signal: state.ai.abort.signal
+          });
       if (!res.ok) {
         let detail = '';
         try { const j = await res.json(); detail = j.error && (j.error.message || j.error.code) || j.message || ''; } catch (err) { /* ignore */ }

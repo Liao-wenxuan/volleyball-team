@@ -100,6 +100,9 @@ export interface AiConfig {
   key: string;
 }
 
+/** API Key 的回传掩码：前端看到它 = 服务器已存了 Key；保存时原样交回则不覆盖（见 settings.ts） */
+export const AI_KEY_MASK = '••••••••••';
+
 export function getSettings(teamId: string): {
   template: TemplateItem[];
   theme: string;
@@ -122,7 +125,10 @@ export function getSettings(teamId: string): {
       ai = {
         base: String(parsed.base || 'https://api.deepseek.com'),
         model: String(parsed.model || 'deepseek-chat'),
-        key: String(parsed.key || '')
+        // Key 永不回传：有就给掩码占位（前端拿它判断「已配置」），
+        // 保存时前端原样交回掩码 → PUT /ai 识别后保留原 Key。真正的 Key 只在
+        // /api/ai/chat 服务端代理里用（r34 起，浏览器不再拿明文 Key）。
+        key: String(parsed.key || '') ? AI_KEY_MASK : ''
       };
     }
   } catch {
