@@ -26,12 +26,21 @@
 |---|---|
 | 球员档案 | 姓名、号码、位置、年级、身高 + 6 项技能（0–10，0.5 步进） |
 | 批量导入 | 从 Excel / 在线表 / 群接龙复制一段文本粘贴进来，自动识别列、纠正位置年级写法、拦下号码重复（只查同性别，男队女队可同号）与身高异常，预览勾选后一键建队 |
-| AI 助手 | 自带钥匙（BYOK）直连 OpenAI 兼容接口（DeepSeek / 智谱 / Kimi…），Key 只存本机；一键生成本周小结、首发阵容建议、队员点评，流式输出可中断，上下文自动带全队真实数据，聊天记录本机持久化 |
+| AI 助手 | OpenAI 兼容接口（DeepSeek / 智谱 / Kimi…）。本地模式 BYOK 直连、Key 只存本机；云端模式 Key 只存服务器、由服务端代理转发并流式透传，浏览器不接触明文 Key。一键生成本周小结、首发阵容建议、队员点评，流式输出可中断，上下文自动带全队真实数据 |
 | 考勤 | 按周 × 每次训练登记，四态循环：出勤 / 迟到 / 请假 / 缺席；未登记不计入出勤率 |
 | 训练编排 | 周二 / 周五 / 周日固定模板，单次可改时间地点或标记「因雨取消」 |
-| 阵型板 | 半场 9×9m，6 个角色位手指拖动，0.25m 吸附，自动保存；「存当前」把站位存进阵型库（改名 / 覆盖 / 删除），云端模式整库同步 |
+| 阵型板 | 半场 9×9m，6 个角色位手指拖动，0.25m 吸附，自动保存；标题跟阵型库名字走；自由人拖进 3m 线内自动换牌「副攻2 / 副攻1」（纯标牌，不动数据）；「存当前」把站位存进阵型库（改名 / 覆盖 / 删除），云端模式整库同步 |
 | 成长 | 全队技能矩阵、单人雷达、训练后批量加减、调整记录 |
 | 主题 | 9 套（6 深 3 浅），含浅色 |
+| 多端 | 云端模式下教练端（平板/电脑）、队员端手机页 `/m` 每 15 秒轮询同步，对方改动免刷新可见 |
+
+### 云端模式的三端
+
+| 端 | 入口 | 用户 | 能做什么 |
+|---|---|---|---|
+| 教练端 | `/` | 教练 / 管理员 | 名单、考勤、技能、阵型、AI，全功能 |
+| 队员端 | `/m` | 队员（手机） | 只读自己的训练档案：下次训练倒计时、出勤率、技能雷达、教练点评、近 5 次记录；可对下一场训练「我要请假」/ 取消 |
+| 管理端 | `/admin` | 系统管理员（桌面） | 一键建队（自动生成教练账号+一次性密码）、账号重置 / 停用 / 启用、球队概览 |
 
 <p>
 <img src="docs/shots/roster.png" width="49%" />
@@ -44,6 +53,9 @@
 <p>
 <img src="docs/shots/ai.png" width="49%" />
 <img src="docs/shots/themes.png" width="49%" />
+</p>
+<p align="center">
+<img src="docs/shots/mobile.png" width="32%" />
 </p>
 
 ## 快速开始
@@ -102,7 +114,7 @@ npm run seed           # 可选：演示账号 demo@xgy.com / demo123456
 > `nixpacks.toml` / `railway.json`（Railway 健康检查配置），任意 Node 托管平台把
 > Root Directory 设为 `server`、挂卷到 `/data`、设 `JWT_SECRET` 即可。
 
-API 一览：`POST /api/auth/register|login`、`GET /api/auth/me`、`GET|POST|PATCH|DELETE /api/players`、`GET /api/weeks/:key`（按模板幂等生成本周训练）、`POST|PATCH|DELETE /api/sessions`、`PUT|DELETE /api/sessions/:id/attendance/:pid`、`POST /api/skills/batch`、`GET /api/skills/logs`、`GET|PUT /api/formation`、`GET|PUT /api/formation/library`（阵型库整库同步）、`PUT /api/settings/template|theme`。
+API 一览：`POST /api/auth/login`、`GET /api/auth/me`、`GET|POST|PATCH|DELETE /api/players`、`GET /api/weeks/:key` 与 `GET /api/weeks/all`（按模板幂等生成 / 全量拉齐）、`POST|PATCH|DELETE /api/sessions`、`PUT|DELETE /api/sessions/:id/attendance/:pid`、`POST /api/skills/batch`、`GET /api/skills/logs`、`GET|PUT /api/formation`、`GET|PUT /api/formation/library`（阵型库整库同步）、`PUT /api/settings/template|theme|ai`、`POST /api/import`（备份导入事务）、`GET /api/me/summary` 与 `POST /api/me/leave`（队员端）、`POST /api/accounts`（发号）、`GET /api/sync/check`（轮询同步）、`POST /api/ai/chat`（AI 服务端代理，SSE 透传）、`POST /api/auth/register` 已移除——账号一律由管理端发放。
 
 ## 几个实现上的取舍
 
@@ -136,11 +148,14 @@ API 一览：`POST /api/auth/register|login`、`GET /api/auth/me`、`GET|POST|PA
 ```
 index.html                    页面骨架
 style.css                     全部样式（含 9 套主题变量）
-app.js                        前端全部逻辑，约 2.4k 行，按模块分段
-cloud.js                      云端同步模块（登录/拉取/推送，双模式切换）
+app.js                        前端全部逻辑，按模块分段
+cloud.js                      云端同步模块（登录/拉取/推送/轮询，双模式切换）
 build.mjs                     把四者内联成单文件
 信工院排球队管理系统.html        构建产物，可直接分发
 server/                       可选后端：Express + SQLite + JWT（云端模式）
+server/public/admin.html      管理端（/admin）
+server/public/m.html          队员端手机页（/m）
+docs/interview.md             面试讲点：每个模块的四段式复盘
 docs/战术板产品方案.md          阵型板的产品方案
 docs/shots/                   README 截图
 prototype/formation-editor.html  阵型板最早的独立原型
@@ -149,12 +164,14 @@ prototype/formation-editor.html  阵型板最早的独立原型
 ## 已知限制
 
 - 本机模式下数据只在当前浏览器（localStorage），换设备要手动导出/导入 JSON；云端模式需自建后端
-- 一个邮箱账号对应一支球队，暂不支持多队切换与多人协作
-- AI 聊天记录只存本机（和 API Key 同级），不进云端同步
+- 云端同步是 15 秒轮询（弱实时），不是 WebSocket 推送；两台设备同时写同一条数据时后写者胜
+- AI 聊天记录只存本机（临时工作区），不进云端同步；云端模式下 API Key 存服务器、不回传浏览器
 
 ## Roadmap
 
 - [x] 阵型库：多套命名保存（改名 / 覆盖 / 删除 + 云端整库同步）
 - [x] PWA：可安装到桌面 / 主屏，离线可用（Service Worker 缓存应用壳）
+- [x] 多角色：管理端 `/admin` 建队发号、队员端 `/m` 手机一屏 + 请假
+- [x] 多端准实时同步（轮询）+ AI Key 服务端代理
 - [ ] 阵型导出 PNG，直接发群里讲站位
 - [x] 数据上云（Node + SQLite）
