@@ -4284,7 +4284,9 @@ try {
     document.body.classList.toggle('cloud-on', on); // [data-cloud-only] 的显隐靠这条
     if (btn) {
       btn.classList.toggle('cloud-on', on);
-      btn.setAttribute('data-tip', on ? `云端：${team ? team.name : user.name}` : '连接云端');
+      // 顶栏图标不挂悬浮提示（用户要求）：这里同步维护 aria-label 即可，别再写 data-tip
+      btn.setAttribute('aria-label', on ? `云端已连接：${team ? team.name : user.name}` : '连接云端');
+      btn.removeAttribute('data-tip');
     }
 
     // 头像菜单的身份区 + 退出按钮：云端显示真实身份，本机显示默认文案
@@ -7090,7 +7092,7 @@ body{
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-04 · r35.7'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-04 · r35.8'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 

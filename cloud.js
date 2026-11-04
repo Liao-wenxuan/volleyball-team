@@ -926,7 +926,9 @@
     document.body.classList.toggle('cloud-on', on); // [data-cloud-only] 的显隐靠这条
     if (btn) {
       btn.classList.toggle('cloud-on', on);
-      btn.setAttribute('data-tip', on ? `云端：${team ? team.name : user.name}` : '连接云端');
+      // 顶栏图标不挂悬浮提示（用户要求）：这里同步维护 aria-label 即可，别再写 data-tip
+      btn.setAttribute('aria-label', on ? `云端已连接：${team ? team.name : user.name}` : '连接云端');
+      btn.removeAttribute('data-tip');
     }
 
     // 头像菜单的身份区 + 退出按钮：云端显示真实身份，本机显示默认文案
