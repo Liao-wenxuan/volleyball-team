@@ -252,9 +252,8 @@ svg{display:block}
 
 .user-chip{
   display:flex;align-items:center;gap:10px;padding:9px;border-radius:15px;text-align:left;
-  border:1px solid var(--ov070);background:var(--ov030);transition:.3s;
+  border:1px solid var(--ov070);background:var(--ov030);
 }
-.user-chip:hover{background:var(--ov070);border-color:var(--ov140);transform:translateY(-1px)}
 .u-avatar{
   width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;
   font-size:13px;font-weight:700;color:#0b0d16;
@@ -266,7 +265,6 @@ svg{display:block}
 .u-info{display:flex;flex-direction:column;gap:2px;min-width:0}
 .u-info strong{font-size:12.5px;font-weight:600}
 .u-info em{font-style:normal;font-size:10px;color:var(--muted)}
-.u-chev{width:14px;height:14px;margin-left:auto;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round}
 .sidebar-note{font-size:9.5px;color:rgba(127,137,163,.55);text-align:center;letter-spacing:.06em}
 
 .scrim{

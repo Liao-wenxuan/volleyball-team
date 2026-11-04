@@ -266,9 +266,8 @@ svg{display:block}
 
 .user-chip{
   display:flex;align-items:center;gap:10px;padding:9px;border-radius:15px;text-align:left;
-  border:1px solid var(--ov070);background:var(--ov030);transition:.3s;
+  border:1px solid var(--ov070);background:var(--ov030);
 }
-.user-chip:hover{background:var(--ov070);border-color:var(--ov140);transform:translateY(-1px)}
 .u-avatar{
   width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;
   font-size:13px;font-weight:700;color:#0b0d16;
@@ -280,7 +279,6 @@ svg{display:block}
 .u-info{display:flex;flex-direction:column;gap:2px;min-width:0}
 .u-info strong{font-size:12.5px;font-weight:600}
 .u-info em{font-style:normal;font-size:10px;color:var(--muted)}
-.u-chev{width:14px;height:14px;margin-left:auto;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round}
 .sidebar-note{font-size:9.5px;color:rgba(127,137,163,.55);text-align:center;letter-spacing:.06em}
 
 .scrim{
@@ -2062,7 +2060,26 @@ html[data-mode="light"] .step-round:hover,
 html[data-mode="light"] .batch-stepper button:hover,
 html[data-mode="light"] .fx-fsbtn:hover,
 html[data-mode="light"] .m-cell:hover,
-html[data-mode="light"] .help-body b{color:var(--text)}
+html[data-mode="light"] .help-body b,
+html[data-mode="light"] .imp-lead b,
+html[data-mode="light"] .imp-steps b,
+html[data-mode="light"] .imp-opt strong,
+html[data-mode="light"] .btn-mini.primary,
+html[data-mode="light"] .fx-act:hover,
+html[data-mode="light"] .fx-act.ok{color:var(--text)}
+/* .imp-row b 放组外：它的深色默认是 #fff，浅色下换 --text；
+   imp-mut 变体的弱化色要在其后重申，避免被组规则盖掉 */
+html[data-mode="light"] .imp-row b{color:var(--text)}
+html[data-mode="light"] .imp-row.imp-mut b{color:var(--muted)}
+/* 危险按钮 hover：浅色下底是淡粉，白字看不见，换深红字 */
+html[data-mode="light"] .btn-danger-ghost:hover{color:var(--red)}
+/* 琥珀提示条：浅色下淡琥珀字对比不够，换深琥珀 */
+html[data-mode="light"] .imp-alert,
+html[data-mode="light"] .imp-hint{color:#8a5c10;border-color:rgba(154,106,26,.3)}
+html[data-mode="light"] .imp-alert b,
+html[data-mode="light"] .imp-hint b{color:#a9720e}
+/* 战术板坐标气泡：底跟随主题，字也要跟 */
+html[data-mode="light"] .fx-coord{color:var(--text-2)}
 
 /* 主题卡：浅色标记 */
 .tc-tag{
@@ -2635,11 +2652,10 @@ try {
     </div>
   </div>
 
-  <button class="user-chip" id="userChip">
+  <div class="user-chip" id="userChip">
     <span class="u-avatar" id="chipAvatar" style="--a:var(--violet);--b:var(--cyan)">管</span>
     <span class="u-info"><strong id="chipName">管理员</strong><em id="chipSub">本地账号</em></span>
-    <svg class="u-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
-  </button>
+  </div>
   <p class="sidebar-note">数据保存在本机浏览器</p>
 </aside>
 <div class="scrim" id="scrim"></div>
@@ -6976,7 +6992,7 @@ body{
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-04 · r35'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-04 · r35.3'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -11057,7 +11073,8 @@ body{
     togglePop('#activityBtn', '#activityPop');
     togglePop('#avatarBtn', '#userPop');
     $('#themeBtn').onclick = () => { closePopovers(); openTheme(); };
-    $('#userChip').onclick = () => openSettings();
+    // 左下角用户卡只是展示「当前登录人」，不挂任何点击行为（2026-11-04 用户明确要求）
+    // 训练模板/数据管理统一走：右上角头像菜单 → 训练模板，或页脚 dock
     $$('.popover').forEach((el) => el.addEventListener('click', (e) => e.stopPropagation()));
     document.addEventListener('click', () => closePopovers());
 

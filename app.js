@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-04 · r35'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-04 · r35.3'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -4098,7 +4098,8 @@
     togglePop('#activityBtn', '#activityPop');
     togglePop('#avatarBtn', '#userPop');
     $('#themeBtn').onclick = () => { closePopovers(); openTheme(); };
-    $('#userChip').onclick = () => openSettings();
+    // 左下角用户卡只是展示「当前登录人」，不挂任何点击行为（2026-11-04 用户明确要求）
+    // 训练模板/数据管理统一走：右上角头像菜单 → 训练模板，或页脚 dock
     $$('.popover').forEach((el) => el.addEventListener('click', (e) => e.stopPropagation()));
     document.addEventListener('click', () => closePopovers());
 
