@@ -30,7 +30,7 @@
 // v22: 用户管理（角色/邀请码/成员管理/改密码/切队）
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v47';
+const VERSION = 'v48';
 const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',
@@ -42,9 +42,9 @@ const SHELL = [
   './card.js?v=v47',
   './share.js?v=v47',
   './manifest.webmanifest?v=v47',
-  './assets/icon-192.png?v=v47?v=v47',
-  './assets/icon-512.png?v=v47?v=v47',
-  './assets/maskable-512.png?v=v47?v=v47'
+  './assets/icon-192.png?v=v47?v=v47?v=v47?v=v48',
+  './assets/icon-512.png?v=v47?v=v47?v=v47?v=v48',
+  './assets/maskable-512.png?v=v47?v=v47?v=v47?v=v48'
 ];
 
 self.addEventListener('install', (e) => {

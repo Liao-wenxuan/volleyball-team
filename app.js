@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-05 · r35.12'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-05 · r35.13'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -2445,6 +2445,14 @@
   }
 
   /* ══════════ 设置 / 数据 ══════════ */
+  // 主动改主题/模板后的保护期：跨境链路下 PUT 可能几十秒后才落定，
+  // 期间 15s 同步轮询会把「上一主题的旧值」当别人的改动拉回来盖掉本地
+  // （实测：点薄荷 → 跳松林 → 跳暖砂，其实是自己的请求在排队）。
+  // 保护期内 applyServerState 不应用服务器带来的这两项，等自己的 PUT 落定后两边自然一致。
+  const SETTINGS_GRACE = 60 * 1000;
+  let themeLocalAt = 0;
+  let templateLocalAt = 0;
+
   function applyTheme(id) {
     const t = isTheme(id) ? id : 'aurora';
     const meta = THEMES.find((x) => x.id === t) || THEMES[0];
@@ -2457,7 +2465,7 @@
     if (!isTheme(id)) return;
     applyTheme(id);
     save();
-    if (CloudOn()) cloudFire(window.XGYCloud.push.theme(id), null);
+    if (CloudOn()) { themeLocalAt = Date.now(); cloudFire(window.XGYCloud.push.theme(id), null); }
     paintThemeCards();
     const t = THEMES.find((x) => x.id === id);
     toast(`已切换到「${t.name}」`);
@@ -2502,7 +2510,7 @@
       for (const x of next) if (x.start >= x.end) { toast(`${x.label}的结束时间需要晚于开始时间`, 'warn'); return; }
       db.settings.template = next;
       save();
-      if (CloudOn()) cloudFire(window.XGYCloud.push.template(next), null);
+      if (CloudOn()) { templateLocalAt = Date.now(); cloudFire(window.XGYCloud.push.template(next), null); }
       closeModal(); renderDashboard(); renderAttendance(); renderSidebar();
       toast('训练模板已保存');
     };
@@ -4326,7 +4334,7 @@
         key: String(payload.ai.key || '')
       };
     }
-    if (Array.isArray(payload.template)) {
+    if (Array.isArray(payload.template) && Date.now() - templateLocalAt > SETTINGS_GRACE) {
       db.settings.template = payload.template.map((t, i) => ({
         id: t.id || uid('t'),
         day: Number.isFinite(Number(t.day)) ? Number(t.day) : [2, 5, 0][i] || 2,
@@ -4336,7 +4344,9 @@
         venue: String(t.venue || '')
       }));
     }
-    if (payload.theme && isTheme(payload.theme)) {
+    // 保护期内不应用服务器带来的主题/模板：本地刚被用户主动改过，
+    // 服务器值大概率是「上一笔还没落定的旧请求」，盖掉就出现主题来回跳
+    if (payload.theme && isTheme(payload.theme) && Date.now() - themeLocalAt > SETTINGS_GRACE) {
       db.settings.theme = payload.theme;
       applyTheme(payload.theme);
     }
