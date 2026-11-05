@@ -479,6 +479,11 @@ body:not(.cloud-on) [data-cloud-only]{display:none!important}
 [data-tip].tip-r::before{left:auto;right:12px;transform:translate(0,7px) rotate(45deg)}
 [data-tip].tip-r:hover::after{transform:translate(0,0)}
 [data-tip].tip-r:hover::before{transform:translate(0,0) rotate(45deg)}
+/* 顶部边缘按钮专用（抽屉/弹窗关闭键）：提示框向下弹出，避免被 overflow:hidden 容器裁掉 */
+[data-tip].tip-b::after{left:auto;right:-2px;bottom:auto;top:calc(100% + 11px);transform:translate(0,-7px)}
+[data-tip].tip-b::before{left:auto;right:12px;bottom:auto;top:calc(100% + 6px);border-right-color:transparent;border-bottom-color:transparent;border-left:1px solid var(--ov120);border-top:1px solid var(--ov120);transform:translate(0,-7px) rotate(45deg)}
+[data-tip].tip-b:hover::after{transform:translate(0,0)}
+[data-tip].tip-b:hover::before{transform:translate(0,0) rotate(45deg)}
 
 /* ═══════════ 通用 ═══════════ */
 .content{flex:1;padding:26px 30px 20px;max-width:1460px;width:100%;margin:0 auto}
@@ -3273,13 +3278,13 @@ try {
 
 <div class="drawer-scrim" id="drawerScrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true">
-  <header class="drawer-head"><span class="dh-label">PLAYER PROFILE</span><button class="icon-btn tip-r" id="drawerClose" data-tip="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header>
+  <header class="drawer-head"><span class="dh-label">PLAYER PROFILE</span><button class="icon-btn tip-b" id="drawerClose" data-tip="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header>
   <div class="drawer-body" id="drawerBody"></div>
 </aside>
 
 <div class="modal-scrim" id="modalScrim">
   <div class="modal" id="modal" role="dialog" aria-modal="true">
-    <header class="modal-head"><h3 id="modalTitle">标题</h3><button class="icon-btn" id="modalClose" data-tip="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header>
+    <header class="modal-head"><h3 id="modalTitle">标题</h3><button class="icon-btn tip-b" id="modalClose" data-tip="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header>
     <div class="modal-body" id="modalBody"></div>
   </div>
 </div>
@@ -7101,7 +7106,7 @@ body{
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-04 · r35.9'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-04 · r35.10'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 

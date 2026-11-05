@@ -465,6 +465,11 @@ body:not(.cloud-on) [data-cloud-only]{display:none!important}
 [data-tip].tip-r::before{left:auto;right:12px;transform:translate(0,7px) rotate(45deg)}
 [data-tip].tip-r:hover::after{transform:translate(0,0)}
 [data-tip].tip-r:hover::before{transform:translate(0,0) rotate(45deg)}
+/* 顶部边缘按钮专用（抽屉/弹窗关闭键）：提示框向下弹出，避免被 overflow:hidden 容器裁掉 */
+[data-tip].tip-b::after{left:auto;right:-2px;bottom:auto;top:calc(100% + 11px);transform:translate(0,-7px)}
+[data-tip].tip-b::before{left:auto;right:12px;bottom:auto;top:calc(100% + 6px);border-right-color:transparent;border-bottom-color:transparent;border-left:1px solid var(--ov120);border-top:1px solid var(--ov120);transform:translate(0,-7px) rotate(45deg)}
+[data-tip].tip-b:hover::after{transform:translate(0,0)}
+[data-tip].tip-b:hover::before{transform:translate(0,0) rotate(45deg)}
 
 /* ═══════════ 通用 ═══════════ */
 .content{flex:1;padding:26px 30px 20px;max-width:1460px;width:100%;margin:0 auto}
