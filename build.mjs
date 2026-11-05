@@ -18,7 +18,7 @@ const xlsx = fs.readFileSync(path.join(dir, 'xlsx.js'), 'utf8');
  * build.mjs 每次运行都会把 index.html 的引用和 sw.js 的 SHELL 刷成当前版本。 */
 const swSrc = fs.readFileSync(path.join(dir, 'sw.js'), 'utf8');
 const ver = (swSrc.match(/const VERSION = '([^']+)'/) || [])[1] || '0';
-const ASSET_RE = /(src|href)="(style\.css|cloud\.js|qr\.js|xlsx\.js|card\.js|share\.js|playercard\.js|app\.js|manifest\.webmanifest|assets\/icon-180\.png)(?:\?v=\d+)?"/g;
+const ASSET_RE = /(src|href)="(style\.css|cloud\.js|qr\.js|xlsx\.js|card\.js|share\.js|playercard\.js|app\.js|manifest\.webmanifest|assets\/icon-180\.png)(?:\?v=[\w.]+)?"/g;
 fs.writeFileSync(
   path.join(dir, 'index.html'),
   html.replace(ASSET_RE, `$1="$2?v=${ver}"`),
@@ -35,7 +35,8 @@ fs.writeFileSync(
 console.log('versioned assets ->', `?v=${ver}`);
 
 // 单文件版用「不带版本号」的 HTML 做内联（单文件没有外链，版本号无意义）
-const htmlPlain = html.replace(/(src|href)="([^"?]+)\?v=\d+"/g, '$1="$2"');
+// 注意 [\w.]+：VERSION 形如 v47，不能只用 \d+（踩过：\d+ 匹配不到导致内联全失效）
+const htmlPlain = html.replace(/(src|href)="([^"?]+)\?v=[\w.]+"/g, '$1="$2"');
 
 const out = htmlPlain
   .replace('<link rel="stylesheet" href="style.css">', () => `<style>\n${css}\n</style>`)
