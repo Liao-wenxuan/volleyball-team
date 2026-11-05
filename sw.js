@@ -5,12 +5,14 @@
  * - 预缓存应用壳（页面 + 样式 + 脚本 + 图标）：装完即离线可用
  *   （业务数据本来就在 localStorage，不依赖网络）
  * - 页面导航：网络优先，失败回缓存
- * - 静态资源：网络优先，失败回缓存
- *   （原来是「缓存优先 + 后台更新」，结果改完代码用户第一次打开还是旧版，
- *     曾经把已修好的 bug 又复现了一遍；改成网络优先，联网时永远是最新代码）
+ * - 静态资源：缓存优先，断网秒开。
+ *   「发版拿到新代码」靠版本号：build.mjs 给 HTML 引用和本文件 SHELL 统一加 ?v=N，
+ *   发版后 URL 变了缓存必然 miss，联网拉新版 → 不会复现「打开还是旧代码」。
+ *   （曾经改成网络优先来防旧版，结果每次刷新都全量重下 160KB，跨境链路下刷新要好几秒）
+ * - API 请求一律不拦（数据实时性靠服务器）
  * - 跨域请求（AI 直连 DeepSeek 等）一律不拦，直接放行
  *
- * 发新版：把 VERSION 加一，旧缓存在 activate 时自动清掉。
+ * 发新版：把 VERSION 加一，跑 node build.mjs（会同步刷新 HTML 引用和 SHELL 的 ?v=N）。
  * ═══════════════════════════════════════════════════════════════ */
 // v36: 队员端改走「单文件档案」——分享弹窗直接下载 .html（断网可看，请假仍走回执码）；/m 停止宣传
 // v35: 多端轮询同步 + AI Key 服务端代理（浏览器不再拿明文 Key）
@@ -28,21 +30,21 @@
 // v22: 用户管理（角色/邀请码/成员管理/改密码/切队）
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v46';
+const VERSION = 'v47';
 const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',
   './index.html',
-  './style.css',
-  './app.js',
-  './cloud.js',
-  './qr.js',
-  './card.js',
-  './share.js',
-  './manifest.webmanifest',
-  './assets/icon-192.png',
-  './assets/icon-512.png',
-  './assets/maskable-512.png'
+  './style.css?v=v47',
+  './app.js?v=v47',
+  './cloud.js?v=v47',
+  './qr.js?v=v47',
+  './card.js?v=v47',
+  './share.js?v=v47',
+  './manifest.webmanifest?v=v47',
+  './assets/icon-192.png?v=v47?v=v47',
+  './assets/icon-512.png?v=v47?v=v47',
+  './assets/maskable-512.png?v=v47?v=v47'
 ];
 
 self.addEventListener('install', (e) => {
@@ -65,6 +67,8 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   // 跨域（AI 接口等）不拦
   if (url.origin !== self.location.origin) return;
+  // API 一律走网络，绝不缓存（数据实时性靠服务器，本地兜底没意义）
+  if (url.pathname.startsWith('/api/')) return;
 
   // 页面导航：网络优先，断网回缓存
   if (req.mode === 'navigate') {
@@ -84,17 +88,20 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // 同源静态资源：网络优先，断网回缓存
-  // （联网时永远拿到最新代码；断网时仍有壳可开）
+  // 静态资源：缓存优先，断网也能秒开。
+  // 「发版拿到新代码」靠版本号：build.mjs 给 index.html 的引用和这里的 SHELL 都加 ?v=N，
+  // HTML 本身网络优先，发版后 HTML 引用新 URL → 缓存必然 miss → 联网拉新版，不会复现旧版 bug。
   e.respondWith(
-    fetch(req)
-      .then((res) => {
-        if (res && res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-        }
-        return res;
-      })
-      .catch(() => caches.match(req).then((hit) => hit || Response.error()))
+    caches.match(req).then(
+      (hit) =>
+        hit ||
+        fetch(req).then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        })
+    )
   );
 });
