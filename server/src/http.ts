@@ -25,6 +25,14 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
     res.status(err.status).json({ error: err.code, message: err.message });
     return;
   }
+  // body-parser 的解析错误（请求体不是合法 JSON / 超出 2mb）：这是客户端错误，
+  // 返回 400 而不是 500（测试抓出来的：此前非法 JSON 会被当成服务器内部错误）
+  const e = err as { type?: string; status?: number };
+  if (e && (e.type === 'entity.parse.failed' || e.type === 'entity.too.large')) {
+    const msg = e.type === 'entity.too.large' ? '请求体过大' : '请求体不是合法的 JSON';
+    res.status(400).json({ error: 'bad_request', message: msg });
+    return;
+  }
   // zod 的校验错误在路由里已经转成 HttpError，走到这里基本是真 bug
   console.error('[unhandled]', err);
   res.status(500).json({ error: 'internal', message: '服务器内部错误' });
