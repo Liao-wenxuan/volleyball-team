@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-05 · r35.13'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-06 · r35.14'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -4718,6 +4718,17 @@ ${aiContext()}`;
   }
 
   /* ══════════ 启动 ══════════ */
+  // 首屏加载动画：页面可见即开始播，这里等主界面渲染完再摘（最短展示 1.2s，能看完一帧切换）。
+  // 兜底在 head 内联脚本里（6s 强摘），脚本挂了也不会卡死在开机画面。
+  function dismissLoader() {
+    const el = document.getElementById('bootLoader');
+    if (!el || el.classList.contains('done')) return;
+    setTimeout(() => {
+      el.classList.add('done');
+      setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
+    }, 1600);
+  }
+
   function init() {
     state.weekMonday = getMonday(new Date());
     applyTheme(db.settings.theme);
@@ -4765,6 +4776,7 @@ ${aiContext()}`;
       cloudEnsureWeek(state.weekMonday);
     }
     initPWA();
+    dismissLoader();
   }
 
   /* ══════════ PWA：Service Worker 注册 + 安装引导 ══════════ */

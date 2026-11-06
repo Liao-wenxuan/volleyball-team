@@ -7,13 +7,42 @@
 <meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%237b6cff'/%3E%3Crect%20x='12'%20y='12'%20width='40'%20height='40'%20rx='4'%20fill='none'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M12%2028h40'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M32%2012v40'%20stroke='%23fff'%20stroke-width='3'%20stroke-opacity='.55'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#05070f">
-<link rel="manifest" href="manifest.webmanifest?v=v48">
-<link rel="apple-touch-icon" href="assets/icon-180.png?v=v48">
+<link rel="manifest" href="manifest.webmanifest?v=v49">
+<link rel="apple-touch-icon" href="assets/icon-180.png?v=v49">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="排球队">
-<link rel="stylesheet" href="style.css?v=v48">
+<link rel="stylesheet" href="style.css?v=v49">
+<style>
+/* ── 首屏加载动画：必须在首帧前生效，所以内联在 head，不依赖 style.css ── */
+.boot-loader{position:fixed;inset:0;z-index:999;background:#05070f;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px;transition:opacity .45s ease,transform .45s ease}
+.boot-loader.done{opacity:0;transform:scale(1.03);pointer-events:none}
+.boot-card{position:relative;width:230px;height:250px;border-radius:28px;overflow:hidden;
+  background:linear-gradient(160deg,#fdfdfd,#f1f1f4);box-shadow:0 24px 70px rgba(123,108,255,.28),0 6px 22px rgba(0,0,0,.5);
+  animation:bootFloat 3s ease-in-out infinite}
+.boot-frame{position:absolute;inset:0;margin:auto;max-width:86%;max-height:88%;opacity:0;
+  animation:bootFrame 1.8s ease-in-out infinite}
+.boot-frame:nth-child(1){opacity:1;animation-delay:0s}
+.boot-frame:nth-child(2){animation-delay:-.6s}
+.boot-frame:nth-child(3){animation-delay:-1.2s}
+.boot-brand{font-size:15px;font-weight:700;letter-spacing:4px;color:#eef1f8;margin-top:4px}
+.boot-dots{display:flex;gap:7px}
+.boot-dots span{width:7px;height:7px;border-radius:50%;background:#7b6cff;
+  animation:bootDot 1.2s ease-in-out infinite}
+.boot-dots span:nth-child(2){animation-delay:.15s}
+.boot-dots span:nth-child(3){animation-delay:.3s}
+.boot-credit{position:absolute;right:16px;bottom:14px;font-size:10px;color:rgba(255,255,255,.28);letter-spacing:.5px}
+@keyframes bootFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes bootFrame{0%{opacity:0;transform:scale(.92)}5%{opacity:1;transform:scale(1)}
+  28%{opacity:1;transform:scale(1)}33.4%{opacity:0;transform:scale(.94)}100%{opacity:0;transform:scale(.94)}}
+@keyframes bootDot{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-5px);opacity:1}}
+@media (prefers-reduced-motion: reduce){
+  .boot-card,.boot-frame,.boot-dots span{animation:none}
+  .boot-loader{transition:opacity .15s}
+}
+</style>
 <script>
 /* 已有登录态（或用户选过「仅在本机使用」）时先藏门禁，避免刷新时闪一下登录页。
    这段必须在样式表之后、首帧之前执行，所以内联在 head。 */
@@ -22,9 +51,29 @@ try {
     document.documentElement.classList.add('gate-pass');
   }
 } catch (e) { /* 隐私模式下 localStorage 会抛，忽略即可 */ }
+
+/* 加载动画兜底：app.js 万一没跑起来（脚本损坏/被插件拦截），6 秒后强制摘掉，
+   不能让用户面对一个永远转不完的开机画面。正常路径由 app.js 的 init() 摘。 */
+setTimeout(function () {
+  var el = document.getElementById('bootLoader');
+  if (el && !el.classList.contains('done')) {
+    el.classList.add('done');
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
+  }
+}, 6000);
 </script>
 </head>
 <body>
+<div class="boot-loader" id="bootLoader" aria-hidden="true">
+  <div class="boot-card">
+    <img class="boot-frame" src="assets/loader-pose1.png?v=v49" alt="">
+    <img class="boot-frame" src="assets/loader-pose2.png?v=v49" alt="">
+    <img class="boot-frame" src="assets/loader-pose3.png?v=v49" alt="">
+  </div>
+  <div class="boot-brand">信工院排球队</div>
+  <div class="boot-dots"><span></span><span></span><span></span></div>
+  <div class="boot-credit">排球猫 · 抖音 @EvitaFfffff</div>
+</div>
 <div class="scroll-progress" aria-hidden="true"><span id="scrollBar"></span></div>
 <div class="bg-orbs" aria-hidden="true">
   <span class="orb orb-1"></span>
@@ -698,12 +747,12 @@ try {
         仍然可能一声不响。现在把 input 直接铺在按钮里（opacity:0 盖满整块），
         用户手指点到的就是 input 本体，不经过任何代理层。见 app.js 的 fileHitHTML()。 -->
 
-<script src="cloud.js?v=v48"></script>
-<script src="qr.js?v=v48"></script>
-<script src="xlsx.js?v=v48"></script>
-<script src="card.js?v=v48"></script>
-<script src="share.js?v=v48"></script>
-<script src="playercard.js?v=v48"></script>
-<script src="app.js?v=v48"></script>
+<script src="cloud.js?v=v49"></script>
+<script src="qr.js?v=v49"></script>
+<script src="xlsx.js?v=v49"></script>
+<script src="card.js?v=v49"></script>
+<script src="share.js?v=v49"></script>
+<script src="playercard.js?v=v49"></script>
+<script src="app.js?v=v49"></script>
 </body>
 </html>

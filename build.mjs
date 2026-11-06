@@ -18,7 +18,7 @@ const xlsx = fs.readFileSync(path.join(dir, 'xlsx.js'), 'utf8');
  * build.mjs 每次运行都会把 index.html 的引用和 sw.js 的 SHELL 刷成当前版本。 */
 const swSrc = fs.readFileSync(path.join(dir, 'sw.js'), 'utf8');
 const ver = (swSrc.match(/const VERSION = '([^']+)'/) || [])[1] || '0';
-const ASSET_RE = /(src|href)="(style\.css|cloud\.js|qr\.js|xlsx\.js|card\.js|share\.js|playercard\.js|app\.js|manifest\.webmanifest|assets\/icon-180\.png)(?:\?v=[\w.]+)?"/g;
+const ASSET_RE = /(src|href)="(style\.css|cloud\.js|qr\.js|xlsx\.js|card\.js|share\.js|playercard\.js|app\.js|manifest\.webmanifest|assets\/icon-180\.png|assets\/loader-pose\d\.png)(?:\?v=[\w.]+)?"/g;
 fs.writeFileSync(
   path.join(dir, 'index.html'),
   html.replace(ASSET_RE, `$1="$2?v=${ver}"`),
@@ -26,8 +26,10 @@ fs.writeFileSync(
 );
 fs.writeFileSync(
   path.join(dir, 'sw.js'),
+  // 路径段用 [^'?]+ 且允许可选的既有 ?v=：否则每次构建在尾部追加一层版本号
+  // （踩过：icon-192.png?v=v47?v=v47?v=v47?v=v48 无限叠加）
   swSrc.replace(
-    /'(\/?(?:\.\/)?(?:style\.css|app\.js|cloud\.js|qr\.js|card\.js|share\.js|manifest\.webmanifest|assets\/[^']+))'/g,
+    /'(\/?(?:\.\/)?(?:style\.css|app\.js|cloud\.js|qr\.js|card\.js|share\.js|manifest\.webmanifest|assets\/[^'?]+))(?:\?v=[\w.]+)*'/g,
     (m, p) => `'${p}?v=${ver}'`
   ),
   'utf8'
@@ -38,6 +40,8 @@ console.log('versioned assets ->', `?v=${ver}`);
 // 注意 [\w.]+：VERSION 形如 v47，不能只用 \d+（踩过：\d+ 匹配不到导致内联全失效）
 const htmlPlain = html.replace(/(src|href)="([^"?]+)\?v=[\w.]+"/g, '$1="$2"');
 
+const png = (f) => fs.readFileSync(path.join(dir, f)).toString('base64');
+
 const out = htmlPlain
   .replace('<link rel="stylesheet" href="style.css">', () => `<style>\n${css}\n</style>`)
   .replace('<script src="cloud.js"></script>', () => `<script>\n${cloud}\n</script>`)
@@ -47,6 +51,10 @@ const out = htmlPlain
   .replace('<script src="share.js"></script>', () => `<script>\n${share}\n</script>`)
   .replace('<script src="playercard.js"></script>', () => `<script>\n${playercard}\n</script>`)
   .replace('<script src="app.js"></script>', () => `<script>\n${js}\n</script>`)
+  // 加载动画的三帧猫图内联成 base64（file:// 下外链 404，loader 卡片就空了）
+  .replace(/src="assets\/loader-pose1\.png"/g, () => `src="data:image/png;base64,${png('assets/loader-pose1.png')}"`)
+  .replace(/src="assets\/loader-pose2\.png"/g, () => `src="data:image/png;base64,${png('assets/loader-pose2.png')}"`)
+  .replace(/src="assets\/loader-pose3\.png"/g, () => `src="data:image/png;base64,${png('assets/loader-pose3.png')}"`)
   // 单文件走 file://，PWA 相关外链资源没有意义，摘掉避免 404
   .replace(/<link rel="manifest"[^>]*>\n?/, '')
   .replace(/<link rel="apple-touch-icon"[^>]*>\n?/, '');
