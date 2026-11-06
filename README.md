@@ -4,10 +4,13 @@
 纯前端、零依赖，双击一个 HTML 就能用，数据存在浏览器本地，可导出 JSON 备份；
 也可以选配 `server/` 里的 Node + SQLite 后端，一键切换成多端同步的云端模式。
 
-两个入口，按你的习惯选：
+三个入口，按你的习惯选：
 
-- **在线试玩** → <https://liao-wenxuan.github.io/volleyball-team/>
+- **完整版（推荐）** → <https://vb.bscjs.top/> —— 带后端 + 登录 + 多端同步，教练平板和队员手机看同一份数据
+- **本地试玩** → <https://liao-wenxuan.github.io/volleyball-team/>（纯前端，数据只存浏览器）
 - **下载单文件** → [volleyball-team.html](https://github.com/Liao-wenxuan/volleyball-team/releases/latest/download/volleyball-team.html)（双击就开，不装任何东西）
+
+演示账号：`demo` / `demo123456`（完整版里可登录体验三端同步）。
 
 数据只存在你自己的浏览器里，随便点、随便拖。
 
@@ -143,6 +146,21 @@ API 一览：`POST /api/auth/login`、`GET /api/auth/me`、`GET|POST|PATCH|DELET
 
 **6. 零依赖的图表**
 雷达图、折线、热力、环形进度全部手写 SVG，没有图表库。
+
+## 测试
+
+**188 条后端单元测试**（vitest + 内存 SQLite，`cd server && npm test`）。
+覆盖按风险排序：鉴权边界（过期/伪造 token、越权、停用账号踢出）、考勤 UPSERT 幂等
+（重复登记以最后一次为准、只有一条记录）、批量改技能的事务回滚（半失败全不动）、
+跨队隔离（每条 SQL 都按 team_id 作用域）、备份导入的认人规则与脏数据兜底。
+
+**3 条端到端测试**（Playwright + 系统 Edge，仓库根目录 `node e2e/e2e.mjs`）：
+真浏览器 → 真前端 → 真后端 → 真 SQLite，只盖三条最关键的用户路径——
+登录门禁（错密码被拦 / 对密码进云端）、考勤登记（刷新后仍在、服务器确有这条数据）、
+阵型板拖拽（松手 0.25m 吸附、站位推送到服务器）。e2e 慢且脆，按金字塔配比只留主干。
+
+测试抓到过一个真 bug：非法 JSON 的请求体会被 body-parser 抛进兜底错误处理返回 500，
+正确语义是 400。已修（`errorMiddleware` 识别 `entity.parse.failed`）。
 
 ## 目录
 
