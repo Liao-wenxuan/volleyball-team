@@ -42,15 +42,16 @@ const htmlPlain = html.replace(/(src|href)="([^"?]+)\?v=[\w.]+"/g, '$1="$2"');
 
 const png = (f) => fs.readFileSync(path.join(dir, f)).toString('base64');
 
+// qr / xlsx / card / share / playercard 平时是按需加载（app.js 的 ensureMod），
+// 单文件版走 file:// 没法再拉外链，所以必须全部内联回 app.js 之前。
+const lazyMods = [qr, xlsx, card, share, playercard]
+  .map((src) => `<script>\n${src}\n</script>`)
+  .join('\n');
+
 const out = htmlPlain
   .replace('<link rel="stylesheet" href="style.css">', () => `<style>\n${css}\n</style>`)
   .replace('<script src="cloud.js"></script>', () => `<script>\n${cloud}\n</script>`)
-  .replace('<script src="qr.js"></script>', () => `<script>\n${qr}\n</script>`)
-  .replace('<script src="xlsx.js"></script>', () => `<script>\n${xlsx}\n</script>`)
-  .replace('<script src="card.js"></script>', () => `<script>\n${card}\n</script>`)
-  .replace('<script src="share.js"></script>', () => `<script>\n${share}\n</script>`)
-  .replace('<script src="playercard.js"></script>', () => `<script>\n${playercard}\n</script>`)
-  .replace('<script src="app.js"></script>', () => `<script>\n${js}\n</script>`)
+  .replace('<script src="app.js"></script>', () => `${lazyMods}\n<script>\n${js}\n</script>`)
   // 加载动画的三帧猫图内联成 base64（file:// 下外链 404，loader 卡片就空了）
   .replace(/src="assets\/loader-pose1\.png"/g, () => `src="data:image/png;base64,${png('assets/loader-pose1.png')}"`)
   .replace(/src="assets\/loader-pose2\.png"/g, () => `src="data:image/png;base64,${png('assets/loader-pose2.png')}"`)

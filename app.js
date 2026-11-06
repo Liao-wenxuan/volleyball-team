@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-06 · r35.15'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-06 · r35.16'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -32,6 +32,44 @@
   function dbKey() {
     const c = window.XGYCloud;
     return DB_KEY + (c && typeof c.dbScope === 'function' ? c.dbScope() : '');
+  }
+
+  /* ══════════ 按需加载的模块 ══════════
+   * qr / xlsx / card / share / playercard 只有「分享、导出、表格导入」时才用得到，
+   * 冷启动不再跟着下载（省约 37KB gzip，跨境链路下就是好几秒）。
+   * 版本号从自己的 script src 里取，保证和 index.html 的 ?v=N 一致；
+   * 单文件版里这些模块是内联的，window.XGY* 已存在，直接 resolve。 */
+  const ASSET_VER = (() => {
+    try {
+      const s = document.currentScript && document.currentScript.src;
+      return s ? (new URL(s).searchParams.get('v') || '') : '';
+    } catch (e) { return ''; }
+  })();
+  const MODS = {
+    qr: ['qr.js', 'XGYQR'],
+    xlsx: ['xlsx.js', 'XGYXlsx'],
+    card: ['card.js', 'XGYCard'],
+    share: ['share.js', 'XGYShare'],
+    playercard: ['playercard.js', 'XGYPlayerCard']
+  };
+  const modPending = {};
+  function ensureMod(...names) {
+    return Promise.all(names.map((n) => new Promise((resolve, reject) => {
+      const spec = MODS[n];
+      if (!spec) return reject(new Error(`未知模块 ${n}`));
+      const [file, globe] = spec;
+      if (window[globe]) return resolve();
+      if (modPending[n]) return modPending[n].then(resolve, reject);
+      const s = document.createElement('script');
+      s.src = file + (ASSET_VER ? '?v=' + ASSET_VER : '');
+      s.async = true;
+      modPending[n] = new Promise((ok, fail) => {
+        s.onload = () => (window[globe] ? ok() : fail(new Error(`${n} 模块异常`)));
+        s.onerror = () => fail(new Error(`${n} 模块加载失败，检查网络后重试`));
+      });
+      document.head.appendChild(s);
+      modPending[n].then(resolve, reject);
+    })));
   }
   const SCHEMA = 2;
   const SKILLS = [
@@ -1749,7 +1787,7 @@
       if (/\.csv$/i.test(name)) {
         rows = siTextRows(await file.text());
       } else {
-        if (typeof window.XGYXlsx === 'undefined') throw new Error('表格解析模块没加载');
+        await ensureMod('xlsx');
         const wb = await window.XGYXlsx.read(await file.arrayBuffer());
         // 多个子表时选数据最多的那个（收集表通常只有一个）
         const sh = wb.sheets.slice().sort((a, b) => b.rows.length - a.rows.length)[0];
@@ -2679,6 +2717,7 @@
 
   async function openTrainingCard(s) {
     if (!s) return;
+    await ensureMod('card');
     const card = await window.XGYCard.render({
       team: '信工院排球队',
       session: s,
@@ -2751,6 +2790,7 @@
   async function openSeasonCard() {
     if (!db.players.length) { toast('先添加队员', 'warn'); return; }
     if (!hasAnyAttendance()) { toast('还没有登记过考勤，先记几周再来看总结', 'warn'); return; }
+    await ensureMod('card');
     const card = await window.XGYSeason.render(seasonPayload());
     openModal('赛季卡', `<div class="card-wrap">
       <p class="share-hint">一学期一张的总结图：每周出勤、位置完整度热力、全队六维进步。<b>在你自己设备上生成</b>，不经过任何服务器。</p>
@@ -2893,6 +2933,8 @@
 
   async function openShareModal() {
     if (!db.players.length) { toast('还没有队员，先录入队员再分享', 'warn'); return; }
+    // 分享/二维码/档案文件三个模块都是这里才需要，冷启动不下发
+    await ensureMod('share', 'qr', 'playercard').catch(() => {});
     const hasAi = !!aiCfg().key;
     // 先试组成一次，只为了在按钮上显示体积；真正下载时会用最新数据重拼
     let pcSize = 0;
