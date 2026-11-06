@@ -492,6 +492,9 @@
           showForcePassword(password);
           return;
         }
+        // 门禁上的排球猫欢呼一下再收（index.html 的 catGate；没有就立即进站）。
+        // 动画是锦上添花，登录是主流程——它抛错也绝不能拦住进站。
+        try { if (window.catGate) await window.catGate.cheer(); } catch (_) {}
         hideGate();
         hooks.toast(`已登录：${data.team.name}（${ROLE_LABEL[data.role] || data.role}）`);
       } catch (ex) {

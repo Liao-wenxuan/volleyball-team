@@ -2686,6 +2686,151 @@ body.sv-mode > *:not(#shareView){display:none !important}
 .card-wrap{padding:2px}
 .card-preview{display:block;width:100%;max-width:360px;margin:0 auto;border-radius:14px;border:1px solid var(--line)}
 
+/* ═══════════════════════════════════════════════════════════
+   登录门禁 v2：排球猫（r52）
+   左边是球队主场（奶油色球场 + 三只跟手猫），右边是原登录表单。
+   猫的状态机与门禁逻辑解耦：本区块只管长相，交互在 index.html 末尾的
+   catGate 脚本里，靠 #authGate[data-cat-state] 驱动表情与姿势。
+   注意：类名统一 gc- 前缀，别和 .card-wrap / .cat-* 撞车。
+   ═══════════════════════════════════════════════════════════ */
+.gate-shell{
+  display:flex;width:min(1120px,100%);
+  min-height:min(700px,calc(100vh - 48px));
+  border-radius:28px;overflow:hidden;
+  background:var(--solid-elev);
+  border:1px solid var(--ov110);
+  box-shadow:0 60px 120px -60px rgba(0,0,0,.95),0 0 0 1px rgba(255,255,255,.03) inset;
+}
+
+/* ── 左：猫主场 ── */
+.gate-stage{
+  position:relative;flex:1.06;min-width:0;
+  padding:42px 36px 0;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,#fcf9f3 0%,#f4efe6 58%,#e9dfcc 100%);
+  overflow:hidden;
+}
+.gate-stage::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(520px 280px at 82% -8%,rgba(255,255,255,.95),transparent 70%),
+    radial-gradient(360px 260px at 0% 108%,rgba(201,163,126,.28),transparent 72%);
+}
+.gate-stage-top{position:relative;z-index:2}
+.gate-tag{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:11px;font-weight:700;letter-spacing:2.4px;color:#8b6f57;
+  padding:6px 11px;border-radius:999px;border:1.5px solid rgba(107,74,56,.22);
+  background:rgba(255,255,255,.62);
+}
+.gate-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:#e0705a;box-shadow:0 0 0 3px rgba(224,112,90,.18)}
+.gate-stage h2{
+  margin:18px 0 10px;font-size:clamp(26px,2.5vw,36px);line-height:1.18;
+  letter-spacing:1px;color:#463125;font-weight:800;
+}
+.gate-stage h2 em{font-style:normal;color:#b4703f}
+.gate-stage .gc-sub{margin:0;font-size:12px;letter-spacing:3px;color:#94806c}
+
+.gate-court{
+  position:relative;z-index:1;flex:1;min-height:320px;
+  margin:14px -36px 0;padding:0 18px;
+  display:flex;align-items:flex-end;justify-content:center;
+}
+.gc-floor{
+  position:absolute;left:0;right:0;bottom:0;height:78px;
+  background:linear-gradient(180deg,#e6d9c2,#dccdb2);
+  border-top:2px solid #cfbb9b;
+}
+.gc-floor::after{ /* 球场地板线 */
+  content:'';position:absolute;left:24px;right:24px;top:14px;height:1px;
+  background:rgba(107,74,56,.18);
+}
+.gc-cat{position:relative;z-index:1;width:31%;max-width:184px;display:flex;justify-content:center}
+.gc-cat svg{width:100%;height:auto;display:block;overflow:visible}
+.gc-shadow{
+  position:absolute;bottom:-10px;left:50%;width:70%;height:14px;margin-left:-35%;
+  background:rgba(107,74,56,.14);border-radius:50%;
+}
+.gc-root{transform-origin:50% 96%;transition:transform .5s var(--ease);will-change:transform}
+.gc-head{transition:transform .45s var(--ease)}
+.gc-pupil{transition:transform .09s linear}
+.gc-eye-open{transform-box:fill-box;transform-origin:center;transition:transform .1s}
+.gc-lid,.gc-mouth-sad,.gc-mouth-happy{display:none}
+
+#authGate[data-cat-state="sad"] .gc-eye-open,
+#authGate[data-cat-state="happy"] .gc-eye-open{display:none}
+#authGate[data-cat-state="sad"] .gc-lid-sad,
+#authGate[data-cat-state="happy"] .gc-lid-happy{display:block}
+#authGate[data-cat-state="sad"] .gc-mouth,
+#authGate[data-cat-state="happy"] .gc-mouth{display:none}
+#authGate[data-cat-state="sad"] .gc-mouth-sad,
+#authGate[data-cat-state="happy"] .gc-mouth-happy{display:block}
+
+.gc-cat.blink .gc-eye-open{transform:scaleY(.12)}
+
+/* 回避：集体向左倾（远离右边的表单） */
+#authGate[data-cat-state="avoid"] .gc-root{transform:rotate(-9deg)}
+#authGate[data-cat-state="avoid"] .gc-cat:nth-child(2) .gc-root{transform:rotate(-13deg) translateY(4px)}
+#authGate[data-cat-state="sad"] .gc-root{transform:translateY(3px)}
+
+/* 飞扑猫常驻浮动 */
+.gc-cat.pounce .gc-pose{animation:gcFloat 2.8s ease-in-out infinite}
+@keyframes gcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+#authGate[data-cat-state="happy"] .gc-ball{animation:gcBall .55s cubic-bezier(.34,1.3,.5,1) 2}
+@keyframes gcBall{0%,100%{transform:translateY(0)}45%{transform:translateY(-26px)}}
+#authGate[data-cat-state="happy"] .gc-cat.lift .gc-root{animation:gcCheer .42s ease-in-out 2}
+@keyframes gcCheer{0%,100%{transform:translateY(0)}50%{transform:translateY(-11px)}}
+
+/* 台词气泡 */
+.gc-bubble{
+  position:absolute;top:-30px;left:50%;transform:translateX(-50%) scale(.6);
+  padding:5px 11px;border-radius:13px;background:#fff;border:2.5px solid #6b4a38;
+  font-size:12px;font-weight:700;color:#6b4a38;white-space:nowrap;opacity:0;pointer-events:none;
+  transition:opacity .22s,transform .3s cubic-bezier(.34,1.4,.5,1);
+}
+.gc-bubble::after{
+  content:'';position:absolute;left:50%;bottom:-8px;width:11px;height:11px;margin-left:-5.5px;
+  background:#fff;border-right:2.5px solid #6b4a38;border-bottom:2.5px solid #6b4a38;
+  transform:rotate(45deg) skew(8deg,8deg);
+}
+.gc-bubble.show{opacity:1;transform:translateX(-50%) scale(1)}
+
+/* ── 右：表单（复用原卡片内部的样式，只换外壳） ── */
+.gate-shell .auth-gate-card{
+  flex:0 0 460px;width:auto;max-width:none;margin:0;
+  padding:46px 44px 34px;border:0;border-radius:0;background:transparent;box-shadow:none;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.gate-shell .auth-gate-head{margin-bottom:24px}
+.gate-shell .auth-gate-card.shake{animation:gateShake .5s}
+@keyframes gateShake{
+  10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}
+  30%,50%,70%{transform:translateX(-6px)}40%,60%{transform:translateX(6px)}
+}
+.gate-pw-wrap{position:relative}
+.gate-pw-wrap input{padding-right:44px}
+.gate-eye{
+  position:absolute;right:7px;top:50%;transform:translateY(-50%);
+  width:34px;height:34px;border:0;border-radius:8px;background:none;color:var(--muted);
+  cursor:pointer;display:grid;place-items:center;transition:background .15s,color .15s;
+}
+.gate-eye:hover{background:var(--ov080);color:var(--text)}
+.gate-eye svg{width:19px;height:19px}
+.gate-cat-note{
+  display:flex;align-items:center;gap:7px;margin:16px 0 0;
+  font-size:11.5px;color:var(--muted);
+}
+.gate-cat-note .gc-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex:none}
+
+@media (max-width:920px){
+  .gate-shell{min-height:0;border-radius:20px}
+  .gate-stage{display:none}
+  .gate-shell .auth-gate-card{flex:1;padding:28px 22px 22px}
+}
+@media (prefers-reduced-motion:reduce){
+  .gc-root,.gc-head,.gc-pupil,.gc-eye-open,.gc-bubble{transition:none!important}
+  .gc-cat.pounce .gc-pose,#authGate[data-cat-state="happy"] .gc-ball{animation:none!important}
+}
+
 </style>
 <style>
 /* ── 首屏加载动画：必须在首帧前生效，所以内联在 head，不依赖 style.css ── */
@@ -3388,12 +3533,190 @@ setTimeout(function () {
 
 <!-- 登录门禁（r24）：公网打开即停在登录页。
      没有注册入口 —— 账号由管理端统一发放，队员/教练拿到的都是初始密码。 -->
-<div class="auth-gate" id="authGate">
+<div class="auth-gate" id="authGate" data-cat-state="follow">
+ <div class="gate-shell">
+
+  <!-- ── 左：猫主场。纯装饰，aria-hidden；三只猫按用户的排球猫表情包复刻 ── -->
+  <aside class="gate-stage" aria-hidden="true">
+    <div class="gate-stage-top">
+      <span class="gate-tag">信工院排球队 · 队务系统</span>
+      <h2>接好每一个<em>一传</em>，<br>才扣得下每一分。</h2>
+      <p class="gc-sub">队员 · 考勤 · 技能点 · 阵容</p>
+    </div>
+
+    <div class="gate-court">
+      <div class="gc-floor"></div>
+
+      <!-- 猫1：坐姿抱球 -->
+      <div class="gc-cat sit">
+        <div class="gc-shadow"></div>
+        <svg viewBox="0 0 220 200">
+          <defs><clipPath id="gcBall1"><circle cx="52" cy="128" r="30"/></clipPath></defs>
+          <g class="gc-root">
+            <path d="M158 120 Q 190 96 186 66" fill="none" stroke="#6b4a38" stroke-width="12" stroke-linecap="round"/>
+            <path d="M74 178 Q 66 116 108 110 Q 152 108 150 150 Q 149 178 130 178 Z"
+                  fill="#fff" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+            <ellipse cx="132" cy="172" rx="15" ry="10" fill="#fff" stroke="#6b4a38" stroke-width="5"/>
+            <g class="gc-head">
+              <g class="gc-pose">
+                <path d="M78 62 L 70 30 Q 69 24 75 26 L 102 42 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+                <path d="M142 62 L 152 28 Q 154 22 148 25 L 120 42 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+                <ellipse cx="110" cy="82" rx="46" ry="38" fill="#fff" stroke="#6b4a38" stroke-width="6"/>
+                <path d="M66 74 Q 60 44 86 32 Q 100 26 110 34 Q 122 24 138 32 Q 162 44 154 74 Q 150 56 134 52 Q 138 62 132 66 Q 124 48 104 50 Q 86 50 82 64 Q 72 62 66 74 Z"
+                      fill="#c9a37e" stroke="#6b4a38" stroke-width="5" stroke-linejoin="round"/>
+                <g transform="translate(94,84)">
+                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="4.5" ry="6.5" fill="#5b9bd5"/></g></g>
+                  <path class="gc-lid gc-lid-sad" d="M-6 3 Q 0 -4 6 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <path class="gc-lid gc-lid-happy" d="M-7 2 Q 0 -6 7 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                </g>
+                <g transform="translate(128,84)">
+                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="4.5" ry="6.5" fill="#5b9bd5"/></g></g>
+                  <path class="gc-lid gc-lid-sad" d="M-6 3 Q 0 -4 6 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <path class="gc-lid gc-lid-happy" d="M-7 2 Q 0 -6 7 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                </g>
+                <ellipse cx="82" cy="96" rx="7" ry="4" fill="#f0a0a0" opacity=".55"/>
+                <ellipse cx="140" cy="96" rx="7" ry="4" fill="#f0a0a0" opacity=".55"/>
+                <path d="M108 94 L 114 94 L 111 98 Z" fill="#6b4a38"/>
+                <path class="gc-mouth" d="M104 102 Q 108 107 112 102 Q 116 107 120 102" fill="none" stroke="#6b4a38" stroke-width="3.5" stroke-linecap="round"/>
+                <path class="gc-mouth-sad" d="M104 106 Q 112 99 120 106" fill="none" stroke="#6b4a38" stroke-width="3.5" stroke-linecap="round"/>
+                <path class="gc-mouth-happy" d="M104 101 Q 112 112 120 101 Z" fill="#6b4a38"/>
+              </g>
+            </g>
+            <path d="M96 150 Q 84 144 78 136" fill="none" stroke="#6b4a38" stroke-width="10" stroke-linecap="round"/>
+            <g class="gc-ball">
+              <circle cx="52" cy="128" r="30" fill="#f5b32e" stroke="#6b4a38" stroke-width="6"/>
+              <g clip-path="url(#gcBall1)">
+                <path d="M22 128 Q 52 100 82 128 L 82 138 Q 52 112 22 138 Z" fill="#2b5db8"/>
+                <path d="M30 156 Q 48 132 76 148 L 70 158 Q 50 146 36 160 Z" fill="#2b5db8"/>
+                <path d="M24 108 Q 44 118 60 104 L 68 112 Q 48 128 28 118 Z" fill="#2b5db8"/>
+              </g>
+              <text x="52" y="131" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff" font-family="Arial" transform="rotate(-18 52 128)">MIKASA</text>
+              <circle cx="52" cy="128" r="30" fill="none" stroke="#6b4a38" stroke-width="6"/>
+            </g>
+          </g>
+        </svg>
+        <div class="gc-bubble">接一传！</div>
+      </div>
+
+      <!-- 猫2：飞扑救球 -->
+      <div class="gc-cat pounce">
+        <div class="gc-shadow" style="width:110%;margin-left:-55%"></div>
+        <svg viewBox="0 0 260 180">
+          <defs><clipPath id="gcBall2"><circle cx="34" cy="120" r="28"/></clipPath></defs>
+          <g class="gc-root">
+            <g stroke="#c9b8a0" stroke-width="5" stroke-linecap="round">
+              <path d="M216 70 H 248"/><path d="M226 92 H 252"/><path d="M214 114 H 244"/>
+            </g>
+            <path d="M186 96 Q 210 66 202 44" fill="none" stroke="#6b4a38" stroke-width="11" stroke-linecap="round"/>
+            <path d="M92 122 Q 104 78 148 84 Q 192 88 188 118 Q 184 138 150 136 Q 116 140 92 122 Z"
+                  fill="#fff" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+            <path d="M172 122 Q 196 128 206 118" fill="none" stroke="#6b4a38" stroke-width="10" stroke-linecap="round"/>
+            <path d="M168 130 Q 190 142 202 136" fill="none" stroke="#6b4a38" stroke-width="10" stroke-linecap="round"/>
+            <g class="gc-head">
+              <g class="gc-pose">
+                <path d="M92 74 L 74 48 Q 70 43 77 44 L 102 58 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+                <path d="M136 62 L 146 34 Q 148 28 152 34 L 156 62 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+                <ellipse cx="116" cy="88" rx="44" ry="36" fill="#fff" stroke="#6b4a38" stroke-width="6"/>
+                <path d="M74 82 Q 68 54 94 44 Q 108 38 118 46 Q 130 38 144 46 Q 166 58 158 84 Q 154 66 138 62 Q 142 72 136 76 Q 128 58 108 62 Q 92 64 88 76 Q 78 72 74 82 Z"
+                      fill="#c9a37e" stroke="#6b4a38" stroke-width="5" stroke-linejoin="round"/>
+                <g transform="translate(102,88)">
+                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="4.5" ry="6.5" fill="#5b9bd5"/></g></g>
+                  <path class="gc-lid gc-lid-sad" d="M-6 3 Q 0 -4 6 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <path class="gc-lid gc-lid-happy" d="M-7 2 Q 0 -6 7 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                </g>
+                <g transform="translate(136,88)">
+                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="4.5" ry="6.5" fill="#5b9bd5"/></g></g>
+                  <path class="gc-lid gc-lid-sad" d="M-6 3 Q 0 -4 6 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <path class="gc-lid gc-lid-happy" d="M-7 2 Q 0 -6 7 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                </g>
+                <ellipse cx="88" cy="100" rx="7" ry="4" fill="#f0a0a0" opacity=".55"/>
+                <ellipse cx="146" cy="100" rx="7" ry="4" fill="#f0a0a0" opacity=".55"/>
+                <path d="M112 98 L 118 98 L 115 102 Z" fill="#6b4a38"/>
+                <path class="gc-mouth" d="M108 106 Q 112 111 116 106 Q 120 111 124 106" fill="none" stroke="#6b4a38" stroke-width="3.5" stroke-linecap="round"/>
+                <path class="gc-mouth-sad" d="M108 110 Q 116 103 124 110" fill="none" stroke="#6b4a38" stroke-width="3.5" stroke-linecap="round"/>
+                <path class="gc-mouth-happy" d="M108 105 Q 116 116 124 105 Z" fill="#6b4a38"/>
+              </g>
+            </g>
+            <path d="M92 116 Q 76 120 64 116" fill="none" stroke="#6b4a38" stroke-width="10" stroke-linecap="round"/>
+            <path d="M96 130 Q 80 136 68 132" fill="none" stroke="#6b4a38" stroke-width="10" stroke-linecap="round"/>
+            <g class="gc-ball">
+              <circle cx="34" cy="120" r="28" fill="#f5b32e" stroke="#6b4a38" stroke-width="6"/>
+              <g clip-path="url(#gcBall2)">
+                <path d="M6 120 Q 34 94 62 120 L 62 130 Q 34 106 6 130 Z" fill="#2b5db8"/>
+                <path d="M14 146 Q 32 124 58 140 L 52 150 Q 32 138 20 152 Z" fill="#2b5db8"/>
+              </g>
+              <text x="34" y="123" text-anchor="middle" font-size="8" font-weight="700" fill="#fff" font-family="Arial" transform="rotate(-18 34 120)">MIKASA</text>
+              <circle cx="34" cy="120" r="28" fill="none" stroke="#6b4a38" stroke-width="6"/>
+            </g>
+          </g>
+        </svg>
+        <div class="gc-bubble">别想过去！</div>
+      </div>
+
+      <!-- 猫3：举球扣杀 -->
+      <div class="gc-cat lift">
+        <div class="gc-shadow"></div>
+        <svg viewBox="0 0 200 230">
+          <defs><clipPath id="gcBall3"><circle cx="100" cy="46" r="34"/></clipPath></defs>
+          <g class="gc-root">
+            <g class="gc-ball">
+              <circle cx="100" cy="46" r="34" fill="#f5b32e" stroke="#6b4a38" stroke-width="6"/>
+              <g clip-path="url(#gcBall3)">
+                <path d="M66 46 Q 100 12 134 46 L 134 58 Q 100 26 66 58 Z" fill="#2b5db8"/>
+                <path d="M74 78 Q 96 50 128 68 L 120 80 Q 98 64 84 84 Z" fill="#2b5db8"/>
+              </g>
+              <text x="100" y="50" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff" font-family="Arial" transform="rotate(-16 100 46)">MIKASA</text>
+              <circle cx="100" cy="46" r="34" fill="none" stroke="#6b4a38" stroke-width="6"/>
+            </g>
+            <path d="M74 108 Q 68 84 82 72" fill="none" stroke="#6b4a38" stroke-width="11" stroke-linecap="round"/>
+            <path d="M126 108 Q 134 84 120 72" fill="none" stroke="#6b4a38" stroke-width="11" stroke-linecap="round"/>
+            <path d="M72 212 Q 60 130 100 124 Q 140 130 128 212 Z"
+                  fill="#fff" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+            <ellipse cx="86" cy="208" rx="14" ry="10" fill="#fff" stroke="#6b4a38" stroke-width="5"/>
+            <ellipse cx="116" cy="208" rx="14" ry="10" fill="#fff" stroke="#6b4a38" stroke-width="5"/>
+            <path d="M128 190 Q 158 178 158 150" fill="none" stroke="#6b4a38" stroke-width="10" stroke-linecap="round"/>
+            <g class="gc-head">
+              <g class="gc-pose">
+                <path d="M70 136 L 54 110 Q 51 104 58 106 L 84 122 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+                <path d="M130 136 L 148 110 Q 152 104 145 107 L 118 122 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+                <ellipse cx="100" cy="152" rx="44" ry="36" fill="#fff" stroke="#6b4a38" stroke-width="6"/>
+                <path d="M58 146 Q 54 118 80 108 Q 94 102 102 110 Q 114 102 126 110 Q 150 120 144 146 Q 138 128 122 126 Q 126 136 120 140 Q 112 122 94 126 Q 78 128 72 140 Q 62 136 58 146 Z"
+                      fill="#c9a37e" stroke="#6b4a38" stroke-width="5" stroke-linejoin="round"/>
+                <g transform="translate(84,152)">
+                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="4.5" ry="6.5" fill="#5b9bd5"/></g></g>
+                  <path class="gc-lid gc-lid-sad" d="M-6 3 Q 0 -4 6 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <path class="gc-lid gc-lid-happy" d="M-7 2 Q 0 -6 7 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                </g>
+                <g transform="translate(118,152)">
+                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="4.5" ry="6.5" fill="#5b9bd5"/></g></g>
+                  <path class="gc-lid gc-lid-sad" d="M-6 3 Q 0 -4 6 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <path class="gc-lid gc-lid-happy" d="M-7 2 Q 0 -6 7 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                </g>
+                <ellipse cx="72" cy="164" rx="7" ry="4" fill="#f0a0a0" opacity=".55"/>
+                <ellipse cx="130" cy="164" rx="7" ry="4" fill="#f0a0a0" opacity=".55"/>
+                <path d="M97 162 L 103 162 L 100 166 Z" fill="#6b4a38"/>
+                <path class="gc-mouth" d="M93 170 Q 97 175 100 170 Q 104 175 108 170" fill="none" stroke="#6b4a38" stroke-width="3.5" stroke-linecap="round"/>
+                <path class="gc-mouth-sad" d="M93 174 Q 100 167 108 174" fill="none" stroke="#6b4a38" stroke-width="3.5" stroke-linecap="round"/>
+                <path class="gc-mouth-happy" d="M93 169 Q 100 180 108 169 Z" fill="#6b4a38"/>
+              </g>
+            </g>
+          </g>
+        </svg>
+        <div class="gc-bubble">扣杀——！</div>
+      </div>
+    </div>
+  </aside>
+
   <div class="auth-gate-card">
     <div class="auth-gate-head">
       <span class="auth-gate-logo" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-          <rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M3.5 12h17M12 3.5v17"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 13.2c-1.7 0-3.2-1-3.2-2.4 0-1 .8-1.6 1.6-1.6.7 0 1.2.4 1.6 1 .4-.6.9-1 1.6-1 .8 0 1.6.6 1.6 1.6 0 1.4-1.5 2.4-3.2 2.4Z"/>
+          <ellipse cx="6.6" cy="8.4" rx="1.9" ry="2.4" transform="rotate(-18 6.6 8.4)"/>
+          <ellipse cx="10" cy="5.2" rx="1.7" ry="2.2"/>
+          <ellipse cx="14" cy="5.2" rx="1.7" ry="2.2"/>
+          <ellipse cx="17.4" cy="8.4" rx="1.9" ry="2.4" transform="rotate(18 17.4 8.4)"/>
+          <path d="M8.4 16.6c1 1.6 2.2 2.4 3.6 2.4s2.6-.8 3.6-2.4"/>
         </svg>
       </span>
       <div>
@@ -3406,7 +3729,17 @@ setTimeout(function () {
       <form id="gateForm">
         <div class="form-grid">
           <div class="field full"><label>用户名</label><input name="username" required placeholder="学号或姓名拼音" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
-          <div class="field full"><label>密码</label><input name="password" type="password" required placeholder="初始密码" autocomplete="current-password"></div>
+          <div class="field full"><label>密码</label>
+            <div class="gate-pw-wrap">
+              <input name="password" type="password" required placeholder="初始密码" autocomplete="current-password">
+              <button type="button" class="gate-eye" id="gateEye" aria-label="显示密码">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path class="gc-ic-open" d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle class="gc-ic-open" cx="12" cy="12" r="3"/>
+                  <path class="gc-ic-off" style="display:none" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22"/>
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
         <details class="gate-adv"><summary>服务器地址</summary><input name="base" placeholder="https://vb.bscjs.top"></details>
         <p class="gate-err" id="gateErr" hidden></p>
@@ -3431,6 +3764,7 @@ setTimeout(function () {
       </form>
     </div>
   </div>
+ </div><!-- /.gate-shell -->
 </div>
 <!-- 文件选择框的坑（2026-10-31 r17 重写）：
      ① 不能写 accept=".json"/.xlsx：iPadOS 和部分安卓的文档选择器按 MIME/UTI 过滤，
@@ -3440,6 +3774,190 @@ setTimeout(function () {
         仍然可能一声不响。现在把 input 直接铺在按钮里（opacity:0 盖满整块），
         用户手指点到的就是 input 本体，不经过任何代理层。见 app.js 的 fileHitHTML()。 -->
 
+<script>
+/* ═══════════════════════════════════════════════════════════
+   登录门禁的猫：跟手 / 回避 / 偷瞄 / 垮脸 / 欢呼
+   —— 与 cloud.js 的门禁逻辑解耦，只读 DOM、不改表单行为。
+   状态优先级：sad(报错后 1.9s) > avoid(密码聚焦且隐藏) > peek(密码明文)
+              > gaze(用户名聚焦) > follow(跟随鼠标)
+   成功欢呼由 cloud.js 在 hideGate() 前调 window.catGate.cheer() 触发。
+   ═══════════════════════════════════════════════════════════ */
+(() => {
+  'use strict';
+  const gate = document.getElementById('authGate');
+  if (!gate) return;
+
+  const html = document.documentElement;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const card = gate.querySelector('.auth-gate-card');
+  const form = document.getElementById('gateForm');
+  const user = form && form.querySelector('[name=username]');
+  const pass = form && form.querySelector('[name=password]');
+  const eye  = document.getElementById('gateEye');
+  const err  = document.getElementById('gateErr');
+  const pwErr = document.getElementById('pwGateErr');
+
+  // 三只猫：瞳孔（快）/ 头（慢半拍）/ 身体（最后跟上）
+  const cats = [...gate.querySelectorAll('.gc-cat')].map(el => ({
+    el,
+    root: el.querySelector('.gc-root'),
+    head: el.querySelector('.gc-head'),
+    pupils: [...el.querySelectorAll('.gc-pupil')],
+    bubble: el.querySelector('.gc-bubble'),
+  }));
+
+  const BUBBLE_AVOID = ['我们不看密码喵！', '非礼勿视！', '喵呜——转过身了'];
+  const BUBBLE_PEEK  = ['呜，偷瞄一眼…', '就当没看见…', '看、看到了…'];
+  const BUBBLE_SAD   = ['呜哇——没接住！', '这球飞了…', '再来一次喵？'];
+  const BUBBLE_HAPPY = ['好球！', '得分！', '队长回来了！'];
+
+  let sadUntil = 0, happy = false, state = '';
+  let active = false, raf = 0, blinkTimer = 0;
+  let mx = innerWidth * .62, my = innerHeight * .35, dirty = true;
+
+  const pwVisible = () => pass && pass.type === 'text';
+
+  function compute() {
+    if (Date.now() < sadUntil) return 'sad';
+    if (happy) return 'happy';
+    if (pass && document.activeElement === pass) return pwVisible() ? 'peek' : 'avoid';
+    if (user && document.activeElement === user) return 'gaze';
+    return 'follow';
+  }
+
+  function apply() {
+    const next = compute();
+    if (next === state) return;
+    state = next;
+    gate.dataset.catState = next;
+    dirty = true;
+    cats.forEach((c, i) => {
+      const b = c.bubble;
+      if (!b) return;
+      let text = '';
+      if (next === 'avoid') text = BUBBLE_AVOID[i % BUBBLE_AVOID.length];
+      else if (next === 'peek') text = BUBBLE_PEEK[i % BUBBLE_PEEK.length];
+      else if (next === 'sad') text = BUBBLE_SAD[i % BUBBLE_SAD.length];
+      else if (next === 'happy') text = BUBBLE_HAPPY[i % BUBBLE_HAPPY.length];
+      if (text) { b.textContent = text; b.classList.add('show'); }
+      else b.classList.remove('show');
+    });
+  }
+
+  function frame() {
+    raf = 0;
+    if (!active) return;
+    apply();
+    if (dirty && !reduced) {
+      dirty = false;
+      const box = card ? card.getBoundingClientRect() : { left: innerWidth * .65, top: 0, width: 400, height: 600 };
+      const looking = state === 'gaze' || state === 'peek';
+      const tx = state === 'avoid' ? 40 : looking ? box.left + box.width * .45 : mx;
+      const ty = state === 'avoid' ? 60 : looking ? box.top + box.height * .32 : my;
+
+      cats.forEach(c => {
+        for (const p of c.pupils) {
+          const r = p.getBoundingClientRect();
+          const ang = Math.atan2(ty - (r.top + r.height / 2), tx - (r.left + r.width / 2));
+          p.style.transform = `translate(${(Math.cos(ang) * 4).toFixed(2)}px,${(Math.sin(ang) * 3.2).toFixed(2)}px)`;
+        }
+        if (c.head) {
+          const r = c.head.getBoundingClientRect();
+          const hx = Math.max(-5, Math.min(5, (tx - (r.left + r.width / 2)) / 60));
+          const hy = Math.max(-4, Math.min(4, (ty - (r.top + r.height / 2)) / 80));
+          c.head.style.transform = `translate(${hx.toFixed(2)}px,${hy.toFixed(2)}px)`;
+        }
+        if (c.root) {
+          if (state === 'avoid' || state === 'sad' || state === 'happy') c.root.style.transform = '';
+          else {
+            const tilt = Math.max(-4, Math.min(4, -(tx - box.left) / 300));
+            c.root.style.transform = `rotate(${tilt.toFixed(2)}deg)`;
+          }
+        }
+      });
+    }
+    // 没在动也要持续跑 apply()：sad 到期、focus 变化都要回落
+    raf = requestAnimationFrame(frame);
+  }
+
+  function start() {
+    if (active) return;
+    active = true;
+    if (!raf) raf = requestAnimationFrame(frame);
+    scheduleBlink();
+  }
+  function stop() {
+    active = false;
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    clearTimeout(blinkTimer);
+  }
+
+  function scheduleBlink() {
+    clearTimeout(blinkTimer);
+    if (!active) return;
+    blinkTimer = setTimeout(() => {
+      if (state !== 'sad' && state !== 'happy' && !reduced) {
+        cats.forEach(c => c.el.classList.add('blink'));
+        setTimeout(() => cats.forEach(c => c.el.classList.remove('blink')), 130);
+      }
+      scheduleBlink();
+    }, 2400 + Math.random() * 2600);
+  }
+
+  const visible = () => !gate.hidden && !html.classList.contains('gate-pass');
+
+  function sync() { visible() ? start() : stop(); }
+
+  addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; dirty = true; }, { passive: true });
+
+  if (user) user.addEventListener('focus', apply);
+  if (pass) pass.addEventListener('focus', apply);
+  [user, pass].forEach(el => el && el.addEventListener('blur', () => setTimeout(apply, 60)));
+
+  if (eye) {
+    eye.addEventListener('click', () => {
+      const show = pass.type === 'password';
+      pass.type = show ? 'text' : 'password';
+      eye.querySelectorAll('.gc-ic-open').forEach(n => n.style.display = show ? 'none' : '');
+      eye.querySelectorAll('.gc-ic-off').forEach(n => n.style.display = show ? '' : 'none');
+      eye.setAttribute('aria-label', show ? '隐藏密码' : '显示密码');
+      pass.focus();
+      apply();
+    });
+  }
+
+  // 登录报错 → 垮脸 + 卡片摇头（只观察，不接管 cloud.js 的报错逻辑）
+  function watchErr(node) {
+    if (!node) return;
+    new MutationObserver(() => {
+      if (node.hidden || !node.textContent) return;
+      sadUntil = Date.now() + 1900;
+      apply();
+      if (card && !reduced) {
+        card.classList.remove('shake');
+        void card.offsetWidth;
+        card.classList.add('shake');
+      }
+    }).observe(node, { attributes: true, childList: true, characterData: true, subtree: true });
+  }
+  watchErr(err); watchErr(pwErr);
+
+  // 门禁显隐：hidden 属性 + html.gate-pass 两条路径都要跟
+  new MutationObserver(sync).observe(gate, { attributes: true, attributeFilter: ['hidden'] });
+  new MutationObserver(sync).observe(html, { attributes: true, attributeFilter: ['class'] });
+
+  window.catGate = {
+    /* 登录成功时由 cloud.js 调用：先看 800ms 欢呼，再收起门禁 */
+    cheer() {
+      if (reduced) return Promise.resolve();
+      happy = true; apply();
+      return new Promise(r => setTimeout(() => { happy = false; r(); }, 800));
+    }
+  };
+
+  sync();
+})();
+</script>
 <script>
 /* ═══════════════════════════════════════════════════════════════
  * 云端同步模块（双模式之一：本地版不动，这里是「云端版」）
@@ -3935,6 +4453,9 @@ setTimeout(function () {
           showForcePassword(password);
           return;
         }
+        // 门禁上的排球猫欢呼一下再收（index.html 的 catGate；没有就立即进站）。
+        // 动画是锦上添花，登录是主流程——它抛错也绝不能拦住进站。
+        try { if (window.catGate) await window.catGate.cheer(); } catch (_) {}
         hideGate();
         hooks.toast(`已登录：${data.team.name}（${ROLE_LABEL[data.role] || data.role}）`);
       } catch (ex) {

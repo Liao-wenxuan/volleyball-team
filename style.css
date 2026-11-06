@@ -2671,3 +2671,148 @@ body.sv-mode > *:not(#shareView){display:none !important}
 /* ══════════ 训练卡弹窗 ══════════ */
 .card-wrap{padding:2px}
 .card-preview{display:block;width:100%;max-width:360px;margin:0 auto;border-radius:14px;border:1px solid var(--line)}
+
+/* ═══════════════════════════════════════════════════════════
+   登录门禁 v2：排球猫（r52）
+   左边是球队主场（奶油色球场 + 三只跟手猫），右边是原登录表单。
+   猫的状态机与门禁逻辑解耦：本区块只管长相，交互在 index.html 末尾的
+   catGate 脚本里，靠 #authGate[data-cat-state] 驱动表情与姿势。
+   注意：类名统一 gc- 前缀，别和 .card-wrap / .cat-* 撞车。
+   ═══════════════════════════════════════════════════════════ */
+.gate-shell{
+  display:flex;width:min(1120px,100%);
+  min-height:min(700px,calc(100vh - 48px));
+  border-radius:28px;overflow:hidden;
+  background:var(--solid-elev);
+  border:1px solid var(--ov110);
+  box-shadow:0 60px 120px -60px rgba(0,0,0,.95),0 0 0 1px rgba(255,255,255,.03) inset;
+}
+
+/* ── 左：猫主场 ── */
+.gate-stage{
+  position:relative;flex:1.06;min-width:0;
+  padding:42px 36px 0;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,#fcf9f3 0%,#f4efe6 58%,#e9dfcc 100%);
+  overflow:hidden;
+}
+.gate-stage::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(520px 280px at 82% -8%,rgba(255,255,255,.95),transparent 70%),
+    radial-gradient(360px 260px at 0% 108%,rgba(201,163,126,.28),transparent 72%);
+}
+.gate-stage-top{position:relative;z-index:2}
+.gate-tag{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:11px;font-weight:700;letter-spacing:2.4px;color:#8b6f57;
+  padding:6px 11px;border-radius:999px;border:1.5px solid rgba(107,74,56,.22);
+  background:rgba(255,255,255,.62);
+}
+.gate-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:#e0705a;box-shadow:0 0 0 3px rgba(224,112,90,.18)}
+.gate-stage h2{
+  margin:18px 0 10px;font-size:clamp(26px,2.5vw,36px);line-height:1.18;
+  letter-spacing:1px;color:#463125;font-weight:800;
+}
+.gate-stage h2 em{font-style:normal;color:#b4703f}
+.gate-stage .gc-sub{margin:0;font-size:12px;letter-spacing:3px;color:#94806c}
+
+.gate-court{
+  position:relative;z-index:1;flex:1;min-height:320px;
+  margin:14px -36px 0;padding:0 18px;
+  display:flex;align-items:flex-end;justify-content:center;
+}
+.gc-floor{
+  position:absolute;left:0;right:0;bottom:0;height:78px;
+  background:linear-gradient(180deg,#e6d9c2,#dccdb2);
+  border-top:2px solid #cfbb9b;
+}
+.gc-floor::after{ /* 球场地板线 */
+  content:'';position:absolute;left:24px;right:24px;top:14px;height:1px;
+  background:rgba(107,74,56,.18);
+}
+.gc-cat{position:relative;z-index:1;width:31%;max-width:184px;display:flex;justify-content:center}
+.gc-cat svg{width:100%;height:auto;display:block;overflow:visible}
+.gc-shadow{
+  position:absolute;bottom:-10px;left:50%;width:70%;height:14px;margin-left:-35%;
+  background:rgba(107,74,56,.14);border-radius:50%;
+}
+.gc-root{transform-origin:50% 96%;transition:transform .5s var(--ease);will-change:transform}
+.gc-head{transition:transform .45s var(--ease)}
+.gc-pupil{transition:transform .09s linear}
+.gc-eye-open{transform-box:fill-box;transform-origin:center;transition:transform .1s}
+.gc-lid,.gc-mouth-sad,.gc-mouth-happy{display:none}
+
+#authGate[data-cat-state="sad"] .gc-eye-open,
+#authGate[data-cat-state="happy"] .gc-eye-open{display:none}
+#authGate[data-cat-state="sad"] .gc-lid-sad,
+#authGate[data-cat-state="happy"] .gc-lid-happy{display:block}
+#authGate[data-cat-state="sad"] .gc-mouth,
+#authGate[data-cat-state="happy"] .gc-mouth{display:none}
+#authGate[data-cat-state="sad"] .gc-mouth-sad,
+#authGate[data-cat-state="happy"] .gc-mouth-happy{display:block}
+
+.gc-cat.blink .gc-eye-open{transform:scaleY(.12)}
+
+/* 回避：集体向左倾（远离右边的表单） */
+#authGate[data-cat-state="avoid"] .gc-root{transform:rotate(-9deg)}
+#authGate[data-cat-state="avoid"] .gc-cat:nth-child(2) .gc-root{transform:rotate(-13deg) translateY(4px)}
+#authGate[data-cat-state="sad"] .gc-root{transform:translateY(3px)}
+
+/* 飞扑猫常驻浮动 */
+.gc-cat.pounce .gc-pose{animation:gcFloat 2.8s ease-in-out infinite}
+@keyframes gcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+#authGate[data-cat-state="happy"] .gc-ball{animation:gcBall .55s cubic-bezier(.34,1.3,.5,1) 2}
+@keyframes gcBall{0%,100%{transform:translateY(0)}45%{transform:translateY(-26px)}}
+#authGate[data-cat-state="happy"] .gc-cat.lift .gc-root{animation:gcCheer .42s ease-in-out 2}
+@keyframes gcCheer{0%,100%{transform:translateY(0)}50%{transform:translateY(-11px)}}
+
+/* 台词气泡 */
+.gc-bubble{
+  position:absolute;top:-30px;left:50%;transform:translateX(-50%) scale(.6);
+  padding:5px 11px;border-radius:13px;background:#fff;border:2.5px solid #6b4a38;
+  font-size:12px;font-weight:700;color:#6b4a38;white-space:nowrap;opacity:0;pointer-events:none;
+  transition:opacity .22s,transform .3s cubic-bezier(.34,1.4,.5,1);
+}
+.gc-bubble::after{
+  content:'';position:absolute;left:50%;bottom:-8px;width:11px;height:11px;margin-left:-5.5px;
+  background:#fff;border-right:2.5px solid #6b4a38;border-bottom:2.5px solid #6b4a38;
+  transform:rotate(45deg) skew(8deg,8deg);
+}
+.gc-bubble.show{opacity:1;transform:translateX(-50%) scale(1)}
+
+/* ── 右：表单（复用原卡片内部的样式，只换外壳） ── */
+.gate-shell .auth-gate-card{
+  flex:0 0 460px;width:auto;max-width:none;margin:0;
+  padding:46px 44px 34px;border:0;border-radius:0;background:transparent;box-shadow:none;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.gate-shell .auth-gate-head{margin-bottom:24px}
+.gate-shell .auth-gate-card.shake{animation:gateShake .5s}
+@keyframes gateShake{
+  10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}
+  30%,50%,70%{transform:translateX(-6px)}40%,60%{transform:translateX(6px)}
+}
+.gate-pw-wrap{position:relative}
+.gate-pw-wrap input{padding-right:44px}
+.gate-eye{
+  position:absolute;right:7px;top:50%;transform:translateY(-50%);
+  width:34px;height:34px;border:0;border-radius:8px;background:none;color:var(--muted);
+  cursor:pointer;display:grid;place-items:center;transition:background .15s,color .15s;
+}
+.gate-eye:hover{background:var(--ov080);color:var(--text)}
+.gate-eye svg{width:19px;height:19px}
+.gate-cat-note{
+  display:flex;align-items:center;gap:7px;margin:16px 0 0;
+  font-size:11.5px;color:var(--muted);
+}
+.gate-cat-note .gc-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex:none}
+
+@media (max-width:920px){
+  .gate-shell{min-height:0;border-radius:20px}
+  .gate-stage{display:none}
+  .gate-shell .auth-gate-card{flex:1;padding:28px 22px 22px}
+}
+@media (prefers-reduced-motion:reduce){
+  .gc-root,.gc-head,.gc-pupil,.gc-eye-open,.gc-bubble{transition:none!important}
+  .gc-cat.pounce .gc-pose,#authGate[data-cat-state="happy"] .gc-ball{animation:none!important}
+}
