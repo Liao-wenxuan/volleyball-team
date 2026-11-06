@@ -30,24 +30,24 @@
 // v22: 用户管理（角色/邀请码/成员管理/改密码/切队）
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v49';
+const VERSION = 'v50';
 const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',
   './index.html',
-  './style.css?v=v49',
-  './app.js?v=v49',
-  './cloud.js?v=v49',
-  './qr.js?v=v49',
-  './card.js?v=v49',
-  './share.js?v=v49',
-  './manifest.webmanifest?v=v49',
-  './assets/icon-192.png?v=v49',
-  './assets/icon-512.png?v=v49',
-  './assets/maskable-512.png?v=v49',
-  './assets/loader-pose1.png?v=v49',
-  './assets/loader-pose2.png?v=v49',
-  './assets/loader-pose3.png?v=v49'
+  './style.css?v=v50',
+  './app.js?v=v50',
+  './cloud.js?v=v50',
+  './qr.js?v=v50',
+  './card.js?v=v50',
+  './share.js?v=v50',
+  './manifest.webmanifest?v=v50',
+  './assets/icon-192.png?v=v50',
+  './assets/icon-512.png?v=v50',
+  './assets/maskable-512.png?v=v50',
+  './assets/loader-pose1.png?v=v50',
+  './assets/loader-pose2.png?v=v50',
+  './assets/loader-pose3.png?v=v50'
 ];
 
 self.addEventListener('install', (e) => {
