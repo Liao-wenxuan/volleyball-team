@@ -7,13 +7,13 @@
 <meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%237b6cff'/%3E%3Crect%20x='12'%20y='12'%20width='40'%20height='40'%20rx='4'%20fill='none'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M12%2028h40'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M32%2012v40'%20stroke='%23fff'%20stroke-width='3'%20stroke-opacity='.55'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#05070f">
-<link rel="manifest" href="manifest.webmanifest?v=v57">
-<link rel="apple-touch-icon" href="assets/icon-180.png?v=v57">
+<link rel="manifest" href="manifest.webmanifest?v=v58">
+<link rel="apple-touch-icon" href="assets/icon-180.png?v=v58">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="排球队">
-<link rel="stylesheet" href="style.css?v=v57">
+<link rel="stylesheet" href="style.css?v=v58">
 <style>
 /* ── 昼夜基调 token：加载页与登录页共用。默认随时间（19:00–06:00 夜，见下方脚本），
    登录页的星球开关可手动切换，选择记在 sessionStorage（本标签页内有效，
@@ -23,23 +23,22 @@ html{
   --g-ink:#111111;--g-ink2:#666666;--g-ink3:#9a9a9a;
   --g-line:rgba(0,0,0,.13);--g-line-strong:rgba(0,0,0,.28);
   --g-field:#ffffff;--g-hover:rgba(0,0,0,.05);--g-focus:rgba(0,0,0,.10);
-  --cat-line:#161616;--cat-body:#ffffff;--cat-fur:#e4e4e4;--cat-soft:#cfcfcf;
-  --cat-ball:#161616;--cat-ball-panel:#ffffff;--cat-blush:rgba(0,0,0,.07);
-  --cat-shadow:rgba(0,0,0,.14);--cat-bubble-bg:#ffffff;
+  /* 猫保持原配色（v58 用户拍板）：棕墨线 + 白猫身 + 浅棕毛 + 蓝黄排球 + 粉腮红，
+     昼夜同一套值——黑白的是界面，不是猫。 */
+  --cat-line:#6b4a38;--cat-body:#ffffff;--cat-fur:#c9a37e;--cat-soft:#c9b8a0;
+  --cat-blue:#5b9bd5;--cat-ball:#f5b32e;--cat-ball-panel:#2b5db8;--cat-blush:#f0a0a0;
+  --cat-shadow:rgba(107,74,56,.14);--cat-bubble-bg:#ffffff;
 }
 html[data-daynight="night"]{
   --g-bg:#000000;--g-bg-2:#0e0e0e;
   --g-ink:#f2f2f2;--g-ink2:#a6a6a6;--g-ink3:#7d7d7d;
   --g-line:rgba(255,255,255,.14);--g-line-strong:rgba(255,255,255,.32);
   --g-field:#141414;--g-hover:rgba(255,255,255,.07);--g-focus:rgba(255,255,255,.14);
-  --cat-line:#f2f2f2;--cat-body:#151515;--cat-fur:#282828;--cat-soft:#3e3e3e;
-  --cat-ball:#f2f2f2;--cat-ball-panel:#111111;--cat-blush:rgba(255,255,255,.16);
-  --cat-shadow:rgba(255,255,255,.10);--cat-bubble-bg:#151515;
 }
 
 /* ── 首屏加载动画：必须在首帧前生效，所以内联在 head，不依赖 style.css ──
-   v57 起黑白配色：昼=白底黑字，夜=黑底白字，随时间自动切换；
-   猫贴纸用 grayscale 黑白化，白天靠灰阶和投影成形，夜里白猫直接浮出来。 */
+   v58 界面黑白、猫保持原色：贴纸本身就是透明底彩绘，白底黑底直接都能用，
+   夜间靠白色柔光把轮廓从黑底上托出来。 */
 .boot-loader{position:fixed;inset:0;z-index:999;background:var(--g-bg,#fff);display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:18px;
   transition:opacity .45s ease,transform .45s ease,background-color .4s ease}
@@ -56,10 +55,10 @@ html[data-daynight="night"] .boot-stage::before{
 .boot-stage:not(.boot-ready){opacity:0;transition:opacity .2s}
 .boot-stage.boot-ready{opacity:1}
 .boot-frame{position:absolute;inset:0;margin:auto;max-width:94%;max-height:94%;opacity:0;
-  filter:grayscale(1) contrast(1.06) drop-shadow(0 16px 26px rgba(0,0,0,.20));
+  filter:drop-shadow(0 16px 26px rgba(0,0,0,.20));
   animation:bootFrame 1.8s ease-in-out infinite}
 html[data-daynight="night"] .boot-frame{
-  filter:grayscale(1) contrast(1.06) drop-shadow(0 16px 26px rgba(255,255,255,.15))}
+  filter:drop-shadow(0 14px 24px rgba(255,255,255,.16))}
 .boot-frame:nth-child(1){opacity:1;animation-delay:0s}
 .boot-frame:nth-child(2){animation-delay:-.6s}
 .boot-frame:nth-child(3){animation-delay:-1.2s}
@@ -115,9 +114,9 @@ setTimeout(function () {
 <body>
 <div class="boot-loader" id="bootLoader" aria-hidden="true">
   <div class="boot-stage" id="bootStage">
-    <img class="boot-frame" src="assets/loader-pose1.png?v=v57" alt="">
-    <img class="boot-frame" src="assets/loader-pose2.png?v=v57" alt="">
-    <img class="boot-frame" src="assets/loader-pose3.png?v=v57" alt="">
+    <img class="boot-frame" src="assets/loader-pose1.png?v=v58" alt="">
+    <img class="boot-frame" src="assets/loader-pose2.png?v=v58" alt="">
+    <img class="boot-frame" src="assets/loader-pose3.png?v=v58" alt="">
   </div>
   <div class="boot-brand">信工院排球队</div>
   <div class="boot-dots"><span></span><span></span><span></span></div>
@@ -1199,9 +1198,9 @@ setTimeout(function () {
   sync();
 })();
 </script>
-<script src="cloud.js?v=v57"></script>
+<script src="cloud.js?v=v58"></script>
 <!-- qr / xlsx / card / share / playercard 改为按需加载（app.js 的 ensureMod），
      冷启动不再跟着下载。单文件版由 build.mjs 内联到 app.js 之前。 -->
-<script src="app.js?v=v57"></script>
+<script src="app.js?v=v58"></script>
 </body>
 </html>

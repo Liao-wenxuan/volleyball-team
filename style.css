@@ -2699,10 +2699,11 @@ body.sv-mode > *:not(#shareView){display:none !important}
 .card-preview{display:block;width:100%;max-width:360px;margin:0 auto;border-radius:14px;border:1px solid var(--line)}
 
 /* ═══════════════════════════════════════════════════════════
-   登录门禁 v2：排球猫（r52）→ v57 黑白配色
-   左边是球队主场（极简黑白球场 + 三只跟手猫），右边是登录表单。
+   登录门禁 v2：排球猫（r52）→ v58 界面黑白、猫保持原色
+   左边是球队主场（极简黑白球场 + 三只原配色跟手猫），右边是登录表单。
    昼夜基调由 html[data-daynight] 驱动（token 定义在 index.html head，
-   加载页与登录页共用）：昼=白底黑墨线猫，夜=黑底白墨线猫。
+   加载页与登录页共用）：昼=白底，夜=黑底；猫昼夜都是原配色，
+   夜间靠轮廓柔光从黑底里托出来。
    猫的状态机与门禁逻辑解耦：本区块只管长相，交互在 index.html 末尾的
    catGate 脚本里，靠 #authGate[data-cat-state] 驱动表情与姿势。
    注意：类名统一 gc- 前缀，别和 .card-wrap / .cat-* 撞车。
@@ -2779,25 +2780,28 @@ html[data-daynight="night"] .gc-floor{
 }
 .gc-cat{position:relative;z-index:1;width:31%;max-width:184px;display:flex;justify-content:center}
 .gc-cat svg{width:100%;height:auto;display:block;overflow:visible}
-/* 猫的黑白反转：SVG 里写死过的暖棕色全部由属性选择器接管上色——
-   白天 = 白猫身 + 黑墨线，夜晚整体反转成黑猫身 + 白墨线
-   （不反转的话，夜里黑线画在黑底上，尾巴胡须直接隐形） */
-#authGate [stroke="#6b4a38"]{stroke:var(--cat-line,#161616)}
-#authGate [fill="#6b4a38"]{fill:var(--cat-line,#161616)}
+/* 猫保持原配色（v58 用户拍板：黑白的是界面，不是猫）。SVG 里写死的颜色
+   仍走属性选择器接管到 --cat-* token，但昼夜两套值相同——保留这层间接
+   是为了将来要调色只动 token，不用满 SVG 找色号。 */
+#authGate [stroke="#6b4a38"]{stroke:var(--cat-line,#6b4a38)}
+#authGate [fill="#6b4a38"]{fill:var(--cat-line,#6b4a38)}
 #authGate [fill="#fff"]{fill:var(--cat-body,#fff)}
-#authGate [fill="#c9a37e"]{fill:var(--cat-fur,#e4e4e4)}
-#authGate [stroke="#c9b8a0"]{stroke:var(--cat-soft,#cfcfcf)}
-#authGate [fill="#5b9bd5"]{fill:var(--cat-line,#161616)}
-#authGate [stroke="#5b9bd5"]{stroke:var(--cat-line,#161616)}
-#authGate [fill="#f0a0a0"]{fill:var(--cat-blush,rgba(0,0,0,.07))}
-#authGate [fill="#f5b32e"]{fill:var(--cat-ball,#161616)}
-#authGate [fill="#2b5db8"]{fill:var(--cat-ball-panel,#fff)}
-/* 墨线颜色跟昼夜走，但别碰掉瞳孔/头/身体既有的 transform 过渡 */
+#authGate [fill="#c9a37e"]{fill:var(--cat-fur,#c9a37e)}
+#authGate [stroke="#c9b8a0"]{stroke:var(--cat-soft,#c9b8a0)}
+#authGate [fill="#5b9bd5"]{fill:var(--cat-blue,#5b9bd5)}
+#authGate [stroke="#5b9bd5"]{stroke:var(--cat-blue,#5b9bd5)}
+#authGate [fill="#f0a0a0"]{fill:var(--cat-blush,#f0a0a0)}
+#authGate [fill="#f5b32e"]{fill:var(--cat-ball,#f5b32e)}
+#authGate [fill="#2b5db8"]{fill:var(--cat-ball-panel,#2b5db8)}
+/* 夜间黑底上给猫一圈白色柔光，把白猫身轮廓从纯黑里托出来（不改猫本身颜色） */
+html[data-daynight="night"] .gc-cat svg{
+  filter:drop-shadow(0 6px 16px rgba(255,255,255,.14))}
+/* 颜色过渡保留（token 万一再调时平滑），不碰瞳孔/头/身体既有的 transform 过渡 */
 #authGate .gc-cat :not(.gc-pupil):not(.gc-head):not(.gc-root):not(.gc-eye-open):not(.gc-pose){
   transition:fill .4s ease,stroke .4s ease}
 .gc-shadow{
   position:absolute;bottom:-10px;left:50%;width:70%;height:14px;margin-left:-35%;
-  background:var(--cat-shadow,rgba(0,0,0,.14));border-radius:50%;
+  background:var(--cat-shadow,rgba(107,74,56,.14));border-radius:50%;
   transition:background .4s ease;
 }
 .gc-root{transform-origin:50% 96%;transition:transform .5s var(--ease);will-change:transform}
@@ -2834,15 +2838,15 @@ html[data-daynight="night"] .gc-floor{
 .gc-bubble{
   position:absolute;top:-30px;left:50%;transform:translateX(-50%) scale(.6);
   padding:5px 11px;border-radius:13px;
-  background:var(--cat-bubble-bg,#fff);border:2.5px solid var(--cat-line,#161616);
-  font-size:12px;font-weight:700;color:var(--cat-line,#161616);white-space:nowrap;opacity:0;pointer-events:none;
+  background:var(--cat-bubble-bg,#fff);border:2.5px solid var(--cat-line,#6b4a38);
+  font-size:12px;font-weight:700;color:var(--cat-line,#6b4a38);white-space:nowrap;opacity:0;pointer-events:none;
   transition:opacity .22s,transform .3s cubic-bezier(.34,1.4,.5,1),
              background-color .4s ease,border-color .4s ease,color .4s ease;
 }
 .gc-bubble::after{
   content:'';position:absolute;left:50%;bottom:-8px;width:11px;height:11px;margin-left:-5.5px;
-  background:var(--cat-bubble-bg,#fff);border-right:2.5px solid var(--cat-line,#161616);
-  border-bottom:2.5px solid var(--cat-line,#161616);
+  background:var(--cat-bubble-bg,#fff);border-right:2.5px solid var(--cat-line,#6b4a38);
+  border-bottom:2.5px solid var(--cat-line,#6b4a38);
   transform:rotate(45deg) skew(8deg,8deg);
 }
 .gc-bubble.show{opacity:1;transform:translateX(-50%) scale(1)}

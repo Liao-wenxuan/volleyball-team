@@ -2713,10 +2713,11 @@ body.sv-mode > *:not(#shareView){display:none !important}
 .card-preview{display:block;width:100%;max-width:360px;margin:0 auto;border-radius:14px;border:1px solid var(--line)}
 
 /* ═══════════════════════════════════════════════════════════
-   登录门禁 v2：排球猫（r52）→ v57 黑白配色
-   左边是球队主场（极简黑白球场 + 三只跟手猫），右边是登录表单。
+   登录门禁 v2：排球猫（r52）→ v58 界面黑白、猫保持原色
+   左边是球队主场（极简黑白球场 + 三只原配色跟手猫），右边是登录表单。
    昼夜基调由 html[data-daynight] 驱动（token 定义在 index.html head，
-   加载页与登录页共用）：昼=白底黑墨线猫，夜=黑底白墨线猫。
+   加载页与登录页共用）：昼=白底，夜=黑底；猫昼夜都是原配色，
+   夜间靠轮廓柔光从黑底里托出来。
    猫的状态机与门禁逻辑解耦：本区块只管长相，交互在 index.html 末尾的
    catGate 脚本里，靠 #authGate[data-cat-state] 驱动表情与姿势。
    注意：类名统一 gc- 前缀，别和 .card-wrap / .cat-* 撞车。
@@ -2793,25 +2794,28 @@ html[data-daynight="night"] .gc-floor{
 }
 .gc-cat{position:relative;z-index:1;width:31%;max-width:184px;display:flex;justify-content:center}
 .gc-cat svg{width:100%;height:auto;display:block;overflow:visible}
-/* 猫的黑白反转：SVG 里写死过的暖棕色全部由属性选择器接管上色——
-   白天 = 白猫身 + 黑墨线，夜晚整体反转成黑猫身 + 白墨线
-   （不反转的话，夜里黑线画在黑底上，尾巴胡须直接隐形） */
-#authGate [stroke="#6b4a38"]{stroke:var(--cat-line,#161616)}
-#authGate [fill="#6b4a38"]{fill:var(--cat-line,#161616)}
+/* 猫保持原配色（v58 用户拍板：黑白的是界面，不是猫）。SVG 里写死的颜色
+   仍走属性选择器接管到 --cat-* token，但昼夜两套值相同——保留这层间接
+   是为了将来要调色只动 token，不用满 SVG 找色号。 */
+#authGate [stroke="#6b4a38"]{stroke:var(--cat-line,#6b4a38)}
+#authGate [fill="#6b4a38"]{fill:var(--cat-line,#6b4a38)}
 #authGate [fill="#fff"]{fill:var(--cat-body,#fff)}
-#authGate [fill="#c9a37e"]{fill:var(--cat-fur,#e4e4e4)}
-#authGate [stroke="#c9b8a0"]{stroke:var(--cat-soft,#cfcfcf)}
-#authGate [fill="#5b9bd5"]{fill:var(--cat-line,#161616)}
-#authGate [stroke="#5b9bd5"]{stroke:var(--cat-line,#161616)}
-#authGate [fill="#f0a0a0"]{fill:var(--cat-blush,rgba(0,0,0,.07))}
-#authGate [fill="#f5b32e"]{fill:var(--cat-ball,#161616)}
-#authGate [fill="#2b5db8"]{fill:var(--cat-ball-panel,#fff)}
-/* 墨线颜色跟昼夜走，但别碰掉瞳孔/头/身体既有的 transform 过渡 */
+#authGate [fill="#c9a37e"]{fill:var(--cat-fur,#c9a37e)}
+#authGate [stroke="#c9b8a0"]{stroke:var(--cat-soft,#c9b8a0)}
+#authGate [fill="#5b9bd5"]{fill:var(--cat-blue,#5b9bd5)}
+#authGate [stroke="#5b9bd5"]{stroke:var(--cat-blue,#5b9bd5)}
+#authGate [fill="#f0a0a0"]{fill:var(--cat-blush,#f0a0a0)}
+#authGate [fill="#f5b32e"]{fill:var(--cat-ball,#f5b32e)}
+#authGate [fill="#2b5db8"]{fill:var(--cat-ball-panel,#2b5db8)}
+/* 夜间黑底上给猫一圈白色柔光，把白猫身轮廓从纯黑里托出来（不改猫本身颜色） */
+html[data-daynight="night"] .gc-cat svg{
+  filter:drop-shadow(0 6px 16px rgba(255,255,255,.14))}
+/* 颜色过渡保留（token 万一再调时平滑），不碰瞳孔/头/身体既有的 transform 过渡 */
 #authGate .gc-cat :not(.gc-pupil):not(.gc-head):not(.gc-root):not(.gc-eye-open):not(.gc-pose){
   transition:fill .4s ease,stroke .4s ease}
 .gc-shadow{
   position:absolute;bottom:-10px;left:50%;width:70%;height:14px;margin-left:-35%;
-  background:var(--cat-shadow,rgba(0,0,0,.14));border-radius:50%;
+  background:var(--cat-shadow,rgba(107,74,56,.14));border-radius:50%;
   transition:background .4s ease;
 }
 .gc-root{transform-origin:50% 96%;transition:transform .5s var(--ease);will-change:transform}
@@ -2848,15 +2852,15 @@ html[data-daynight="night"] .gc-floor{
 .gc-bubble{
   position:absolute;top:-30px;left:50%;transform:translateX(-50%) scale(.6);
   padding:5px 11px;border-radius:13px;
-  background:var(--cat-bubble-bg,#fff);border:2.5px solid var(--cat-line,#161616);
-  font-size:12px;font-weight:700;color:var(--cat-line,#161616);white-space:nowrap;opacity:0;pointer-events:none;
+  background:var(--cat-bubble-bg,#fff);border:2.5px solid var(--cat-line,#6b4a38);
+  font-size:12px;font-weight:700;color:var(--cat-line,#6b4a38);white-space:nowrap;opacity:0;pointer-events:none;
   transition:opacity .22s,transform .3s cubic-bezier(.34,1.4,.5,1),
              background-color .4s ease,border-color .4s ease,color .4s ease;
 }
 .gc-bubble::after{
   content:'';position:absolute;left:50%;bottom:-8px;width:11px;height:11px;margin-left:-5.5px;
-  background:var(--cat-bubble-bg,#fff);border-right:2.5px solid var(--cat-line,#161616);
-  border-bottom:2.5px solid var(--cat-line,#161616);
+  background:var(--cat-bubble-bg,#fff);border-right:2.5px solid var(--cat-line,#6b4a38);
+  border-bottom:2.5px solid var(--cat-line,#6b4a38);
   transform:rotate(45deg) skew(8deg,8deg);
 }
 .gc-bubble.show{opacity:1;transform:translateX(-50%) scale(1)}
@@ -2893,7 +2897,8 @@ html[data-daynight="night"] .gc-floor{
    全部由 html[data-daynight] 的 --g-* token 驱动，切换走 .4s 过渡。
    （0,3,0) 压过站内 html[data-mode=light] 的 logo 规则——少一层
    html 类型选择器就是白爪画白底，r53 上线首小时真踩过。 */
-.gate-shell .auth-gate-card{
+/* 卡片底：#authGate 前缀压过 html[data-mode=light] .auth-gate-card{background:#fff}（(0,2,1)） */
+#authGate .auth-gate-card{
   position:relative;
   background:var(--g-bg-2,#f6f6f6);
   border-left:1px solid var(--g-line,rgba(0,0,0,.13));
@@ -2912,16 +2917,18 @@ html[data-daynight="night"] .gate-shell .auth-gate-head .auth-gate-logo{
 .gate-shell .auth-gate-head h1{color:var(--g-ink,#111);transition:color .4s ease}
 .gate-shell .auth-gate-head p{color:var(--g-ink2,#666);transition:color .4s ease}
 .gate-shell .field label{color:var(--g-ink2,#666);transition:color .4s ease}
-.gate-shell .field input,
-.gate-shell .gate-adv input{
+/* 输入框用 #authGate 前缀（ID 特异性）：站内 html[data-mode=light] .field input
+   是 (0,2,2)/(0,3,2)，.gate-shell 前缀的 (0,2,x) 压不住——v54 logo 白爪的同款坑 */
+#authGate .field input,
+#authGate .gate-adv input{
   background:var(--g-field,#fff);border-color:var(--g-line-strong,rgba(0,0,0,.28));
   color:var(--g-ink,#111);caret-color:var(--g-ink,#111);
   transition:background-color .4s ease,border-color .4s ease,color .4s ease;
 }
-.gate-shell .field input::placeholder,
-.gate-shell .gate-adv input::placeholder{color:var(--g-ink3,#9a9a9a)}
-.gate-shell .field input:focus,
-.gate-shell .gate-adv input:focus{
+#authGate .field input::placeholder,
+#authGate .gate-adv input::placeholder{color:var(--g-ink3,#9a9a9a)}
+#authGate .field input:focus,
+#authGate .gate-adv input:focus{
   border-color:var(--g-ink,#111);box-shadow:0 0 0 3px var(--g-focus,rgba(0,0,0,.10));
 }
 .gate-shell .gate-adv{color:var(--g-ink2,#666);transition:color .4s ease}
@@ -3051,23 +3058,22 @@ html{
   --g-ink:#111111;--g-ink2:#666666;--g-ink3:#9a9a9a;
   --g-line:rgba(0,0,0,.13);--g-line-strong:rgba(0,0,0,.28);
   --g-field:#ffffff;--g-hover:rgba(0,0,0,.05);--g-focus:rgba(0,0,0,.10);
-  --cat-line:#161616;--cat-body:#ffffff;--cat-fur:#e4e4e4;--cat-soft:#cfcfcf;
-  --cat-ball:#161616;--cat-ball-panel:#ffffff;--cat-blush:rgba(0,0,0,.07);
-  --cat-shadow:rgba(0,0,0,.14);--cat-bubble-bg:#ffffff;
+  /* 猫保持原配色（v58 用户拍板）：棕墨线 + 白猫身 + 浅棕毛 + 蓝黄排球 + 粉腮红，
+     昼夜同一套值——黑白的是界面，不是猫。 */
+  --cat-line:#6b4a38;--cat-body:#ffffff;--cat-fur:#c9a37e;--cat-soft:#c9b8a0;
+  --cat-blue:#5b9bd5;--cat-ball:#f5b32e;--cat-ball-panel:#2b5db8;--cat-blush:#f0a0a0;
+  --cat-shadow:rgba(107,74,56,.14);--cat-bubble-bg:#ffffff;
 }
 html[data-daynight="night"]{
   --g-bg:#000000;--g-bg-2:#0e0e0e;
   --g-ink:#f2f2f2;--g-ink2:#a6a6a6;--g-ink3:#7d7d7d;
   --g-line:rgba(255,255,255,.14);--g-line-strong:rgba(255,255,255,.32);
   --g-field:#141414;--g-hover:rgba(255,255,255,.07);--g-focus:rgba(255,255,255,.14);
-  --cat-line:#f2f2f2;--cat-body:#151515;--cat-fur:#282828;--cat-soft:#3e3e3e;
-  --cat-ball:#f2f2f2;--cat-ball-panel:#111111;--cat-blush:rgba(255,255,255,.16);
-  --cat-shadow:rgba(255,255,255,.10);--cat-bubble-bg:#151515;
 }
 
 /* ── 首屏加载动画：必须在首帧前生效，所以内联在 head，不依赖 style.css ──
-   v57 起黑白配色：昼=白底黑字，夜=黑底白字，随时间自动切换；
-   猫贴纸用 grayscale 黑白化，白天靠灰阶和投影成形，夜里白猫直接浮出来。 */
+   v58 界面黑白、猫保持原色：贴纸本身就是透明底彩绘，白底黑底直接都能用，
+   夜间靠白色柔光把轮廓从黑底上托出来。 */
 .boot-loader{position:fixed;inset:0;z-index:999;background:var(--g-bg,#fff);display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:18px;
   transition:opacity .45s ease,transform .45s ease,background-color .4s ease}
@@ -3084,10 +3090,10 @@ html[data-daynight="night"] .boot-stage::before{
 .boot-stage:not(.boot-ready){opacity:0;transition:opacity .2s}
 .boot-stage.boot-ready{opacity:1}
 .boot-frame{position:absolute;inset:0;margin:auto;max-width:94%;max-height:94%;opacity:0;
-  filter:grayscale(1) contrast(1.06) drop-shadow(0 16px 26px rgba(0,0,0,.20));
+  filter:drop-shadow(0 16px 26px rgba(0,0,0,.20));
   animation:bootFrame 1.8s ease-in-out infinite}
 html[data-daynight="night"] .boot-frame{
-  filter:grayscale(1) contrast(1.06) drop-shadow(0 16px 26px rgba(255,255,255,.15))}
+  filter:drop-shadow(0 14px 24px rgba(255,255,255,.16))}
 .boot-frame:nth-child(1){opacity:1;animation-delay:0s}
 .boot-frame:nth-child(2){animation-delay:-.6s}
 .boot-frame:nth-child(3){animation-delay:-1.2s}
