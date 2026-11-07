@@ -2237,6 +2237,37 @@ html[data-mode="light"] .user-chip:hover .u-info strong{
 .cloud-tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--ov3,rgba(255,255,255,.05));padding:4px;border-radius:12px}
 .cloud-tab{flex:1;padding:9px 0;border:none;border-radius:9px;background:transparent;color:var(--text-2,#aab);font-size:14px;cursor:pointer;transition:.18s}
 .cloud-tab.on{background:var(--violet);color:#fff;font-weight:600}
+/* ══════════ 进站转场：刷子抹过（v62） ══════════
+   黑白门禁 → 暖棕系统的「切换点」全靠这一层抹平：
+   .gw-sheet 是一张 200vw 宽的大纸，初始右边缘正好贴着屏幕左边缘；
+   推 101vw 整页盖满（此刻 JS 才收门禁），再推到 302vw 左边缘才离场。
+   同一方向连续推，所以「盖住 → 露出」读起来是一个动作，不是两段动画。
+   .gw-head 贴在纸的右边缘，是刷头：透明 → 主色 → 深主色的竖向渐变，
+   后面接一层极淡的斜向条纹当毛笔飞白，免得看起来像一块几何色块。
+   配色不在 CSS 里写死：JS 开跑时从当前主题读 --bg / --violet / --violet-rgb，
+   换主题（含夜间黑白门禁）自动跟；读不到才用排球主题兜底。
+   三根柱子：①只动 transform，不碰 opacity/filter；②pointer-events:none 全程不挡点击；
+   ③一次性节点，跑完摘 class，不在 DOM 里留一层看不见的遮罩。 */
+.gate-wipe{position:fixed;inset:0;z-index:210;pointer-events:none;overflow:hidden;
+  display:none;--gw-bg:#faf6ee;--gw-ac:#b4703f;--gw-ac2:#8a4f22;--gw-ac-rgb:180,112,63}
+.gate-wipe.on{display:block}
+.gw-sheet{position:absolute;top:0;bottom:0;left:-200vw;width:200vw;
+  transform:translate3d(0,0,0);will-change:transform;
+  background:linear-gradient(90deg,rgba(0,0,0,0) 0,var(--gw-bg) 5%,var(--gw-bg) 100%);
+  box-shadow:0 0 70px rgba(0,0,0,.12)}
+.gw-head{position:absolute;top:-6%;bottom:-6%;right:0;width:130px;display:block;
+  box-shadow:14px 0 38px -8px rgba(0,0,0,.28);
+  background:linear-gradient(90deg,
+    rgba(var(--gw-ac-rgb),0) 0,
+    rgba(var(--gw-ac-rgb),.24) 34%,
+    var(--gw-ac) 78%,
+    var(--gw-ac2) 100%)}
+.gw-head::before{content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(94deg,rgba(255,255,255,.09) 0 1px,rgba(255,255,255,0) 1px 6px)}
+.gw-head::after{content:"";position:absolute;right:0;top:0;bottom:0;width:2px;
+  background:var(--gw-ac2);opacity:.85}
+@media (prefers-reduced-motion: reduce){.gate-wipe{display:none!important}}
+
 /* 登录门禁：盖住整个应用，先登录再谈数据。
    r53：遮罩固定为暖米纸感，不跟主题——门禁是「进站大厅」，大厅就是奶油色的，
    冷紫光晕和左边的奶油球场根本不是一个球队来的。 */
@@ -3890,6 +3921,79 @@ setTimeout(function () {
   </div>
  </div><!-- /.gate-shell -->
 </div>
+
+<!-- 进站转场（v62）：门禁是黑白世界、系统内部是暖棕，硬切看着像窜台。
+     这里用一把「系统配色的刷子」把整页刷走：刷头压过去的每一帧都盖在门禁上，
+     盖满的那一帧才把门禁收掉（底下早已是渲染完的系统界面），刷身再扫出画面。
+     于是用户看到的最后一帧本身就是系统配色，中间没有「切换点」。
+     配色在开跑时从 --bg / --violet / --violet-rgb 读，换主题自动跟。 -->
+<div class="gate-wipe" id="gateWipe" aria-hidden="true">
+  <div class="gw-sheet"><i class="gw-head"></i></div>
+</div>
+<script>
+/* 进站转场：刷子抹过（v62）。
+   用法：window.gateWipe.run(commit) —— commit 在整页被盖满的那一帧执行（收门禁），
+   之后刷子继续刷出画面，露出的是系统界面。返回 Promise；重复调用只跑一次。
+   动画是锦上添花，登录是主流程：commit 包 try/catch，再挂一个 1.4s 兜底，
+   任何异常（切后台让 rAF 停摆等）都不许把遮罩留在屏幕上。 */
+(function () {
+  var el = document.getElementById('gateWipe');
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var running = null;
+
+  function commitSafely(commit) {
+    try { commit && commit(); } catch (e) { console.error('[gateWipe] commit failed', e); }
+  }
+
+  window.gateWipe = {
+    run: function (commit) {
+      if (running) return running;
+      if (!el || reduced) { commitSafely(commit); return Promise.resolve(); }
+
+      var sheet = el.querySelector('.gw-sheet');
+      var cs = getComputedStyle(document.documentElement);
+      var bg = cs.getPropertyValue('--bg').trim();
+      var ac = cs.getPropertyValue('--violet').trim();
+      var ac2 = cs.getPropertyValue('--violet-deep').trim();
+      var acRgb = cs.getPropertyValue('--violet-rgb').trim();
+      if (bg) el.style.setProperty('--gw-bg', bg);
+      if (ac) el.style.setProperty('--gw-ac', ac);
+      if (ac2) el.style.setProperty('--gw-ac2', ac2);
+      if (acRgb) el.style.setProperty('--gw-ac-rgb', acRgb);
+
+      el.classList.add('on');
+      running = new Promise(function (resolve) {
+        var done = false;
+        function finish() {
+          if (done) return;
+          done = true;
+          el.classList.remove('on');
+          sheet.style.transition = '';
+          sheet.style.transform = '';
+          running = null;
+          resolve();
+        }
+        // 强制回流：sheet 刚从 display:none 变成 block，浏览器还没有它的初始态，
+        // 不回流就直接设 transform 会把过渡跳成「瞬移」（实测会）。回流之后
+        // 初始 transform 已被计算过，紧接着设终值才能真的动起来。
+        void sheet.offsetWidth;
+        // 第一段：刷子进画面（右边缘从屏幕左边缘推到盖满）
+        sheet.style.transition = 'transform .26s cubic-bezier(.55,.06,.3,1)';
+        sheet.style.transform = 'translate3d(101vw,0,0)';
+        // 盖满的那一帧：收门禁，然后同一把刷子不停顿继续刷出去
+        setTimeout(function () {
+          commitSafely(commit);
+          sheet.style.transition = 'transform .36s cubic-bezier(.6,.02,.34,1)';
+          sheet.style.transform = 'translate3d(302vw,0,0)';
+          setTimeout(finish, 400);
+        }, 268);
+        setTimeout(finish, 1400);
+      });
+      return running;
+    }
+  };
+})();
+</script>
 <script>
 /* 星球开关 → 昼夜基调：勾选 = 白天。选择记 sessionStorage（本标签页有效，
    新开访问恢复跟时间走），加载页与登录页共用同一 dataset，所以两边永远同色。 */
@@ -4381,11 +4485,25 @@ setTimeout(function () {
     }
   }
 
+  /* 收门禁。门禁要是正显示着，就走一次「刷子抹过」转场（index.html 的 gateWipe）：
+     黑白门禁被系统配色刷走，露出来的已经是系统界面——没有配色硬切的那一下。
+     门禁本来就不可见时（刷新时 head 已打过 gate-pass、或已经收过）不进转场，
+     否则每次刷新都会莫名其妙刷一下。 */
   function hideGate() {
     const g = document.getElementById('authGate');
-    if (!g) return;
-    g.hidden = true;
-    document.documentElement.classList.add('gate-pass');
+    if (!g) return Promise.resolve();
+    const html = document.documentElement;
+    const commit = () => { g.hidden = true; html.classList.add('gate-pass'); };
+    const visible = !g.hidden && !html.classList.contains('gate-pass') && g.getClientRects().length > 0;
+    if (!visible || !window.gateWipe) { commit(); return Promise.resolve(); }
+    return window.gateWipe.run(commit);
+  }
+
+  /* 门禁 → 系统：猫先欢呼一下，再让刷子把门禁刷走。
+     两段都是锦上添花，任何一步失败都不能拦住进站。 */
+  async function enterApp() {
+    try { if (window.catGate) await window.catGate.cheer(); } catch (_) { /* 动画坏了也要进站 */ }
+    await hideGate();
   }
 
   /* 登录的唯一实现：门禁页和顶栏弹窗都调这里，避免两套逻辑走偏。
@@ -4414,9 +4532,11 @@ setTimeout(function () {
     await pullCore();
     await syncWeek(currentMondayKey(), true);
     paintCloudUI();
-    hideGate();
+    // 先渲染再揭幕：刷子扫出去露出来的第一帧就该是这套数据，
+    // 不能「揭开了还是登录前的空壳、下一帧才跳成真数据」。
     hooks.renderAll();
     startSyncLoop();
+    await enterApp();
     await offerImport(snap);
   }
 
@@ -4591,9 +4711,8 @@ setTimeout(function () {
           showForcePassword(password);
           return;
         }
-        // 门禁上的排球猫欢呼一下再收（index.html 的 catGate；没有就立即进站）。
-        // 动画是锦上添花，登录是主流程——它抛错也绝不能拦住进站。
-        try { if (window.catGate) await window.catGate.cheer(); } catch (_) {}
+        // 欢呼 + 转场已经在 finishLogin → enterApp 里跑过；这里只兜底收一次门禁
+        //（门禁已收起时是空操作，不会重放转场）。
         hideGate();
         hooks.toast(`已登录：${data.team.name}（${ROLE_LABEL[data.role] || data.role}）`);
       } catch (ex) {

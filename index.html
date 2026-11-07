@@ -7,13 +7,13 @@
 <meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%237b6cff'/%3E%3Crect%20x='12'%20y='12'%20width='40'%20height='40'%20rx='4'%20fill='none'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M12%2028h40'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M32%2012v40'%20stroke='%23fff'%20stroke-width='3'%20stroke-opacity='.55'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#05070f">
-<link rel="manifest" href="manifest.webmanifest?v=v61">
-<link rel="apple-touch-icon" href="assets/icon-180.png?v=v61">
+<link rel="manifest" href="manifest.webmanifest?v=v62">
+<link rel="apple-touch-icon" href="assets/icon-180.png?v=v62">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="排球队">
-<link rel="stylesheet" href="style.css?v=v61">
+<link rel="stylesheet" href="style.css?v=v62">
 <style>
 /* ── 昼夜基调 token：加载页与登录页共用。默认随时间（19:00–06:00 夜，见下方脚本），
    登录页的星球开关可手动切换，选择记在 sessionStorage（本标签页内有效，
@@ -114,9 +114,9 @@ setTimeout(function () {
 <body>
 <div class="boot-loader" id="bootLoader" aria-hidden="true">
   <div class="boot-stage" id="bootStage">
-    <img class="boot-frame" src="assets/loader-pose1.png?v=v61" alt="">
-    <img class="boot-frame" src="assets/loader-pose2.png?v=v61" alt="">
-    <img class="boot-frame" src="assets/loader-pose3.png?v=v61" alt="">
+    <img class="boot-frame" src="assets/loader-pose1.png?v=v62" alt="">
+    <img class="boot-frame" src="assets/loader-pose2.png?v=v62" alt="">
+    <img class="boot-frame" src="assets/loader-pose3.png?v=v62" alt="">
   </div>
   <div class="boot-brand">信工院排球队</div>
   <div class="boot-dots"><span></span><span></span><span></span></div>
@@ -855,6 +855,79 @@ setTimeout(function () {
   </div>
  </div><!-- /.gate-shell -->
 </div>
+
+<!-- 进站转场（v62）：门禁是黑白世界、系统内部是暖棕，硬切看着像窜台。
+     这里用一把「系统配色的刷子」把整页刷走：刷头压过去的每一帧都盖在门禁上，
+     盖满的那一帧才把门禁收掉（底下早已是渲染完的系统界面），刷身再扫出画面。
+     于是用户看到的最后一帧本身就是系统配色，中间没有「切换点」。
+     配色在开跑时从 --bg / --violet / --violet-rgb 读，换主题自动跟。 -->
+<div class="gate-wipe" id="gateWipe" aria-hidden="true">
+  <div class="gw-sheet"><i class="gw-head"></i></div>
+</div>
+<script>
+/* 进站转场：刷子抹过（v62）。
+   用法：window.gateWipe.run(commit) —— commit 在整页被盖满的那一帧执行（收门禁），
+   之后刷子继续刷出画面，露出的是系统界面。返回 Promise；重复调用只跑一次。
+   动画是锦上添花，登录是主流程：commit 包 try/catch，再挂一个 1.4s 兜底，
+   任何异常（切后台让 rAF 停摆等）都不许把遮罩留在屏幕上。 */
+(function () {
+  var el = document.getElementById('gateWipe');
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var running = null;
+
+  function commitSafely(commit) {
+    try { commit && commit(); } catch (e) { console.error('[gateWipe] commit failed', e); }
+  }
+
+  window.gateWipe = {
+    run: function (commit) {
+      if (running) return running;
+      if (!el || reduced) { commitSafely(commit); return Promise.resolve(); }
+
+      var sheet = el.querySelector('.gw-sheet');
+      var cs = getComputedStyle(document.documentElement);
+      var bg = cs.getPropertyValue('--bg').trim();
+      var ac = cs.getPropertyValue('--violet').trim();
+      var ac2 = cs.getPropertyValue('--violet-deep').trim();
+      var acRgb = cs.getPropertyValue('--violet-rgb').trim();
+      if (bg) el.style.setProperty('--gw-bg', bg);
+      if (ac) el.style.setProperty('--gw-ac', ac);
+      if (ac2) el.style.setProperty('--gw-ac2', ac2);
+      if (acRgb) el.style.setProperty('--gw-ac-rgb', acRgb);
+
+      el.classList.add('on');
+      running = new Promise(function (resolve) {
+        var done = false;
+        function finish() {
+          if (done) return;
+          done = true;
+          el.classList.remove('on');
+          sheet.style.transition = '';
+          sheet.style.transform = '';
+          running = null;
+          resolve();
+        }
+        // 强制回流：sheet 刚从 display:none 变成 block，浏览器还没有它的初始态，
+        // 不回流就直接设 transform 会把过渡跳成「瞬移」（实测会）。回流之后
+        // 初始 transform 已被计算过，紧接着设终值才能真的动起来。
+        void sheet.offsetWidth;
+        // 第一段：刷子进画面（右边缘从屏幕左边缘推到盖满）
+        sheet.style.transition = 'transform .26s cubic-bezier(.55,.06,.3,1)';
+        sheet.style.transform = 'translate3d(101vw,0,0)';
+        // 盖满的那一帧：收门禁，然后同一把刷子不停顿继续刷出去
+        setTimeout(function () {
+          commitSafely(commit);
+          sheet.style.transition = 'transform .36s cubic-bezier(.6,.02,.34,1)';
+          sheet.style.transform = 'translate3d(302vw,0,0)';
+          setTimeout(finish, 400);
+        }, 268);
+        setTimeout(finish, 1400);
+      });
+      return running;
+    }
+  };
+})();
+</script>
 <script>
 /* 星球开关 → 昼夜基调：勾选 = 白天。选择记 sessionStorage（本标签页有效，
    新开访问恢复跟时间走），加载页与登录页共用同一 dataset，所以两边永远同色。 */
@@ -1061,9 +1134,9 @@ setTimeout(function () {
   sync();
 })();
 </script>
-<script src="cloud.js?v=v61"></script>
+<script src="cloud.js?v=v62"></script>
 <!-- qr / xlsx / card / share / playercard 改为按需加载（app.js 的 ensureMod），
      冷启动不再跟着下载。单文件版由 build.mjs 内联到 app.js 之前。 -->
-<script src="app.js?v=v61"></script>
+<script src="app.js?v=v62"></script>
 </body>
 </html>

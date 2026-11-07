@@ -2223,6 +2223,37 @@ html[data-mode="light"] .user-chip:hover .u-info strong{
 .cloud-tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--ov3,rgba(255,255,255,.05));padding:4px;border-radius:12px}
 .cloud-tab{flex:1;padding:9px 0;border:none;border-radius:9px;background:transparent;color:var(--text-2,#aab);font-size:14px;cursor:pointer;transition:.18s}
 .cloud-tab.on{background:var(--violet);color:#fff;font-weight:600}
+/* ══════════ 进站转场：刷子抹过（v62） ══════════
+   黑白门禁 → 暖棕系统的「切换点」全靠这一层抹平：
+   .gw-sheet 是一张 200vw 宽的大纸，初始右边缘正好贴着屏幕左边缘；
+   推 101vw 整页盖满（此刻 JS 才收门禁），再推到 302vw 左边缘才离场。
+   同一方向连续推，所以「盖住 → 露出」读起来是一个动作，不是两段动画。
+   .gw-head 贴在纸的右边缘，是刷头：透明 → 主色 → 深主色的竖向渐变，
+   后面接一层极淡的斜向条纹当毛笔飞白，免得看起来像一块几何色块。
+   配色不在 CSS 里写死：JS 开跑时从当前主题读 --bg / --violet / --violet-rgb，
+   换主题（含夜间黑白门禁）自动跟；读不到才用排球主题兜底。
+   三根柱子：①只动 transform，不碰 opacity/filter；②pointer-events:none 全程不挡点击；
+   ③一次性节点，跑完摘 class，不在 DOM 里留一层看不见的遮罩。 */
+.gate-wipe{position:fixed;inset:0;z-index:210;pointer-events:none;overflow:hidden;
+  display:none;--gw-bg:#faf6ee;--gw-ac:#b4703f;--gw-ac2:#8a4f22;--gw-ac-rgb:180,112,63}
+.gate-wipe.on{display:block}
+.gw-sheet{position:absolute;top:0;bottom:0;left:-200vw;width:200vw;
+  transform:translate3d(0,0,0);will-change:transform;
+  background:linear-gradient(90deg,rgba(0,0,0,0) 0,var(--gw-bg) 5%,var(--gw-bg) 100%);
+  box-shadow:0 0 70px rgba(0,0,0,.12)}
+.gw-head{position:absolute;top:-6%;bottom:-6%;right:0;width:130px;display:block;
+  box-shadow:14px 0 38px -8px rgba(0,0,0,.28);
+  background:linear-gradient(90deg,
+    rgba(var(--gw-ac-rgb),0) 0,
+    rgba(var(--gw-ac-rgb),.24) 34%,
+    var(--gw-ac) 78%,
+    var(--gw-ac2) 100%)}
+.gw-head::before{content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(94deg,rgba(255,255,255,.09) 0 1px,rgba(255,255,255,0) 1px 6px)}
+.gw-head::after{content:"";position:absolute;right:0;top:0;bottom:0;width:2px;
+  background:var(--gw-ac2);opacity:.85}
+@media (prefers-reduced-motion: reduce){.gate-wipe{display:none!important}}
+
 /* 登录门禁：盖住整个应用，先登录再谈数据。
    r53：遮罩固定为暖米纸感，不跟主题——门禁是「进站大厅」，大厅就是奶油色的，
    冷紫光晕和左边的奶油球场根本不是一个球队来的。 */

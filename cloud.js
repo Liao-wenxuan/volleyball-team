@@ -282,11 +282,25 @@
     }
   }
 
+  /* 收门禁。门禁要是正显示着，就走一次「刷子抹过」转场（index.html 的 gateWipe）：
+     黑白门禁被系统配色刷走，露出来的已经是系统界面——没有配色硬切的那一下。
+     门禁本来就不可见时（刷新时 head 已打过 gate-pass、或已经收过）不进转场，
+     否则每次刷新都会莫名其妙刷一下。 */
   function hideGate() {
     const g = document.getElementById('authGate');
-    if (!g) return;
-    g.hidden = true;
-    document.documentElement.classList.add('gate-pass');
+    if (!g) return Promise.resolve();
+    const html = document.documentElement;
+    const commit = () => { g.hidden = true; html.classList.add('gate-pass'); };
+    const visible = !g.hidden && !html.classList.contains('gate-pass') && g.getClientRects().length > 0;
+    if (!visible || !window.gateWipe) { commit(); return Promise.resolve(); }
+    return window.gateWipe.run(commit);
+  }
+
+  /* 门禁 → 系统：猫先欢呼一下，再让刷子把门禁刷走。
+     两段都是锦上添花，任何一步失败都不能拦住进站。 */
+  async function enterApp() {
+    try { if (window.catGate) await window.catGate.cheer(); } catch (_) { /* 动画坏了也要进站 */ }
+    await hideGate();
   }
 
   /* 登录的唯一实现：门禁页和顶栏弹窗都调这里，避免两套逻辑走偏。
@@ -315,9 +329,11 @@
     await pullCore();
     await syncWeek(currentMondayKey(), true);
     paintCloudUI();
-    hideGate();
+    // 先渲染再揭幕：刷子扫出去露出来的第一帧就该是这套数据，
+    // 不能「揭开了还是登录前的空壳、下一帧才跳成真数据」。
     hooks.renderAll();
     startSyncLoop();
+    await enterApp();
     await offerImport(snap);
   }
 
@@ -492,9 +508,8 @@
           showForcePassword(password);
           return;
         }
-        // 门禁上的排球猫欢呼一下再收（index.html 的 catGate；没有就立即进站）。
-        // 动画是锦上添花，登录是主流程——它抛错也绝不能拦住进站。
-        try { if (window.catGate) await window.catGate.cheer(); } catch (_) {}
+        // 欢呼 + 转场已经在 finishLogin → enterApp 里跑过；这里只兜底收一次门禁
+        //（门禁已收起时是空操作，不会重放转场）。
         hideGate();
         hooks.toast(`已登录：${data.team.name}（${ROLE_LABEL[data.role] || data.role}）`);
       } catch (ex) {

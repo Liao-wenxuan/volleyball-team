@@ -14,6 +14,8 @@
  *
  * 发新版：把 VERSION 加一，跑 node build.mjs（会同步刷新 HTML 引用和 SHELL 的 ?v=N）。
  * ═══════════════════════════════════════════════════════════════ */
+// v62: 进站转场——登录成功后用系统配色的刷子把黑白门禁刷走，消掉「进门风格突变」
+// v61: 门禁排球猫改整体扁平（修头身断裂 / 夜景黑身子）；v58-v60 猫保持原色 + 去猴化 + 按参考贴纸重绘
 // v57: 进站动线黑白化——加载页/门禁昼夜 token（昼白夜黑，随时间），星球开关切登录页背景
 // v56: 页脚波浪跟主题走（原硬编码极光紫/青，r55 漏网）
 // v55: 新增「排球」主题（暖棕+球衣蓝，与门禁同色板）并设为默认；老库 aurora 一次性迁移
@@ -36,7 +38,7 @@
 // v22: 用户管理（角色/邀请码/成员管理/改密码/切队）
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v61';
+const VERSION = 'v62';
 const CACHE = `xgy-pwa-${VERSION}`;
 // qr / xlsx / card / share / playercard 是「分享、导出、表格导入」才用的按需模块，
 // 不放进预缓存——否则首次访问会在后台白下 37KB，抢本就稀薄的跨境带宽。
@@ -44,16 +46,16 @@ const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',
   './index.html',
-  './style.css?v=v61',
-  './app.js?v=v61',
-  './cloud.js?v=v61',
-  './manifest.webmanifest?v=v61',
-  './assets/icon-192.png?v=v61',
-  './assets/icon-512.png?v=v61',
-  './assets/maskable-512.png?v=v61',
-  './assets/loader-pose1.png?v=v61',
-  './assets/loader-pose2.png?v=v61',
-  './assets/loader-pose3.png?v=v61'
+  './style.css?v=v62',
+  './app.js?v=v62',
+  './cloud.js?v=v62',
+  './manifest.webmanifest?v=v62',
+  './assets/icon-192.png?v=v62',
+  './assets/icon-512.png?v=v62',
+  './assets/maskable-512.png?v=v62',
+  './assets/loader-pose1.png?v=v62',
+  './assets/loader-pose2.png?v=v62',
+  './assets/loader-pose3.png?v=v62'
 ];
 
 self.addEventListener('install', (e) => {
