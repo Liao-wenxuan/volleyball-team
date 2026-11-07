@@ -2213,11 +2213,13 @@ html[data-mode="light"] .user-chip:hover .u-info strong{
 .cloud-tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--ov3,rgba(255,255,255,.05));padding:4px;border-radius:12px}
 .cloud-tab{flex:1;padding:9px 0;border:none;border-radius:9px;background:transparent;color:var(--text-2,#aab);font-size:14px;cursor:pointer;transition:.18s}
 .cloud-tab.on{background:var(--violet);color:#fff;font-weight:600}
-/* 登录门禁：盖住整个应用，先登录再谈数据 */
+/* 登录门禁：盖住整个应用，先登录再谈数据。
+   r53：遮罩固定为暖米纸感，不跟主题——门禁是「进站大厅」，大厅就是奶油色的，
+   冷紫光晕和左边的奶油球场根本不是一个球队来的。 */
 .auth-gate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
   padding:24px;overflow:auto;
-  background:radial-gradient(900px 520px at 82% -12%,rgba(var(--violet-rgb),.20),transparent 62%),
-             radial-gradient(720px 460px at 6% 110%,rgba(var(--cyan-rgb),.13),transparent 60%),var(--bg)}
+  background:radial-gradient(900px 520px at 82% -12%,rgba(255,253,247,.95),transparent 62%),
+             radial-gradient(720px 460px at 6% 110%,rgba(176,136,94,.22),transparent 60%),#ece3d2}
 .auth-gate[hidden]{display:none!important}
 html.gate-pass .auth-gate{display:none!important}
 .auth-gate-card{width:100%;max-width:430px;padding:30px 30px 22px;border-radius:22px;
@@ -2697,9 +2699,9 @@ body.sv-mode > *:not(#shareView){display:none !important}
   display:flex;width:min(1120px,100%);
   min-height:min(700px,calc(100vh - 48px));
   border-radius:28px;overflow:hidden;
-  background:var(--solid-elev);
-  border:1px solid var(--ov110);
-  box-shadow:0 60px 120px -60px rgba(0,0,0,.95),0 0 0 1px rgba(255,255,255,.03) inset;
+  background:linear-gradient(180deg,#fdfaf4,#f8f2e6);
+  border:1px solid rgba(107,74,56,.18);
+  box-shadow:0 60px 120px -60px rgba(107,74,56,.55),0 24px 60px -30px rgba(107,74,56,.35);
 }
 
 /* ── 左：猫主场 ── */
@@ -2821,6 +2823,61 @@ body.sv-mode > *:not(#shareView){display:none !important}
 }
 .gate-cat-note .gc-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex:none}
 
+/* ── r53 右栏暖色统一：把冷紫 SaaS 表单拽进奶油球场 ──
+   右栏原来直接复用站内表单样式（明=白卡+紫按钮，暗=蓝黑卡），
+   和左边的手绘奶油球场拼在一起就是两拨人做的。以下全部在 .gate-shell
+   作用域内写死暖色，跟主题解耦——进站大厅不分明暗模式。
+   色板沿用左栏：主棕 #463125 / 中棕 #8b6f57 / 弱棕 #9c8a74 /
+   边框 rgba(107,74,56,.26) / 输入底 #fffdf8 / 点缀橙 #e0705a */
+.gate-shell .auth-gate-card{
+  background:linear-gradient(180deg,#fdfaf4 0%,#f8f2e6 100%);
+  border-left:1px solid rgba(107,74,56,.14);
+  color:#463125;
+}
+.gate-shell .auth-gate-logo{
+  background:#fffdf8;border:1.5px solid rgba(107,74,56,.30);color:#6b4a38;
+  box-shadow:0 8px 20px -12px rgba(107,74,56,.55);
+}
+.gate-shell .auth-gate-head h1{color:#463125}
+.gate-shell .auth-gate-head p{color:#9c8a74}
+.gate-shell .field label{color:#8b6f57}
+.gate-shell .field input,
+.gate-shell .gate-adv input{
+  background:#fffdf8;border-color:rgba(107,74,56,.26);color:#463125;
+  caret-color:#b4703f;
+}
+.gate-shell .field input::placeholder,
+.gate-shell .gate-adv input::placeholder{color:#b8a68f}
+.gate-shell .field input:focus,
+.gate-shell .gate-adv input:focus{
+  border-color:#b4703f;box-shadow:0 0 0 3px rgba(180,112,63,.16);
+}
+.gate-shell .gate-adv{color:#9c8a74}
+.gate-shell .gate-submit{
+  background:linear-gradient(135deg,#c98a52,#a9622f);
+  box-shadow:0 14px 30px -14px rgba(169,98,47,.85),inset 0 1px 0 rgba(255,255,255,.35);
+  border-color:rgba(107,74,56,.4);
+}
+.gate-shell .gate-submit:hover{
+  box-shadow:0 20px 40px -14px rgba(169,98,47,.9),inset 0 1px 0 rgba(255,255,255,.4);
+}
+.gate-shell .gate-err{
+  background:rgba(224,112,90,.12);color:#b14a35;border-color:rgba(224,112,90,.32);
+}
+.gate-shell .gate-foot{border-top-color:rgba(107,74,56,.16)}
+.gate-shell .gate-hint{color:#9c8a74}
+.gate-shell .gate-skip{color:#9c8a74}
+.gate-shell .gate-skip:hover{color:#463125;background:rgba(107,74,56,.08)}
+.gate-shell .gate-note{color:#9c8a74}
+.gate-shell .gate-eye{color:#9c8a74}
+.gate-shell .gate-eye:hover{background:rgba(107,74,56,.10);color:#6b4a38}
+.gate-shell .gate-cat-note{color:#9c8a74}
+.gate-shell .gate-cat-note .gc-dot{background:#e0705a}
+.gate-shell .secret-box{border-color:rgba(107,74,56,.22);background:rgba(255,253,248,.7)}
+.gate-shell .secret-box>div+div{border-top-color:rgba(107,74,56,.14)}
+.gate-shell .secret-box small{color:#9c8a74}
+.gate-shell .secret-box b.mono{color:#a9622f}
+
 @media (max-width:920px){
   .gate-shell{min-height:0;border-radius:20px}
   .gate-stage{display:none}
@@ -2833,32 +2890,34 @@ body.sv-mode > *:not(#shareView){display:none !important}
 
 </style>
 <style>
-/* ── 首屏加载动画：必须在首帧前生效，所以内联在 head，不依赖 style.css ── */
-.boot-loader{position:fixed;inset:0;z-index:999;background:#05070f;display:flex;flex-direction:column;
+/* ── 首屏加载动画：必须在首帧前生效，所以内联在 head，不依赖 style.css ──
+   r53 起整条「进站动线」（加载页 → 门禁 → 表单）统一为暖奶油排球风，
+   跟主题解耦：猫插画本来就是奶油底上的浅色系，深蓝黑底反而把它泡在冷色里。 */
+.boot-loader{position:fixed;inset:0;z-index:999;background:#f4eee1;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:18px;transition:opacity .45s ease,transform .45s ease}
 .boot-loader.done{opacity:0;transform:scale(1.03);pointer-events:none}
 .boot-stage{position:relative;width:230px;height:240px;display:flex;align-items:center;justify-content:center;
   animation:bootFloat 3s ease-in-out infinite}
-/* 猫身后一团紫色光晕，把主体从纯黑背景里托出来 */
+/* 猫身后一团暖白光晕，把主体从奶油底上托出来（原来是紫光晕，和球场暖棕打架） */
 .boot-stage::before{content:'';position:absolute;width:320px;height:320px;border-radius:50%;
-  background:radial-gradient(circle,rgba(123,108,255,.30) 0%,rgba(123,108,255,.10) 42%,transparent 68%);
+  background:radial-gradient(circle,rgba(255,255,255,.95) 0%,rgba(216,186,142,.30) 42%,transparent 68%);
   animation:bootGlow 2.4s ease-in-out infinite}
 /* 首帧图未加载完前整个舞台隐藏，避免看到半张猫（图很小 + SW 缓存，通常一闪而过） */
 .boot-stage:not(.boot-ready){opacity:0;transition:opacity .2s}
 .boot-stage.boot-ready{opacity:1}
 .boot-frame{position:absolute;inset:0;margin:auto;max-width:94%;max-height:94%;opacity:0;
-  filter:drop-shadow(0 16px 30px rgba(0,0,0,.5));
+  filter:drop-shadow(0 16px 26px rgba(107,74,56,.30));
   animation:bootFrame 1.8s ease-in-out infinite}
 .boot-frame:nth-child(1){opacity:1;animation-delay:0s}
 .boot-frame:nth-child(2){animation-delay:-.6s}
 .boot-frame:nth-child(3){animation-delay:-1.2s}
-.boot-brand{font-size:15px;font-weight:700;letter-spacing:4px;color:#eef1f8;margin-top:-14px}
+.boot-brand{font-size:15px;font-weight:700;letter-spacing:4px;color:#463125;margin-top:-14px}
 .boot-dots{display:flex;gap:7px}
-.boot-dots span{width:7px;height:7px;border-radius:50%;background:#7b6cff;
+.boot-dots span{width:7px;height:7px;border-radius:50%;background:#b4703f;
   animation:bootDot 1.2s ease-in-out infinite}
 .boot-dots span:nth-child(2){animation-delay:.15s}
 .boot-dots span:nth-child(3){animation-delay:.3s}
-.boot-credit{position:absolute;right:16px;bottom:14px;font-size:10px;color:rgba(255,255,255,.28);letter-spacing:.5px}
+.boot-credit{position:absolute;right:16px;bottom:14px;font-size:10px;color:rgba(107,74,56,.45);letter-spacing:.5px}
 @keyframes bootFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes bootGlow{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
 @keyframes bootFrame{0%{opacity:0;transform:scale(.92)}5%{opacity:1;transform:scale(1)}

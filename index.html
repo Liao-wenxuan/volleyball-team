@@ -7,40 +7,42 @@
 <meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%237b6cff'/%3E%3Crect%20x='12'%20y='12'%20width='40'%20height='40'%20rx='4'%20fill='none'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M12%2028h40'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M32%2012v40'%20stroke='%23fff'%20stroke-width='3'%20stroke-opacity='.55'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#05070f">
-<link rel="manifest" href="manifest.webmanifest?v=v52">
-<link rel="apple-touch-icon" href="assets/icon-180.png?v=v52">
+<link rel="manifest" href="manifest.webmanifest?v=v53">
+<link rel="apple-touch-icon" href="assets/icon-180.png?v=v53">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="排球队">
-<link rel="stylesheet" href="style.css?v=v52">
+<link rel="stylesheet" href="style.css?v=v53">
 <style>
-/* ── 首屏加载动画：必须在首帧前生效，所以内联在 head，不依赖 style.css ── */
-.boot-loader{position:fixed;inset:0;z-index:999;background:#05070f;display:flex;flex-direction:column;
+/* ── 首屏加载动画：必须在首帧前生效，所以内联在 head，不依赖 style.css ──
+   r53 起整条「进站动线」（加载页 → 门禁 → 表单）统一为暖奶油排球风，
+   跟主题解耦：猫插画本来就是奶油底上的浅色系，深蓝黑底反而把它泡在冷色里。 */
+.boot-loader{position:fixed;inset:0;z-index:999;background:#f4eee1;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:18px;transition:opacity .45s ease,transform .45s ease}
 .boot-loader.done{opacity:0;transform:scale(1.03);pointer-events:none}
 .boot-stage{position:relative;width:230px;height:240px;display:flex;align-items:center;justify-content:center;
   animation:bootFloat 3s ease-in-out infinite}
-/* 猫身后一团紫色光晕，把主体从纯黑背景里托出来 */
+/* 猫身后一团暖白光晕，把主体从奶油底上托出来（原来是紫光晕，和球场暖棕打架） */
 .boot-stage::before{content:'';position:absolute;width:320px;height:320px;border-radius:50%;
-  background:radial-gradient(circle,rgba(123,108,255,.30) 0%,rgba(123,108,255,.10) 42%,transparent 68%);
+  background:radial-gradient(circle,rgba(255,255,255,.95) 0%,rgba(216,186,142,.30) 42%,transparent 68%);
   animation:bootGlow 2.4s ease-in-out infinite}
 /* 首帧图未加载完前整个舞台隐藏，避免看到半张猫（图很小 + SW 缓存，通常一闪而过） */
 .boot-stage:not(.boot-ready){opacity:0;transition:opacity .2s}
 .boot-stage.boot-ready{opacity:1}
 .boot-frame{position:absolute;inset:0;margin:auto;max-width:94%;max-height:94%;opacity:0;
-  filter:drop-shadow(0 16px 30px rgba(0,0,0,.5));
+  filter:drop-shadow(0 16px 26px rgba(107,74,56,.30));
   animation:bootFrame 1.8s ease-in-out infinite}
 .boot-frame:nth-child(1){opacity:1;animation-delay:0s}
 .boot-frame:nth-child(2){animation-delay:-.6s}
 .boot-frame:nth-child(3){animation-delay:-1.2s}
-.boot-brand{font-size:15px;font-weight:700;letter-spacing:4px;color:#eef1f8;margin-top:-14px}
+.boot-brand{font-size:15px;font-weight:700;letter-spacing:4px;color:#463125;margin-top:-14px}
 .boot-dots{display:flex;gap:7px}
-.boot-dots span{width:7px;height:7px;border-radius:50%;background:#7b6cff;
+.boot-dots span{width:7px;height:7px;border-radius:50%;background:#b4703f;
   animation:bootDot 1.2s ease-in-out infinite}
 .boot-dots span:nth-child(2){animation-delay:.15s}
 .boot-dots span:nth-child(3){animation-delay:.3s}
-.boot-credit{position:absolute;right:16px;bottom:14px;font-size:10px;color:rgba(255,255,255,.28);letter-spacing:.5px}
+.boot-credit{position:absolute;right:16px;bottom:14px;font-size:10px;color:rgba(107,74,56,.45);letter-spacing:.5px}
 @keyframes bootFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes bootGlow{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
 @keyframes bootFrame{0%{opacity:0;transform:scale(.92)}5%{opacity:1;transform:scale(1)}
@@ -74,9 +76,9 @@ setTimeout(function () {
 <body>
 <div class="boot-loader" id="bootLoader" aria-hidden="true">
   <div class="boot-stage" id="bootStage">
-    <img class="boot-frame" src="assets/loader-pose1.png?v=v52" alt="">
-    <img class="boot-frame" src="assets/loader-pose2.png?v=v52" alt="">
-    <img class="boot-frame" src="assets/loader-pose3.png?v=v52" alt="">
+    <img class="boot-frame" src="assets/loader-pose1.png?v=v53" alt="">
+    <img class="boot-frame" src="assets/loader-pose2.png?v=v53" alt="">
+    <img class="boot-frame" src="assets/loader-pose3.png?v=v53" alt="">
   </div>
   <div class="boot-brand">信工院排球队</div>
   <div class="boot-dots"><span></span><span></span><span></span></div>
@@ -1140,9 +1142,9 @@ setTimeout(function () {
   sync();
 })();
 </script>
-<script src="cloud.js?v=v52"></script>
+<script src="cloud.js?v=v53"></script>
 <!-- qr / xlsx / card / share / playercard 改为按需加载（app.js 的 ensureMod），
      冷启动不再跟着下载。单文件版由 build.mjs 内联到 app.js 之前。 -->
-<script src="app.js?v=v52"></script>
+<script src="app.js?v=v53"></script>
 </body>
 </html>
