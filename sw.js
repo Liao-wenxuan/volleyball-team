@@ -14,6 +14,7 @@
  *
  * 发新版：把 VERSION 加一，跑 node build.mjs（会同步刷新 HTML 引用和 SHELL 的 ?v=N）。
  * ═══════════════════════════════════════════════════════════════ */
+// v54: 修门禁 logo 白爪画白底（浅色模式 color:#fff 特异性 (0,2,1) 压过暖棕 (0,2,0)）
 // v53: 进站动线统一暖奶油排球风（加载页/遮罩/右栏表单全部去冷紫，跟主题解耦）
 // v52: 登录门禁换排球猫（左侧猫主场跟手/回避/垮脸/欢呼，右侧表单不变；加密码明文切换）
 // v36: 队员端改走「单文件档案」——分享弹窗直接下载 .html（断网可看，请假仍走回执码）；/m 停止宣传
@@ -32,7 +33,7 @@
 // v22: 用户管理（角色/邀请码/成员管理/改密码/切队）
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v53';
+const VERSION = 'v54';
 const CACHE = `xgy-pwa-${VERSION}`;
 // qr / xlsx / card / share / playercard 是「分享、导出、表格导入」才用的按需模块，
 // 不放进预缓存——否则首次访问会在后台白下 37KB，抢本就稀薄的跨境带宽。
@@ -40,16 +41,16 @@ const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',
   './index.html',
-  './style.css?v=v53',
-  './app.js?v=v53',
-  './cloud.js?v=v53',
-  './manifest.webmanifest?v=v53',
-  './assets/icon-192.png?v=v53',
-  './assets/icon-512.png?v=v53',
-  './assets/maskable-512.png?v=v53',
-  './assets/loader-pose1.png?v=v53',
-  './assets/loader-pose2.png?v=v53',
-  './assets/loader-pose3.png?v=v53'
+  './style.css?v=v54',
+  './app.js?v=v54',
+  './cloud.js?v=v54',
+  './manifest.webmanifest?v=v54',
+  './assets/icon-192.png?v=v54',
+  './assets/icon-512.png?v=v54',
+  './assets/maskable-512.png?v=v54',
+  './assets/loader-pose1.png?v=v54',
+  './assets/loader-pose2.png?v=v54',
+  './assets/loader-pose3.png?v=v54'
 ];
 
 self.addEventListener('install', (e) => {

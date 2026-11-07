@@ -2834,7 +2834,9 @@ body.sv-mode > *:not(#shareView){display:none !important}
   border-left:1px solid rgba(107,74,56,.14);
   color:#463125;
 }
-.gate-shell .auth-gate-logo{
+/* (0,3,0) 才能压过 html[data-mode=light] .auth-gate-logo{color:#fff} 的 (0,2,1)，
+   少一层 html 类型选择器就是白爪画白底——r53 上线首小时真踩了 */
+.gate-shell .auth-gate-head .auth-gate-logo{
   background:#fffdf8;border:1.5px solid rgba(107,74,56,.30);color:#6b4a38;
   box-shadow:0 8px 20px -12px rgba(107,74,56,.55);
 }
