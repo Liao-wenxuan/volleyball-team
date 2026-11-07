@@ -36,7 +36,7 @@
 // v22: 用户管理（角色/邀请码/成员管理/改密码/切队）
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v58';
+const VERSION = 'v59';
 const CACHE = `xgy-pwa-${VERSION}`;
 // qr / xlsx / card / share / playercard 是「分享、导出、表格导入」才用的按需模块，
 // 不放进预缓存——否则首次访问会在后台白下 37KB，抢本就稀薄的跨境带宽。
@@ -44,16 +44,16 @@ const CACHE = `xgy-pwa-${VERSION}`;
 const SHELL = [
   './',
   './index.html',
-  './style.css?v=v58',
-  './app.js?v=v58',
-  './cloud.js?v=v58',
-  './manifest.webmanifest?v=v58',
-  './assets/icon-192.png?v=v58',
-  './assets/icon-512.png?v=v58',
-  './assets/maskable-512.png?v=v58',
-  './assets/loader-pose1.png?v=v58',
-  './assets/loader-pose2.png?v=v58',
-  './assets/loader-pose3.png?v=v58'
+  './style.css?v=v59',
+  './app.js?v=v59',
+  './cloud.js?v=v59',
+  './manifest.webmanifest?v=v59',
+  './assets/icon-192.png?v=v59',
+  './assets/icon-512.png?v=v59',
+  './assets/maskable-512.png?v=v59',
+  './assets/loader-pose1.png?v=v59',
+  './assets/loader-pose2.png?v=v59',
+  './assets/loader-pose3.png?v=v59'
 ];
 
 self.addEventListener('install', (e) => {

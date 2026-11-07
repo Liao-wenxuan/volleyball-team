@@ -7,13 +7,13 @@
 <meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%237b6cff'/%3E%3Crect%20x='12'%20y='12'%20width='40'%20height='40'%20rx='4'%20fill='none'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M12%2028h40'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M32%2012v40'%20stroke='%23fff'%20stroke-width='3'%20stroke-opacity='.55'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#05070f">
-<link rel="manifest" href="manifest.webmanifest?v=v58">
-<link rel="apple-touch-icon" href="assets/icon-180.png?v=v58">
+<link rel="manifest" href="manifest.webmanifest?v=v59">
+<link rel="apple-touch-icon" href="assets/icon-180.png?v=v59">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="排球队">
-<link rel="stylesheet" href="style.css?v=v58">
+<link rel="stylesheet" href="style.css?v=v59">
 <style>
 /* ── 昼夜基调 token：加载页与登录页共用。默认随时间（19:00–06:00 夜，见下方脚本），
    登录页的星球开关可手动切换，选择记在 sessionStorage（本标签页内有效，
@@ -114,9 +114,9 @@ setTimeout(function () {
 <body>
 <div class="boot-loader" id="bootLoader" aria-hidden="true">
   <div class="boot-stage" id="bootStage">
-    <img class="boot-frame" src="assets/loader-pose1.png?v=v58" alt="">
-    <img class="boot-frame" src="assets/loader-pose2.png?v=v58" alt="">
-    <img class="boot-frame" src="assets/loader-pose3.png?v=v58" alt="">
+    <img class="boot-frame" src="assets/loader-pose1.png?v=v59" alt="">
+    <img class="boot-frame" src="assets/loader-pose2.png?v=v59" alt="">
+    <img class="boot-frame" src="assets/loader-pose3.png?v=v59" alt="">
   </div>
   <div class="boot-brand">信工院排球队</div>
   <div class="boot-dots"><span></span><span></span><span></span></div>
@@ -781,23 +781,27 @@ setTimeout(function () {
             <ellipse cx="132" cy="172" rx="15" ry="10" fill="#fff" stroke="#6b4a38" stroke-width="5"/>
             <g class="gc-head">
               <g class="gc-pose">
-                <path d="M78 62 L 70 30 Q 69 24 75 26 L 102 42 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
-                <path d="M142 62 L 152 28 Q 154 22 148 25 L 120 42 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+                <path d="M84 56 L 79 16 Q 78 9 84 12 L 105 42 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+                <path d="M136 56 L 141 16 Q 142 9 136 12 L 115 42 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
                 <ellipse cx="110" cy="82" rx="46" ry="38" fill="#fff" stroke="#6b4a38" stroke-width="6"/>
-                <path d="M66 74 Q 60 44 86 32 Q 100 26 110 34 Q 122 24 138 32 Q 162 44 154 74 Q 150 56 134 52 Q 138 62 132 66 Q 124 48 104 50 Q 86 50 82 64 Q 72 62 66 74 Z"
+                <path d="M70 58 Q 66 38 88 31 L 132 31 Q 154 38 150 58 Q 143 49 133 51 L 125 57 L 115 48 Q 110 44 105 48 L 95 57 L 87 51 Q 77 49 70 58 Z"
                       fill="#c9a37e" stroke="#6b4a38" stroke-width="5" stroke-linejoin="round"/>
                 <g transform="translate(94,84)">
-                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="4.5" ry="6.5" fill="#5b9bd5"/></g></g>
-                  <path class="gc-lid gc-lid-sad" d="M-6 3 Q 0 -4 6 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
-                  <path class="gc-lid gc-lid-happy" d="M-7 2 Q 0 -6 7 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="6" ry="9" fill="#5b9bd5"/></g></g>
+                  <path class="gc-lid gc-lid-sad" d="M-8 3 Q 0 -5 8 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <path class="gc-lid gc-lid-happy" d="M-9 2 Q 0 -9 9 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
                 </g>
                 <g transform="translate(128,84)">
-                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="4.5" ry="6.5" fill="#5b9bd5"/></g></g>
-                  <path class="gc-lid gc-lid-sad" d="M-6 3 Q 0 -4 6 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
-                  <path class="gc-lid gc-lid-happy" d="M-7 2 Q 0 -6 7 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="6" ry="9" fill="#5b9bd5"/></g></g>
+                  <path class="gc-lid gc-lid-sad" d="M-8 3 Q 0 -5 8 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <path class="gc-lid gc-lid-happy" d="M-9 2 Q 0 -9 9 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
                 </g>
                 <ellipse cx="82" cy="96" rx="7" ry="4" fill="#f0a0a0" opacity=".55"/>
                 <ellipse cx="140" cy="96" rx="7" ry="4" fill="#f0a0a0" opacity=".55"/>
+                <g stroke="#6b4a38" stroke-width="3" stroke-linecap="round" fill="none">
+                  <path d="M62 86 Q 50 83 41 80"/><path d="M62 94 H 38"/><path d="M62 102 Q 50 105 41 108"/>
+                  <path d="M158 86 Q 168 83 175 80"/><path d="M158 94 H 175"/><path d="M158 102 Q 167 105 172 108"/>
+                </g>
                 <path d="M108 94 L 114 94 L 111 98 Z" fill="#6b4a38"/>
                 <path class="gc-mouth" d="M104 102 Q 108 107 112 102 Q 116 107 120 102" fill="none" stroke="#6b4a38" stroke-width="3.5" stroke-linecap="round"/>
                 <path class="gc-mouth-sad" d="M104 106 Q 112 99 120 106" fill="none" stroke="#6b4a38" stroke-width="3.5" stroke-linecap="round"/>
@@ -836,23 +840,27 @@ setTimeout(function () {
             <path d="M168 130 Q 190 142 202 136" fill="none" stroke="#6b4a38" stroke-width="10" stroke-linecap="round"/>
             <g class="gc-head">
               <g class="gc-pose">
-                <path d="M92 74 L 74 48 Q 70 43 77 44 L 102 58 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
-                <path d="M136 62 L 146 34 Q 148 28 152 34 L 156 62 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+                <path d="M92 62 L 87 24 Q 86 17 92 20 L 111 48 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+                <path d="M140 62 L 145 24 Q 146 17 140 20 L 121 48 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
                 <ellipse cx="116" cy="88" rx="44" ry="36" fill="#fff" stroke="#6b4a38" stroke-width="6"/>
-                <path d="M74 82 Q 68 54 94 44 Q 108 38 118 46 Q 130 38 144 46 Q 166 58 158 84 Q 154 66 138 62 Q 142 72 136 76 Q 128 58 108 62 Q 92 64 88 76 Q 78 72 74 82 Z"
+                <path d="M80 66 Q 76 48 96 41 L 136 41 Q 156 48 152 66 Q 145 57 135 59 L 127 65 L 117 56 Q 112 52 107 56 L 97 65 L 89 59 Q 83 57 80 66 Z"
                       fill="#c9a37e" stroke="#6b4a38" stroke-width="5" stroke-linejoin="round"/>
                 <g transform="translate(102,88)">
-                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="4.5" ry="6.5" fill="#5b9bd5"/></g></g>
-                  <path class="gc-lid gc-lid-sad" d="M-6 3 Q 0 -4 6 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
-                  <path class="gc-lid gc-lid-happy" d="M-7 2 Q 0 -6 7 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="6" ry="9" fill="#5b9bd5"/></g></g>
+                  <path class="gc-lid gc-lid-sad" d="M-8 3 Q 0 -5 8 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <path class="gc-lid gc-lid-happy" d="M-9 2 Q 0 -9 9 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
                 </g>
                 <g transform="translate(136,88)">
-                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="4.5" ry="6.5" fill="#5b9bd5"/></g></g>
-                  <path class="gc-lid gc-lid-sad" d="M-6 3 Q 0 -4 6 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
-                  <path class="gc-lid gc-lid-happy" d="M-7 2 Q 0 -6 7 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="6" ry="9" fill="#5b9bd5"/></g></g>
+                  <path class="gc-lid gc-lid-sad" d="M-8 3 Q 0 -5 8 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <path class="gc-lid gc-lid-happy" d="M-9 2 Q 0 -9 9 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
                 </g>
                 <ellipse cx="88" cy="100" rx="7" ry="4" fill="#f0a0a0" opacity=".55"/>
                 <ellipse cx="146" cy="100" rx="7" ry="4" fill="#f0a0a0" opacity=".55"/>
+                <g stroke="#6b4a38" stroke-width="3" stroke-linecap="round" fill="none">
+                  <path d="M68 92 Q 56 89 47 86"/><path d="M68 100 H 45"/><path d="M68 108 Q 56 111 47 114"/>
+                  <path d="M164 92 Q 176 89 185 86"/><path d="M164 100 H 187"/><path d="M164 108 Q 176 111 185 114"/>
+                </g>
                 <path d="M112 98 L 118 98 L 115 102 Z" fill="#6b4a38"/>
                 <path class="gc-mouth" d="M108 106 Q 112 111 116 106 Q 120 111 124 106" fill="none" stroke="#6b4a38" stroke-width="3.5" stroke-linecap="round"/>
                 <path class="gc-mouth-sad" d="M108 110 Q 116 103 124 110" fill="none" stroke="#6b4a38" stroke-width="3.5" stroke-linecap="round"/>
@@ -896,26 +904,30 @@ setTimeout(function () {
                   fill="#fff" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
             <ellipse cx="86" cy="208" rx="14" ry="10" fill="#fff" stroke="#6b4a38" stroke-width="5"/>
             <ellipse cx="116" cy="208" rx="14" ry="10" fill="#fff" stroke="#6b4a38" stroke-width="5"/>
-            <path d="M128 190 Q 158 178 158 150" fill="none" stroke="#6b4a38" stroke-width="10" stroke-linecap="round"/>
+            <path d="M126 202 Q 158 202 168 184" fill="none" stroke="#6b4a38" stroke-width="10" stroke-linecap="round"/>
             <g class="gc-head">
               <g class="gc-pose">
-                <path d="M70 136 L 54 110 Q 51 104 58 106 L 84 122 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
-                <path d="M130 136 L 148 110 Q 152 104 145 107 L 118 122 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+                <path d="M74 126 L 69 88 Q 68 81 74 84 L 95 112 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
+                <path d="M126 126 L 131 88 Q 132 81 126 84 L 105 112 Z" fill="#c9a37e" stroke="#6b4a38" stroke-width="6" stroke-linejoin="round"/>
                 <ellipse cx="100" cy="152" rx="44" ry="36" fill="#fff" stroke="#6b4a38" stroke-width="6"/>
-                <path d="M58 146 Q 54 118 80 108 Q 94 102 102 110 Q 114 102 126 110 Q 150 120 144 146 Q 138 128 122 126 Q 126 136 120 140 Q 112 122 94 126 Q 78 128 72 140 Q 62 136 58 146 Z"
+                <path d="M64 130 Q 60 112 80 105 L 120 105 Q 140 112 136 130 Q 129 121 119 123 L 111 129 L 101 120 Q 96 116 91 120 L 81 129 L 73 123 Q 67 121 64 130 Z"
                       fill="#c9a37e" stroke="#6b4a38" stroke-width="5" stroke-linejoin="round"/>
                 <g transform="translate(84,152)">
-                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="4.5" ry="6.5" fill="#5b9bd5"/></g></g>
-                  <path class="gc-lid gc-lid-sad" d="M-6 3 Q 0 -4 6 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
-                  <path class="gc-lid gc-lid-happy" d="M-7 2 Q 0 -6 7 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="6" ry="9" fill="#5b9bd5"/></g></g>
+                  <path class="gc-lid gc-lid-sad" d="M-8 3 Q 0 -5 8 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <path class="gc-lid gc-lid-happy" d="M-9 2 Q 0 -9 9 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
                 </g>
                 <g transform="translate(118,152)">
-                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="4.5" ry="6.5" fill="#5b9bd5"/></g></g>
-                  <path class="gc-lid gc-lid-sad" d="M-6 3 Q 0 -4 6 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
-                  <path class="gc-lid gc-lid-happy" d="M-7 2 Q 0 -6 7 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <g class="gc-eye-open"><g class="gc-pupil"><ellipse rx="6" ry="9" fill="#5b9bd5"/></g></g>
+                  <path class="gc-lid gc-lid-sad" d="M-8 3 Q 0 -5 8 3" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
+                  <path class="gc-lid gc-lid-happy" d="M-9 2 Q 0 -9 9 2" fill="none" stroke="#5b9bd5" stroke-width="4" stroke-linecap="round"/>
                 </g>
                 <ellipse cx="72" cy="164" rx="7" ry="4" fill="#f0a0a0" opacity=".55"/>
                 <ellipse cx="130" cy="164" rx="7" ry="4" fill="#f0a0a0" opacity=".55"/>
+                <g stroke="#6b4a38" stroke-width="3" stroke-linecap="round" fill="none">
+                  <path d="M54 156 Q 42 153 33 150"/><path d="M54 164 H 31"/><path d="M54 172 Q 42 175 33 178"/>
+                  <path d="M146 156 Q 158 153 167 150"/><path d="M146 164 H 169"/><path d="M146 172 Q 158 175 167 178"/>
+                </g>
                 <path d="M97 162 L 103 162 L 100 166 Z" fill="#6b4a38"/>
                 <path class="gc-mouth" d="M93 170 Q 97 175 100 170 Q 104 175 108 170" fill="none" stroke="#6b4a38" stroke-width="3.5" stroke-linecap="round"/>
                 <path class="gc-mouth-sad" d="M93 174 Q 100 167 108 174" fill="none" stroke="#6b4a38" stroke-width="3.5" stroke-linecap="round"/>
@@ -1198,9 +1210,9 @@ setTimeout(function () {
   sync();
 })();
 </script>
-<script src="cloud.js?v=v58"></script>
+<script src="cloud.js?v=v59"></script>
 <!-- qr / xlsx / card / share / playercard 改为按需加载（app.js 的 ensureMod），
      冷启动不再跟着下载。单文件版由 build.mjs 内联到 app.js 之前。 -->
-<script src="app.js?v=v58"></script>
+<script src="app.js?v=v59"></script>
 </body>
 </html>

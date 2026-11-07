@@ -2796,6 +2796,10 @@ html[data-daynight="night"] .gc-floor{
 /* 夜间黑底上给猫一圈白色柔光，把白猫身轮廓从纯黑里托出来（不改猫本身颜色） */
 html[data-daynight="night"] .gc-cat svg{
   filter:drop-shadow(0 6px 16px rgba(255,255,255,.14))}
+/* 夜间黑底上棕色细胡须会隐形（宽 3px 又无白色猫身垫底），
+   提亮为毛色棕——仍属猫原配色系，只是给新加的胡须做可读性适配 */
+html[data-daynight="night"] #authGate .gc-cat g[stroke="#6b4a38"][stroke-width="3"]{
+  stroke:#c9a37e}
 /* 颜色过渡保留（token 万一再调时平滑），不碰瞳孔/头/身体既有的 transform 过渡 */
 #authGate .gc-cat :not(.gc-pupil):not(.gc-head):not(.gc-root):not(.gc-eye-open):not(.gc-pose){
   transition:fill .4s ease,stroke .4s ease}
