@@ -2228,8 +2228,8 @@ html[data-mode="light"] .user-chip:hover .u-info strong{
    冷紫光晕和左边的奶油球场根本不是一个球队来的。 */
 .auth-gate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
   padding:24px;overflow:auto;
-  background:radial-gradient(900px 520px at 82% -12%,rgba(255,253,247,.95),transparent 62%),
-             radial-gradient(720px 460px at 6% 110%,rgba(176,136,94,.22),transparent 60%),#ece3d2}
+  background:var(--g-bg,#fff);
+  transition:background-color .4s ease}
 .auth-gate[hidden]{display:none!important}
 html.gate-pass .auth-gate{display:none!important}
 .auth-gate-card{width:100%;max-width:430px;padding:30px 30px 22px;border-radius:22px;
@@ -2699,8 +2699,10 @@ body.sv-mode > *:not(#shareView){display:none !important}
 .card-preview{display:block;width:100%;max-width:360px;margin:0 auto;border-radius:14px;border:1px solid var(--line)}
 
 /* ═══════════════════════════════════════════════════════════
-   登录门禁 v2：排球猫（r52）
-   左边是球队主场（奶油色球场 + 三只跟手猫），右边是原登录表单。
+   登录门禁 v2：排球猫（r52）→ v57 黑白配色
+   左边是球队主场（极简黑白球场 + 三只跟手猫），右边是登录表单。
+   昼夜基调由 html[data-daynight] 驱动（token 定义在 index.html head，
+   加载页与登录页共用）：昼=白底黑墨线猫，夜=黑底白墨线猫。
    猫的状态机与门禁逻辑解耦：本区块只管长相，交互在 index.html 末尾的
    catGate 脚本里，靠 #authGate[data-cat-state] 驱动表情与姿势。
    注意：类名统一 gc- 前缀，别和 .card-wrap / .cat-* 撞车。
@@ -2709,38 +2711,51 @@ body.sv-mode > *:not(#shareView){display:none !important}
   display:flex;width:min(1120px,100%);
   min-height:min(700px,calc(100vh - 48px));
   border-radius:28px;overflow:hidden;
-  background:linear-gradient(180deg,#fdfaf4,#f8f2e6);
-  border:1px solid rgba(107,74,56,.18);
-  box-shadow:0 60px 120px -60px rgba(107,74,56,.55),0 24px 60px -30px rgba(107,74,56,.35);
+  background:var(--g-bg,#fff);
+  border:1px solid var(--g-shell-line,rgba(0,0,0,.14));
+  box-shadow:0 60px 120px -60px rgba(0,0,0,.30),0 24px 60px -30px rgba(0,0,0,.14);
+  transition:background-color .4s ease,border-color .4s ease,box-shadow .4s ease;
+}
+html[data-daynight="night"] .gate-shell{
+  background:var(--g-bg,#000);
+  box-shadow:0 60px 120px -60px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.05) inset;
 }
 
 /* ── 左：猫主场 ── */
 .gate-stage{
   position:relative;flex:1.06;min-width:0;
   padding:42px 36px 0;display:flex;flex-direction:column;
-  background:linear-gradient(180deg,#fcf9f3 0%,#f4efe6 58%,#e9dfcc 100%);
+  background:var(--g-bg,#fff);
+  transition:background-color .4s ease;
   overflow:hidden;
 }
 .gate-stage::before{
   content:'';position:absolute;inset:0;pointer-events:none;
-  background:
-    radial-gradient(520px 280px at 82% -8%,rgba(255,255,255,.95),transparent 70%),
-    radial-gradient(360px 260px at 0% 108%,rgba(201,163,126,.28),transparent 72%);
+  background:radial-gradient(520px 280px at 82% -8%,rgba(0,0,0,.04),transparent 70%);
+}
+html[data-daynight="night"] .gate-stage::before{
+  background:radial-gradient(520px 280px at 82% -8%,rgba(255,255,255,.06),transparent 70%),
+             radial-gradient(360px 260px at 0% 108%,rgba(255,255,255,.04),transparent 72%);
 }
 .gate-stage-top{position:relative;z-index:2}
 .gate-tag{
   display:inline-flex;align-items:center;gap:7px;
-  font-size:11px;font-weight:700;letter-spacing:2.4px;color:#8b6f57;
-  padding:6px 11px;border-radius:999px;border:1.5px solid rgba(107,74,56,.22);
-  background:rgba(255,255,255,.62);
+  font-size:11px;font-weight:700;letter-spacing:2.4px;color:var(--g-ink2,#666);
+  padding:6px 11px;border-radius:999px;border:1.5px solid var(--g-line-strong,rgba(0,0,0,.28));
+  background:var(--g-hover,rgba(0,0,0,.04));
+  transition:color .4s ease,border-color .4s ease,background-color .4s ease;
 }
-.gate-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:#e0705a;box-shadow:0 0 0 3px rgba(224,112,90,.18)}
+.gate-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--g-ink,#111)}
 .gate-stage h2{
   margin:18px 0 10px;font-size:clamp(26px,2.5vw,36px);line-height:1.18;
-  letter-spacing:1px;color:#463125;font-weight:800;
+  letter-spacing:1px;color:var(--g-ink,#111);font-weight:800;
+  transition:color .4s ease;
 }
-.gate-stage h2 em{font-style:normal;color:#b4703f}
-.gate-stage .gc-sub{margin:0;font-size:12px;letter-spacing:3px;color:#94806c}
+/* 黑白体系里没有第二种颜色，重点用一道粗下划线顶出来 */
+.gate-stage h2 em{font-style:normal;color:var(--g-ink,#111);
+  text-decoration:underline;text-underline-offset:7px;text-decoration-thickness:3px}
+.gate-stage .gc-sub{margin:0;font-size:12px;letter-spacing:3px;color:var(--g-ink3,#9a9a9a);
+  transition:color .4s ease}
 
 .gate-court{
   position:relative;z-index:1;flex:1;min-height:320px;
@@ -2749,18 +2764,41 @@ body.sv-mode > *:not(#shareView){display:none !important}
 }
 .gc-floor{
   position:absolute;left:0;right:0;bottom:0;height:78px;
-  background:linear-gradient(180deg,#e6d9c2,#dccdb2);
-  border-top:2px solid #cfbb9b;
+  background:linear-gradient(180deg,#f1f1f1,#e7e7e7);
+  border-top:2px solid #d6d6d6;
+  transition:background .4s ease,border-color .4s ease;
+}
+html[data-daynight="night"] .gc-floor{
+  background:linear-gradient(180deg,#191919,#111);
+  border-top-color:#2e2e2e;
 }
 .gc-floor::after{ /* 球场地板线 */
   content:'';position:absolute;left:24px;right:24px;top:14px;height:1px;
-  background:rgba(107,74,56,.18);
+  background:var(--g-line,rgba(0,0,0,.18));
+  transition:background .4s ease;
 }
 .gc-cat{position:relative;z-index:1;width:31%;max-width:184px;display:flex;justify-content:center}
 .gc-cat svg{width:100%;height:auto;display:block;overflow:visible}
+/* 猫的黑白反转：SVG 里写死过的暖棕色全部由属性选择器接管上色——
+   白天 = 白猫身 + 黑墨线，夜晚整体反转成黑猫身 + 白墨线
+   （不反转的话，夜里黑线画在黑底上，尾巴胡须直接隐形） */
+#authGate [stroke="#6b4a38"]{stroke:var(--cat-line,#161616)}
+#authGate [fill="#6b4a38"]{fill:var(--cat-line,#161616)}
+#authGate [fill="#fff"]{fill:var(--cat-body,#fff)}
+#authGate [fill="#c9a37e"]{fill:var(--cat-fur,#e4e4e4)}
+#authGate [stroke="#c9b8a0"]{stroke:var(--cat-soft,#cfcfcf)}
+#authGate [fill="#5b9bd5"]{fill:var(--cat-line,#161616)}
+#authGate [stroke="#5b9bd5"]{stroke:var(--cat-line,#161616)}
+#authGate [fill="#f0a0a0"]{fill:var(--cat-blush,rgba(0,0,0,.07))}
+#authGate [fill="#f5b32e"]{fill:var(--cat-ball,#161616)}
+#authGate [fill="#2b5db8"]{fill:var(--cat-ball-panel,#fff)}
+/* 墨线颜色跟昼夜走，但别碰掉瞳孔/头/身体既有的 transform 过渡 */
+#authGate .gc-cat :not(.gc-pupil):not(.gc-head):not(.gc-root):not(.gc-eye-open):not(.gc-pose){
+  transition:fill .4s ease,stroke .4s ease}
 .gc-shadow{
   position:absolute;bottom:-10px;left:50%;width:70%;height:14px;margin-left:-35%;
-  background:rgba(107,74,56,.14);border-radius:50%;
+  background:var(--cat-shadow,rgba(0,0,0,.14));border-radius:50%;
+  transition:background .4s ease;
 }
 .gc-root{transform-origin:50% 96%;transition:transform .5s var(--ease);will-change:transform}
 .gc-head{transition:transform .45s var(--ease)}
@@ -2795,13 +2833,16 @@ body.sv-mode > *:not(#shareView){display:none !important}
 /* 台词气泡 */
 .gc-bubble{
   position:absolute;top:-30px;left:50%;transform:translateX(-50%) scale(.6);
-  padding:5px 11px;border-radius:13px;background:#fff;border:2.5px solid #6b4a38;
-  font-size:12px;font-weight:700;color:#6b4a38;white-space:nowrap;opacity:0;pointer-events:none;
-  transition:opacity .22s,transform .3s cubic-bezier(.34,1.4,.5,1);
+  padding:5px 11px;border-radius:13px;
+  background:var(--cat-bubble-bg,#fff);border:2.5px solid var(--cat-line,#161616);
+  font-size:12px;font-weight:700;color:var(--cat-line,#161616);white-space:nowrap;opacity:0;pointer-events:none;
+  transition:opacity .22s,transform .3s cubic-bezier(.34,1.4,.5,1),
+             background-color .4s ease,border-color .4s ease,color .4s ease;
 }
 .gc-bubble::after{
   content:'';position:absolute;left:50%;bottom:-8px;width:11px;height:11px;margin-left:-5.5px;
-  background:#fff;border-right:2.5px solid #6b4a38;border-bottom:2.5px solid #6b4a38;
+  background:var(--cat-bubble-bg,#fff);border-right:2.5px solid var(--cat-line,#161616);
+  border-bottom:2.5px solid var(--cat-line,#161616);
   transform:rotate(45deg) skew(8deg,8deg);
 }
 .gc-bubble.show{opacity:1;transform:translateX(-50%) scale(1)}
@@ -2833,69 +2874,158 @@ body.sv-mode > *:not(#shareView){display:none !important}
 }
 .gate-cat-note .gc-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex:none}
 
-/* ── r53 右栏暖色统一：把冷紫 SaaS 表单拽进奶油球场 ──
-   右栏原来直接复用站内表单样式（明=白卡+紫按钮，暗=蓝黑卡），
-   和左边的手绘奶油球场拼在一起就是两拨人做的。以下全部在 .gate-shell
-   作用域内写死暖色，跟主题解耦——进站大厅不分明暗模式。
-   色板沿用左栏：主棕 #463125 / 中棕 #8b6f57 / 弱棕 #9c8a74 /
-   边框 rgba(107,74,56,.26) / 输入底 #fffdf8 / 点缀橙 #e0705a */
-.gate-shell .auth-gate-card{
-  background:linear-gradient(180deg,#fdfaf4 0%,#f8f2e6 100%);
-  border-left:1px solid rgba(107,74,56,.14);
-  color:#463125;
+/* ── v57 右栏黑白统一：表单全面接入昼夜 token ──
+   右栏不再写死任何颜色：昼 = 白底黑字黑按钮，夜 = 黑底白字白按钮，
+   全部由 html[data-daynight] 的 --g-* token 驱动，切换走 .4s 过渡。
+   （0,3,0) 压过站内 html[data-mode=light] 的 logo 规则——少一层
+   html 类型选择器就是白爪画白底，r53 上线首小时真踩过。 */
+/* 卡片底：#authGate 前缀压过 html[data-mode=light] .auth-gate-card{background:#fff}（(0,2,1)） */
+#authGate .auth-gate-card{
+  position:relative;
+  background:var(--g-bg-2,#f6f6f6);
+  border-left:1px solid var(--g-line,rgba(0,0,0,.13));
+  color:var(--g-ink,#111);
+  transition:background-color .4s ease,border-color .4s ease,color .4s ease;
 }
-/* (0,3,0) 才能压过 html[data-mode=light] .auth-gate-logo{color:#fff} 的 (0,2,1)，
-   少一层 html 类型选择器就是白爪画白底——r53 上线首小时真踩了 */
 .gate-shell .auth-gate-head .auth-gate-logo{
-  background:#fffdf8;border:1.5px solid rgba(107,74,56,.30);color:#6b4a38;
-  box-shadow:0 8px 20px -12px rgba(107,74,56,.55);
+  background:var(--g-bg,#fff);border:1.5px solid var(--g-line-strong,rgba(0,0,0,.28));
+  color:var(--g-ink,#111);
+  box-shadow:0 8px 20px -12px rgba(0,0,0,.45);
+  transition:background-color .4s ease,border-color .4s ease,color .4s ease;
 }
-.gate-shell .auth-gate-head h1{color:#463125}
-.gate-shell .auth-gate-head p{color:#9c8a74}
-.gate-shell .field label{color:#8b6f57}
-.gate-shell .field input,
-.gate-shell .gate-adv input{
-  background:#fffdf8;border-color:rgba(107,74,56,.26);color:#463125;
-  caret-color:#b4703f;
+html[data-daynight="night"] .gate-shell .auth-gate-head .auth-gate-logo{
+  background:var(--g-field,#141414);
 }
-.gate-shell .field input::placeholder,
-.gate-shell .gate-adv input::placeholder{color:#b8a68f}
-.gate-shell .field input:focus,
-.gate-shell .gate-adv input:focus{
-  border-color:#b4703f;box-shadow:0 0 0 3px rgba(180,112,63,.16);
+.gate-shell .auth-gate-head h1{color:var(--g-ink,#111);transition:color .4s ease}
+.gate-shell .auth-gate-head p{color:var(--g-ink2,#666);transition:color .4s ease}
+.gate-shell .field label{color:var(--g-ink2,#666);transition:color .4s ease}
+/* 输入框用 #authGate 前缀（ID 特异性）：站内 html[data-mode=light] .field input
+   是 (0,2,2)/(0,3,2)，.gate-shell 前缀的 (0,2,x) 压不住——v54 logo 白爪的同款坑 */
+#authGate .field input,
+#authGate .gate-adv input{
+  background:var(--g-field,#fff);border-color:var(--g-line-strong,rgba(0,0,0,.28));
+  color:var(--g-ink,#111);caret-color:var(--g-ink,#111);
+  transition:background-color .4s ease,border-color .4s ease,color .4s ease;
 }
-.gate-shell .gate-adv{color:#9c8a74}
+#authGate .field input::placeholder,
+#authGate .gate-adv input::placeholder{color:var(--g-ink3,#9a9a9a)}
+#authGate .field input:focus,
+#authGate .gate-adv input:focus{
+  border-color:var(--g-ink,#111);box-shadow:0 0 0 3px var(--g-focus,rgba(0,0,0,.10));
+}
+.gate-shell .gate-adv{color:var(--g-ink2,#666);transition:color .4s ease}
 .gate-shell .gate-submit{
-  background:linear-gradient(135deg,#c98a52,#a9622f);
-  box-shadow:0 14px 30px -14px rgba(169,98,47,.85),inset 0 1px 0 rgba(255,255,255,.35);
-  border-color:rgba(107,74,56,.4);
+  background:var(--g-ink,#111);color:var(--g-bg,#fff);
+  box-shadow:0 14px 30px -14px rgba(0,0,0,.55);
+  border-color:transparent;
+  transition:background-color .4s ease,color .4s ease,box-shadow .2s ease;
 }
 .gate-shell .gate-submit:hover{
-  box-shadow:0 20px 40px -14px rgba(169,98,47,.9),inset 0 1px 0 rgba(255,255,255,.4);
+  box-shadow:0 20px 40px -14px rgba(0,0,0,.6);
+  opacity:.9;
 }
 .gate-shell .gate-err{
-  background:rgba(224,112,90,.12);color:#b14a35;border-color:rgba(224,112,90,.32);
+  background:rgba(220,38,38,.08);color:#b91c1c;border-color:rgba(220,38,38,.30);
 }
-.gate-shell .gate-foot{border-top-color:rgba(107,74,56,.16)}
-.gate-shell .gate-hint{color:#9c8a74}
-.gate-shell .gate-skip{color:#9c8a74}
-.gate-shell .gate-skip:hover{color:#463125;background:rgba(107,74,56,.08)}
-.gate-shell .gate-note{color:#9c8a74}
-.gate-shell .gate-eye{color:#9c8a74}
-.gate-shell .gate-eye:hover{background:rgba(107,74,56,.10);color:#6b4a38}
-.gate-shell .gate-cat-note{color:#9c8a74}
-.gate-shell .gate-cat-note .gc-dot{background:#e0705a}
-.gate-shell .secret-box{border-color:rgba(107,74,56,.22);background:rgba(255,253,248,.7)}
-.gate-shell .secret-box>div+div{border-top-color:rgba(107,74,56,.14)}
-.gate-shell .secret-box small{color:#9c8a74}
-.gate-shell .secret-box b.mono{color:#a9622f}
+html[data-daynight="night"] .gate-shell .gate-err{
+  background:rgba(248,113,113,.10);color:#f87171;border-color:rgba(248,113,113,.32);
+}
+.gate-shell .gate-foot{border-top-color:var(--g-line,rgba(0,0,0,.13));transition:border-color .4s ease}
+.gate-shell .gate-hint{color:var(--g-ink2,#666)}
+.gate-shell .gate-skip{color:var(--g-ink2,#666);transition:color .4s ease,background-color .2s ease}
+.gate-shell .gate-skip:hover{color:var(--g-ink,#111);background:var(--g-hover,rgba(0,0,0,.05))}
+.gate-shell .gate-note{color:var(--g-ink2,#666);transition:color .4s ease}
+.gate-shell .gate-eye{color:var(--g-ink2,#666)}
+.gate-shell .gate-eye:hover{background:var(--g-hover,rgba(0,0,0,.05));color:var(--g-ink,#111)}
+.gate-shell .gate-cat-note{color:var(--g-ink2,#666)}
+.gate-shell .gate-cat-note .gc-dot{background:var(--g-ink,#111)}
+.gate-shell .secret-box{border-color:var(--g-line,rgba(0,0,0,.13));background:var(--g-hover,rgba(0,0,0,.03))}
+.gate-shell .secret-box>div+div{border-top-color:var(--g-line,rgba(0,0,0,.13))}
+.gate-shell .secret-box small{color:var(--g-ink2,#666)}
+.gate-shell .secret-box b.mono{color:var(--g-ink,#111)}
+
+/* ── 昼夜星球开关（参考 16.昼-星球动画，黑白化适配）──
+   勾选 = 白天：白轨道 + 黑太阳 + 灰云；未勾 = 夜晚：黑轨道 + 白月亮 + 白星。
+   结构沿用原组件：轨道即 input 本体，::before 星云层，::after 星球。 */
+@property --dnx{syntax:'<percentage>';inherits:true;initial-value:35%}
+@property --dnx1{syntax:'<length>';inherits:true;initial-value:0px}
+@property --dnx2{syntax:'<length>';inherits:true;initial-value:0px}
+@property --dnx3{syntax:'<length>';inherits:true;initial-value:0px}
+@property --dnx4{syntax:'<length>';inherits:true;initial-value:0px}
+@keyframes dnStar1{to{--dnx1:2em}}
+@keyframes dnStar2{to{--dnx2:2em}}
+@keyframes dnStar3{to{--dnx3:2em}}
+@keyframes dnStar4{to{--dnx4:2em}}
+.dn-toggle{
+  appearance:none;position:absolute;top:46px;right:44px;z-index:3;
+  font-size:24px;height:1em;width:auto;aspect-ratio:2;box-sizing:content-box;
+  margin:0;border:1px solid var(--g-line-strong,rgba(0,0,0,.28));border-radius:1em;
+  background-color:#0a0a0a;cursor:pointer;overflow:hidden;
+  transition:background-color .4s ease,border-color .4s ease;
+}
+.dn-toggle::before{
+  content:'';inset:0;position:absolute;pointer-events:none;opacity:.9;
+  background:
+    conic-gradient(at 96% calc(100% - .1em),#0000 150deg,#fff 0 210deg,#0000 0) var(--dnx1) .5em/100% 100%,
+    conic-gradient(at 96% .1em,#fff 30deg,#0000 0 330deg,#fff 0) var(--dnx1) .43em/100% 100%,
+    conic-gradient(at 96% calc(100% - .06em),#0000 150deg,#fff 0 210deg,#0000 0) var(--dnx2) .25em/100% 100%,
+    conic-gradient(at 96% .06em,#fff 30deg,#0000 0 330deg,#fff 0) var(--dnx2) .21em/100% 100%,
+    conic-gradient(at 96% calc(100% - .06em),#0000 150deg,#fff 0 210deg,#0000 0) var(--dnx3) .85em/100% 100%,
+    conic-gradient(at 96% .06em,#fff 30deg,#0000 0 330deg,#fff 0) var(--dnx3) .81em/100% 100%,
+    conic-gradient(at 96% calc(100% - .075em),#0000 150deg,#fff 0 210deg,#0000 0) var(--dnx4) .65em/100% 100%,
+    conic-gradient(at 96% .075em,#fff 30deg,#0000 0 330deg,#fff 0) var(--dnx4) .6em/100% 100%;
+  animation:dnStar1 4.75s -3s linear infinite,dnStar2 5.5s -1.75s linear infinite,
+            dnStar3 5s -4.17s linear infinite,dnStar4 5.25s -2.5s linear infinite;
+  filter:drop-shadow(0 0 .05em rgba(255,255,255,.8));
+  transition:opacity .3s ease;
+}
+.dn-toggle::after{ /* 月亮（未勾）/ 太阳（勾选） */
+  content:'';position:absolute;height:80%;aspect-ratio:1;border-radius:50%;
+  left:.5em;top:50%;transform:translate(-50%,-50%);z-index:1;
+  background-image:
+    radial-gradient(circle at 25% 45%,#c9c9c9 .05em,#0000 0),
+    radial-gradient(circle at 55% 25%,#c9c9c9 .075em,#0000 0),
+    radial-gradient(circle at 65% 85%,#c9c9c9 .065em,#0000 0),
+    radial-gradient(circle at 97% 51%,#c9c9c9 .075em,#0000 0),
+    radial-gradient(at var(--dnx) 30%,#0000 10%,#b9b9b9 80%);
+  background-color:#fff;background-repeat:no-repeat;
+  box-shadow:0 0 .2em .0125em rgba(255,255,255,.5);
+  transition:box-shadow .5s,background-color .3s,left .3s,transform .3s;
+  pointer-events:none;
+}
+.dn-toggle:checked{background-color:#fff}
+.dn-toggle:checked::after{ /* 黑太阳 */
+  background-color:#111;
+  background-image:radial-gradient(at var(--dnx) 30%,#0000 10%,#3d3d3d 80%);
+  left:calc(100% - .5em);
+  box-shadow:0 0 .2em .0125em rgba(0,0,0,.45);
+}
+.dn-toggle:checked::before{ /* 灰云 */
+  background:
+    radial-gradient(at calc(100% - .2em) 100%,#d9d9d9 .2em,#0000 0) var(--dnx1) .5em/100% 100%,
+    radial-gradient(20% 60% at calc(100% - .15em) 100%,#d9d9d9 30%,#0000 0) var(--dnx1) .5em/100% 100%,
+    radial-gradient(at calc(100% - .2em) 100%,#d9d9d9 .2em,#0000 0) var(--dnx2) .21em/100% 100%,
+    radial-gradient(20% 60% at calc(100% - .15em) 100%,#d9d9d9 30%,#0000 0) var(--dnx2) .21em/100% 100%,
+    radial-gradient(at calc(100% - .3em) 100%,#d9d9d9 .2em,#0000 0) var(--dnx3) .81em/100% 100%,
+    radial-gradient(20% 60% at calc(100% - .25em) 100%,#d9d9d9 30%,#0000 0) var(--dnx3) .81em/100% 100%,
+    radial-gradient(at calc(100% - .2em) 100%,#d9d9d9 .2em,#0000 0) var(--dnx4) .6em/100% 100%,
+    radial-gradient(20% 60% at calc(100% - .15em) 100%,#d9d9d9 30%,#0000 0) var(--dnx4) .6em/100% 100%;
+  filter:none;opacity:.9;
+}
+.dn-toggle:focus-visible{outline:2px solid var(--g-ink,#111);outline-offset:3px}
 
 @media (max-width:920px){
   .gate-shell{min-height:0;border-radius:20px}
   .gate-stage{display:none}
   .gate-shell .auth-gate-card{flex:1;padding:28px 22px 22px}
+  .dn-toggle{top:30px;right:22px}
 }
 @media (prefers-reduced-motion:reduce){
   .gc-root,.gc-head,.gc-pupil,.gc-eye-open,.gc-bubble{transition:none!important}
   .gc-cat.pounce .gc-pose,#authGate[data-cat-state="happy"] .gc-ball{animation:none!important}
+  .dn-toggle,.dn-toggle::before,.dn-toggle::after,
+  .auth-gate,.gate-shell,.gate-stage,.gc-floor,
+  .gate-shell .field input,.gate-shell .gate-adv input,
+  .gate-shell .gate-submit,.gate-shell .auth-gate-head .auth-gate-logo{transition:none!important}
+  .dn-toggle::before{animation:none!important}
 }

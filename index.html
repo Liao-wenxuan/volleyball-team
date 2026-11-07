@@ -7,42 +7,69 @@
 <meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%237b6cff'/%3E%3Crect%20x='12'%20y='12'%20width='40'%20height='40'%20rx='4'%20fill='none'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M12%2028h40'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M32%2012v40'%20stroke='%23fff'%20stroke-width='3'%20stroke-opacity='.55'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#05070f">
-<link rel="manifest" href="manifest.webmanifest?v=v56">
-<link rel="apple-touch-icon" href="assets/icon-180.png?v=v56">
+<link rel="manifest" href="manifest.webmanifest?v=v57">
+<link rel="apple-touch-icon" href="assets/icon-180.png?v=v57">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="排球队">
-<link rel="stylesheet" href="style.css?v=v56">
+<link rel="stylesheet" href="style.css?v=v57">
 <style>
+/* ── 昼夜基调 token：加载页与登录页共用。默认随时间（19:00–06:00 夜，见下方脚本），
+   登录页的星球开关可手动切换，选择记在 sessionStorage（本标签页内有效，
+   新开一次访问重新跟时间）。--g-* = 界面色，--cat-* = 猫的上色。 ── */
+html{
+  --g-bg:#ffffff;--g-bg-2:#f6f6f6;
+  --g-ink:#111111;--g-ink2:#666666;--g-ink3:#9a9a9a;
+  --g-line:rgba(0,0,0,.13);--g-line-strong:rgba(0,0,0,.28);
+  --g-field:#ffffff;--g-hover:rgba(0,0,0,.05);--g-focus:rgba(0,0,0,.10);
+  --cat-line:#161616;--cat-body:#ffffff;--cat-fur:#e4e4e4;--cat-soft:#cfcfcf;
+  --cat-ball:#161616;--cat-ball-panel:#ffffff;--cat-blush:rgba(0,0,0,.07);
+  --cat-shadow:rgba(0,0,0,.14);--cat-bubble-bg:#ffffff;
+}
+html[data-daynight="night"]{
+  --g-bg:#000000;--g-bg-2:#0e0e0e;
+  --g-ink:#f2f2f2;--g-ink2:#a6a6a6;--g-ink3:#7d7d7d;
+  --g-line:rgba(255,255,255,.14);--g-line-strong:rgba(255,255,255,.32);
+  --g-field:#141414;--g-hover:rgba(255,255,255,.07);--g-focus:rgba(255,255,255,.14);
+  --cat-line:#f2f2f2;--cat-body:#151515;--cat-fur:#282828;--cat-soft:#3e3e3e;
+  --cat-ball:#f2f2f2;--cat-ball-panel:#111111;--cat-blush:rgba(255,255,255,.16);
+  --cat-shadow:rgba(255,255,255,.10);--cat-bubble-bg:#151515;
+}
+
 /* ── 首屏加载动画：必须在首帧前生效，所以内联在 head，不依赖 style.css ──
-   r53 起整条「进站动线」（加载页 → 门禁 → 表单）统一为暖奶油排球风，
-   跟主题解耦：猫插画本来就是奶油底上的浅色系，深蓝黑底反而把它泡在冷色里。 */
-.boot-loader{position:fixed;inset:0;z-index:999;background:#f4eee1;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:18px;transition:opacity .45s ease,transform .45s ease}
+   v57 起黑白配色：昼=白底黑字，夜=黑底白字，随时间自动切换；
+   猫贴纸用 grayscale 黑白化，白天靠灰阶和投影成形，夜里白猫直接浮出来。 */
+.boot-loader{position:fixed;inset:0;z-index:999;background:var(--g-bg,#fff);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px;
+  transition:opacity .45s ease,transform .45s ease,background-color .4s ease}
 .boot-loader.done{opacity:0;transform:scale(1.03);pointer-events:none}
 .boot-stage{position:relative;width:230px;height:240px;display:flex;align-items:center;justify-content:center;
   animation:bootFloat 3s ease-in-out infinite}
-/* 猫身后一团暖白光晕，把主体从奶油底上托出来（原来是紫光晕，和球场暖棕打架） */
+/* 猫身后一团光晕，把主体从纯底上托出来 */
 .boot-stage::before{content:'';position:absolute;width:320px;height:320px;border-radius:50%;
-  background:radial-gradient(circle,rgba(255,255,255,.95) 0%,rgba(216,186,142,.30) 42%,transparent 68%);
+  background:radial-gradient(circle,rgba(0,0,0,.06) 0%,transparent 68%);
   animation:bootGlow 2.4s ease-in-out infinite}
+html[data-daynight="night"] .boot-stage::before{
+  background:radial-gradient(circle,rgba(255,255,255,.13) 0%,transparent 68%)}
 /* 首帧图未加载完前整个舞台隐藏，避免看到半张猫（图很小 + SW 缓存，通常一闪而过） */
 .boot-stage:not(.boot-ready){opacity:0;transition:opacity .2s}
 .boot-stage.boot-ready{opacity:1}
 .boot-frame{position:absolute;inset:0;margin:auto;max-width:94%;max-height:94%;opacity:0;
-  filter:drop-shadow(0 16px 26px rgba(107,74,56,.30));
+  filter:grayscale(1) contrast(1.06) drop-shadow(0 16px 26px rgba(0,0,0,.20));
   animation:bootFrame 1.8s ease-in-out infinite}
+html[data-daynight="night"] .boot-frame{
+  filter:grayscale(1) contrast(1.06) drop-shadow(0 16px 26px rgba(255,255,255,.15))}
 .boot-frame:nth-child(1){opacity:1;animation-delay:0s}
 .boot-frame:nth-child(2){animation-delay:-.6s}
 .boot-frame:nth-child(3){animation-delay:-1.2s}
-.boot-brand{font-size:15px;font-weight:700;letter-spacing:4px;color:#463125;margin-top:-14px}
+.boot-brand{font-size:15px;font-weight:700;letter-spacing:4px;color:var(--g-ink,#111);margin-top:-14px}
 .boot-dots{display:flex;gap:7px}
-.boot-dots span{width:7px;height:7px;border-radius:50%;background:#b4703f;
+.boot-dots span{width:7px;height:7px;border-radius:50%;background:var(--g-ink,#111);
   animation:bootDot 1.2s ease-in-out infinite}
 .boot-dots span:nth-child(2){animation-delay:.15s}
 .boot-dots span:nth-child(3){animation-delay:.3s}
-.boot-credit{position:absolute;right:16px;bottom:14px;font-size:10px;color:rgba(107,74,56,.45);letter-spacing:.5px}
+.boot-credit{position:absolute;right:16px;bottom:14px;font-size:10px;color:var(--g-ink3,#9a9a9a);letter-spacing:.5px}
 @keyframes bootFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes bootGlow{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
 @keyframes bootFrame{0%{opacity:0;transform:scale(.92)}5%{opacity:1;transform:scale(1)}
@@ -62,6 +89,18 @@ try {
   }
 } catch (e) { /* 隐私模式下 localStorage 会抛，忽略即可 */ }
 
+/* 昼夜基调：默认随时间（19:00–06:00 夜 = 黑底，其余昼 = 白底）；
+   登录页的星球开关手动切换后记 sessionStorage，本标签页内刷新也保持。 */
+(function () {
+  var dn = null;
+  try { dn = sessionStorage.getItem('xgy-gate-daynight'); } catch (e) {}
+  if (dn !== 'day' && dn !== 'night') {
+    var h = new Date().getHours();
+    dn = (h >= 19 || h < 6) ? 'night' : 'day';
+  }
+  document.documentElement.dataset.daynight = dn;
+})();
+
 /* 加载动画兜底：app.js 万一没跑起来（脚本损坏/被插件拦截），6 秒后强制摘掉，
    不能让用户面对一个永远转不完的开机画面。正常路径由 app.js 的 init() 摘。 */
 setTimeout(function () {
@@ -76,9 +115,9 @@ setTimeout(function () {
 <body>
 <div class="boot-loader" id="bootLoader" aria-hidden="true">
   <div class="boot-stage" id="bootStage">
-    <img class="boot-frame" src="assets/loader-pose1.png?v=v56" alt="">
-    <img class="boot-frame" src="assets/loader-pose2.png?v=v56" alt="">
-    <img class="boot-frame" src="assets/loader-pose3.png?v=v56" alt="">
+    <img class="boot-frame" src="assets/loader-pose1.png?v=v57" alt="">
+    <img class="boot-frame" src="assets/loader-pose2.png?v=v57" alt="">
+    <img class="boot-frame" src="assets/loader-pose3.png?v=v57" alt="">
   </div>
   <div class="boot-brand">信工院排球队</div>
   <div class="boot-dots"><span></span><span></span><span></span></div>
@@ -907,6 +946,10 @@ setTimeout(function () {
         <h1>信工院排球队</h1>
         <p id="gateSub">用管理员发给你的账号登录</p>
       </div>
+      <!-- 昼夜星球开关（参考 16.昼-星球动画，黑白化适配）：
+           勾选 = 白天（白底），未勾 = 夜晚（黑底）。默认跟时间。 -->
+      <input type="checkbox" id="gateDayNight" class="dn-toggle"
+             aria-label="切换昼 / 夜背景" title="切换昼 / 夜背景">
     </div>
 
     <div id="gateLoginPane">
@@ -950,6 +993,20 @@ setTimeout(function () {
   </div>
  </div><!-- /.gate-shell -->
 </div>
+<script>
+/* 星球开关 → 昼夜基调：勾选 = 白天。选择记 sessionStorage（本标签页有效，
+   新开访问恢复跟时间走），加载页与登录页共用同一 dataset，所以两边永远同色。 */
+(function () {
+  var t = document.getElementById('gateDayNight');
+  if (!t) return;
+  t.checked = document.documentElement.dataset.daynight !== 'night';
+  t.addEventListener('change', function () {
+    var v = t.checked ? 'day' : 'night';
+    document.documentElement.dataset.daynight = v;
+    try { sessionStorage.setItem('xgy-gate-daynight', v); } catch (e) {}
+  });
+})();
+</script>
 <!-- 文件选择框的坑（2026-10-31 r17 重写）：
      ① 不能写 accept=".json"/.xlsx：iPadOS 和部分安卓的文档选择器按 MIME/UTI 过滤，
         认不出来会把文件变灰点不动。类型校验交给 app.js。
@@ -1142,9 +1199,9 @@ setTimeout(function () {
   sync();
 })();
 </script>
-<script src="cloud.js?v=v56"></script>
+<script src="cloud.js?v=v57"></script>
 <!-- qr / xlsx / card / share / playercard 改为按需加载（app.js 的 ensureMod），
      冷启动不再跟着下载。单文件版由 build.mjs 内联到 app.js 之前。 -->
-<script src="app.js?v=v56"></script>
+<script src="app.js?v=v57"></script>
 </body>
 </html>
