@@ -2829,7 +2829,7 @@ html[data-daynight="night"] .gc-cat svg{
 /* 飞扑猫常驻浮动 */
 .gc-cat.pounce .gc-pose{animation:gcFloat 2.8s ease-in-out infinite}
 @keyframes gcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
-#authGate[data-cat-state="happy"] .gc-ball{animation:gcBall .55s cubic-bezier(.34,1.3,.5,1) 2}
+#authGate[data-cat-state="happy"] .gc-cat:not(.lift) .gc-root{animation:gcBall .55s cubic-bezier(.34,1.3,.5,1) 2}
 @keyframes gcBall{0%,100%{transform:translateY(0)}45%{transform:translateY(-26px)}}
 #authGate[data-cat-state="happy"] .gc-cat.lift .gc-root{animation:gcCheer .42s ease-in-out 2}
 @keyframes gcCheer{0%,100%{transform:translateY(0)}50%{transform:translateY(-11px)}}
@@ -3026,7 +3026,7 @@ html[data-daynight="night"] .gate-shell .gate-err{
 }
 @media (prefers-reduced-motion:reduce){
   .gc-root,.gc-head,.gc-pupil,.gc-eye-open,.gc-bubble{transition:none!important}
-  .gc-cat.pounce .gc-pose,#authGate[data-cat-state="happy"] .gc-ball{animation:none!important}
+  .gc-cat.pounce .gc-pose,#authGate[data-cat-state="happy"] .gc-root{animation:none!important}
   .dn-toggle,.dn-toggle::before,.dn-toggle::after,
   .auth-gate,.gate-shell,.gate-stage,.gc-floor,
   .gate-shell .field input,.gate-shell .gate-adv input,
