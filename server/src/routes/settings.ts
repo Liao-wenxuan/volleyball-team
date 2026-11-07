@@ -27,7 +27,7 @@ const templateSchema = z.object({
 
 const themeSchema = z.object({
   theme: z.enum([
-    'aurora', 'ocean', 'forest', 'sunset', 'sakura', 'graphite',
+    'court', 'aurora', 'ocean', 'forest', 'sunset', 'sakura', 'graphite',
     'paper', 'sand', 'mint'
   ])
 });
@@ -45,7 +45,7 @@ router.put(
     const r = req as unknown as AuthedRequest;
     const b = parse(templateSchema, req.body);
     db.prepare(
-      `INSERT INTO team_settings (team_id, template, theme, updated_at) VALUES (?, ?, 'aurora', ?)
+      `INSERT INTO team_settings (team_id, template, theme, updated_at) VALUES (?, ?, 'court', ?)
        ON CONFLICT(team_id) DO UPDATE SET template = excluded.template, updated_at = excluded.updated_at`
     ).run(r.teamId, JSON.stringify(b.template), now());
     res.json({ settings: getSettings(r.teamId) });
@@ -81,7 +81,7 @@ router.put(
     }
     const aiJson = JSON.stringify({ base: b.ai.base, model: b.ai.model, key });
     db.prepare(
-      `INSERT INTO team_settings (team_id, template, theme, ai, updated_at) VALUES (?, '[]', 'aurora', ?, ?)
+      `INSERT INTO team_settings (team_id, template, theme, ai, updated_at) VALUES (?, '[]', 'court', ?, ?)
        ON CONFLICT(team_id) DO UPDATE SET ai = excluded.ai, updated_at = excluded.updated_at`
     ).run(r.teamId, aiJson, now());
     res.json({ settings: getSettings(r.teamId) });

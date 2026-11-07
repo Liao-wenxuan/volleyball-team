@@ -39,7 +39,7 @@ const tx = db.transaction(() => {
     userId, teamId, 'admin', ts
   );
   db.prepare('INSERT INTO team_settings (team_id, template, theme, updated_at) VALUES (?, ?, ?, ?)').run(
-    teamId, JSON.stringify(DEFAULT_TEMPLATE), 'aurora', ts
+    teamId, JSON.stringify(DEFAULT_TEMPLATE), 'court', ts
   );
   db.prepare('INSERT INTO formations (team_id, preset, pos, updated_at) VALUES (?, ?, ?, ?)').run(
     teamId, DEFAULT_FORMATION.preset, JSON.stringify(DEFAULT_FORMATION.pos), ts

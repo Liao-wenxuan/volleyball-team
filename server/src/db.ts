@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS team_members (
 CREATE TABLE IF NOT EXISTS team_settings (
   team_id    TEXT PRIMARY KEY REFERENCES teams(id) ON DELETE CASCADE,
   template   TEXT NOT NULL DEFAULT '[]',
-  theme      TEXT NOT NULL DEFAULT 'aurora',
+  theme      TEXT NOT NULL DEFAULT 'court',
   updated_at INTEGER NOT NULL
 );
 

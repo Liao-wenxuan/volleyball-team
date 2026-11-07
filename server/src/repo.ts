@@ -111,7 +111,7 @@ export function getSettings(teamId: string): {
   const row = db.prepare('SELECT template, theme, ai FROM team_settings WHERE team_id = ?').get(teamId) as
     | { template: string; theme: string; ai: string }
     | undefined;
-  if (!row) return { template: [], theme: 'aurora', ai: null };
+  if (!row) return { template: [], theme: 'court', ai: null };
   let template: TemplateItem[] = [];
   try {
     template = JSON.parse(row.template) as TemplateItem[];

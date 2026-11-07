@@ -139,6 +139,28 @@
   --violet-deep:#0a7259;--violet-deep-rgb:10,114,89;
   --cyan:#0b7ea3;--cyan-rgb:11,126,163;
 }
+/* 排球：和登录门禁同一套色板（#463125 / #b4703f / #e0705a），进门不换队服。
+   ── 玻璃质感的三根柱子，动之前先看清楚 ──
+   ①背景 radial 光晕：由下面 4 组 *-rgb 驱动（body 的 background 里），换色值即可
+   ②半透明卡片的雾层：--ov* / --panel，跟主题完全无关，一行都不能碰
+   ③backdrop-blur：与颜色无关
+   所以主题只改色相不改透明度——改了 --ov* 或 --panel，玻璃立刻从「透光」变「蒙灰」。
+   另外 .bg-orbs 的三颗背景球原来硬编码紫/青/暗金：在暖棕底上 mix-blend:screen
+   会烧成脏粉，multiply 又压成土灰，必须跟着主题走（见 .orb-1/2/3 的 var）。 */
+[data-theme="court"]{
+  --violet:#b4703f;--violet-rgb:180,112,63;
+  --violet-2:#dda06a;--violet-2-rgb:221,160,106;
+  --violet-deep:#8a4f22;--violet-deep-rgb:138,79,34;
+  --cyan:#3f7fd0;--cyan-rgb:63,127,208;
+  --orb-1:#c98a52;--orb-2:#3f6fa8;--orb-3:#a9622f;
+}
+/* 浅色模式的三套冷白底（#f5f7fc）是给冷紫主题配的，暖棕光打上去会显得底脏。
+   这里只把底色和次要文字调暖，--text / --line / 对比度体系一律不动。 */
+html[data-mode="light"][data-theme="court"]{
+  --bg:#faf6ee;
+  --bg-2:#f1e9db;
+  --muted:#6f6a63;
+}
 
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -171,9 +193,11 @@ svg{display:block}
 /* ── 背景 ── */
 .bg-orbs{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;mix-blend-mode:screen}
-.orb-1{width:420px;height:420px;background:#4b2fd8;left:-140px;top:-100px;animation:orbDrift 24s ease-in-out infinite}
-.orb-2{width:360px;height:360px;background:#0e7fa8;right:-120px;top:24%;animation:orbDrift 30s ease-in-out infinite reverse}
-.orb-3{width:300px;height:300px;background:#8a5a12;left:38%;bottom:-160px;animation:orbDrift 34s ease-in-out infinite}
+/* 背景球取主题变量：不取的话暖棕主题里会飘着紫球和青球，
+   玻璃一透光就把它们糊成脏色。默认值 = 原来的固定色，其他主题零影响。 */
+.orb-1{width:420px;height:420px;background:var(--orb-1,#4b2fd8);left:-140px;top:-100px;animation:orbDrift 24s ease-in-out infinite}
+.orb-2{width:360px;height:360px;background:var(--orb-2,#0e7fa8);right:-120px;top:24%;animation:orbDrift 30s ease-in-out infinite reverse}
+.orb-3{width:300px;height:300px;background:var(--orb-3,#8a5a12);left:38%;bottom:-160px;animation:orbDrift 34s ease-in-out infinite}
 @keyframes orbDrift{
   0%,100%{transform:translate3d(0,0,0) scale(1)}
   33%{transform:translate3d(60px,40px,0) scale(1.12)}
@@ -7858,6 +7882,7 @@ body{
 
   /* ══════════ 主题 ══════════ */
   const THEMES = [
+    { id: 'court', name: '排球', sub: '暖棕 + 球衣蓝', p: '#b4703f', s: '#3f7fd0', mode: 'light' },
     { id: 'aurora', name: '极光', sub: '紫 + 青', p: '#7b6cff', s: '#46e0ff' },
     { id: 'ocean', name: '深海', sub: '蓝 + 湖青', p: '#3f8cff', s: '#2fd4e8' },
     { id: 'forest', name: '松林', sub: '翠绿 + 黄绿', p: '#2fbf8f', s: '#a8e05f' },
@@ -7870,6 +7895,8 @@ body{
   ];
   const THEME_IDS = THEMES.map((t) => t.id);
   const isTheme = (v) => THEME_IDS.includes(v);
+  /** v55 一次迁移的本地标记：置位后永不再跑，用户手动选回紫色也不会被改 */
+  const THEME_MIGRATION_KEY = 'xgy-theme-migrated-v55';
 
   /* ══════════ 阵型板常量 ══════════ */
   const FX_SIZE = 9;      // 半场 9 × 9 米
@@ -7962,7 +7989,7 @@ body{
 
   /* ══════════ 数据 ══════════ */
   function blankDB() {
-    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [], aiChat: [], shareNotes: {} };
+    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'court' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [], aiChat: [], shareNotes: {} };
   }
 
   function normalizeSkills(raw) {
@@ -8060,7 +8087,7 @@ body{
       });
     }
     base.formation = normalizeFormation(raw.formation);
-    base.settings.theme = raw.settings && isTheme(raw.settings.theme) ? raw.settings.theme : 'aurora';
+    base.settings.theme = raw.settings && isTheme(raw.settings.theme) ? raw.settings.theme : 'court';
     // AI 配置（BYOK）必须原样带回，否则每次刷新 Key 都会丢
     if (raw.settings && raw.settings.ai && typeof raw.settings.ai === 'object') {
       const a = raw.settings.ai;
@@ -10236,11 +10263,28 @@ body{
   let templateLocalAt = 0;
 
   function applyTheme(id) {
-    const t = isTheme(id) ? id : 'aurora';
+    const t = isTheme(id) ? id : 'court';
     const meta = THEMES.find((x) => x.id === t) || THEMES[0];
     document.documentElement.dataset.theme = t;
     document.documentElement.dataset.mode = meta.mode || 'dark';
     if (db.settings) db.settings.theme = t;
+  }
+
+  /** v55 一次性迁移：历史默认主题「极光」（紫）和登录门禁的奶油暖棕撞脸。
+      只跑一次（本地标记），且仅当库仍停在历史默认时迁到「排球」；
+      用户之后手动选回极光不会再被动。云端模式下必须在 applyServerState
+      之后调用——否则刚改完就被 pullCore 拉回来的旧值盖回去。 */
+  function migrateThemeOnce() {
+    try {
+      if (localStorage.getItem(THEME_MIGRATION_KEY)) return;
+      // 没迁就不置位：登录前本地还是新库默认（court），这时候判定没有意义，
+      // 置了标记反而让服务器真正数据（aurora）合并回来时再也没机会迁。
+      if (db.settings.theme !== 'aurora') return;
+      applyTheme('court');
+      save();
+      localStorage.setItem(THEME_MIGRATION_KEY, '1');
+      if (CloudOn()) { themeLocalAt = Date.now(); cloudFire(window.XGYCloud.push.theme('court'), null); }
+    } catch (e) { /* 隐私模式 localStorage 会抛：当作已迁移，不折腾 */ }
   }
 
   function setTheme(id) {
@@ -10258,7 +10302,7 @@ body{
   }
 
   function openTheme() {
-    const body = `<p class="theme-hint">换的是界面的品牌色和背景。深色六套、浅色三套。出勤绿、缺席红、提醒琥珀这三个语义色都不跟着变 —— 不然颜色就不代表状态了。</p>
+    const body = `<p class="theme-hint">换的是界面的品牌色和背景。深色六套、浅色四套。出勤绿、缺席红、提醒琥珀这三个语义色都不跟着变 —— 不然颜色就不代表状态了。</p>
       <div class="theme-grid">${THEMES.map((t) => `
         <button type="button" class="theme-card" data-theme-id="${t.id}" data-mode="${t.mode || 'dark'}" style="--p1:${t.p};--p2:${t.s}">
           <span class="tc-preview"></span>
@@ -12157,6 +12201,7 @@ body{
       });
     }
     save();
+    migrateThemeOnce(); // v55：服务器数据合并完再判主题迁移
   }
 
   function applyWeek(key, sessions) {
@@ -12517,6 +12562,7 @@ ${aiContext()}`;
 
   function init() {
     state.weekMonday = getMonday(new Date());
+    if (!CloudOn()) migrateThemeOnce();
     applyTheme(db.settings.theme);
     const fm = $('.footer-meta');
     if (fm) fm.textContent += ` · ${BUILD}`;

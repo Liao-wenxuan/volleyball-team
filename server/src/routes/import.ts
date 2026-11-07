@@ -45,7 +45,7 @@ const MAX_FORMATIONS = 30;
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const STATES = ['present', 'late', 'leave', 'absent'] as const;
-const THEMES = ['aurora', 'ocean', 'forest', 'sunset', 'sakura', 'graphite', 'paper', 'sand', 'mint'];
+const THEMES = ['court', 'aurora', 'ocean', 'forest', 'sunset', 'sakura', 'graphite', 'paper', 'sand', 'mint'];
 const ROLES6 = ['oh1', 'oh2', 'mb', 'opp', 's', 'lib'];
 
 /** 只校验外层结构与规模，内层交给下面的清洗函数逐字段兜底 */
@@ -446,7 +446,7 @@ router.post(
             | { template: string; theme: string }
             | undefined;
           const tpl = template.length ? JSON.stringify(template) : curSet?.template || '[]';
-          const th = theme || curSet?.theme || 'aurora';
+          const th = theme || curSet?.theme || 'court';
           db.prepare(
             `INSERT INTO team_settings (team_id, template, theme, updated_at) VALUES (?, ?, ?, ?)
              ON CONFLICT(team_id) DO UPDATE SET template = excluded.template, theme = excluded.theme, updated_at = excluded.updated_at`

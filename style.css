@@ -125,6 +125,28 @@
   --violet-deep:#0a7259;--violet-deep-rgb:10,114,89;
   --cyan:#0b7ea3;--cyan-rgb:11,126,163;
 }
+/* 排球：和登录门禁同一套色板（#463125 / #b4703f / #e0705a），进门不换队服。
+   ── 玻璃质感的三根柱子，动之前先看清楚 ──
+   ①背景 radial 光晕：由下面 4 组 *-rgb 驱动（body 的 background 里），换色值即可
+   ②半透明卡片的雾层：--ov* / --panel，跟主题完全无关，一行都不能碰
+   ③backdrop-blur：与颜色无关
+   所以主题只改色相不改透明度——改了 --ov* 或 --panel，玻璃立刻从「透光」变「蒙灰」。
+   另外 .bg-orbs 的三颗背景球原来硬编码紫/青/暗金：在暖棕底上 mix-blend:screen
+   会烧成脏粉，multiply 又压成土灰，必须跟着主题走（见 .orb-1/2/3 的 var）。 */
+[data-theme="court"]{
+  --violet:#b4703f;--violet-rgb:180,112,63;
+  --violet-2:#dda06a;--violet-2-rgb:221,160,106;
+  --violet-deep:#8a4f22;--violet-deep-rgb:138,79,34;
+  --cyan:#3f7fd0;--cyan-rgb:63,127,208;
+  --orb-1:#c98a52;--orb-2:#3f6fa8;--orb-3:#a9622f;
+}
+/* 浅色模式的三套冷白底（#f5f7fc）是给冷紫主题配的，暖棕光打上去会显得底脏。
+   这里只把底色和次要文字调暖，--text / --line / 对比度体系一律不动。 */
+html[data-mode="light"][data-theme="court"]{
+  --bg:#faf6ee;
+  --bg-2:#f1e9db;
+  --muted:#6f6a63;
+}
 
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -157,9 +179,11 @@ svg{display:block}
 /* ── 背景 ── */
 .bg-orbs{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;mix-blend-mode:screen}
-.orb-1{width:420px;height:420px;background:#4b2fd8;left:-140px;top:-100px;animation:orbDrift 24s ease-in-out infinite}
-.orb-2{width:360px;height:360px;background:#0e7fa8;right:-120px;top:24%;animation:orbDrift 30s ease-in-out infinite reverse}
-.orb-3{width:300px;height:300px;background:#8a5a12;left:38%;bottom:-160px;animation:orbDrift 34s ease-in-out infinite}
+/* 背景球取主题变量：不取的话暖棕主题里会飘着紫球和青球，
+   玻璃一透光就把它们糊成脏色。默认值 = 原来的固定色，其他主题零影响。 */
+.orb-1{width:420px;height:420px;background:var(--orb-1,#4b2fd8);left:-140px;top:-100px;animation:orbDrift 24s ease-in-out infinite}
+.orb-2{width:360px;height:360px;background:var(--orb-2,#0e7fa8);right:-120px;top:24%;animation:orbDrift 30s ease-in-out infinite reverse}
+.orb-3{width:300px;height:300px;background:var(--orb-3,#8a5a12);left:38%;bottom:-160px;animation:orbDrift 34s ease-in-out infinite}
 @keyframes orbDrift{
   0%,100%{transform:translate3d(0,0,0) scale(1)}
   33%{transform:translate3d(60px,40px,0) scale(1.12)}

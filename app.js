@@ -114,6 +114,7 @@
 
   /* ══════════ 主题 ══════════ */
   const THEMES = [
+    { id: 'court', name: '排球', sub: '暖棕 + 球衣蓝', p: '#b4703f', s: '#3f7fd0', mode: 'light' },
     { id: 'aurora', name: '极光', sub: '紫 + 青', p: '#7b6cff', s: '#46e0ff' },
     { id: 'ocean', name: '深海', sub: '蓝 + 湖青', p: '#3f8cff', s: '#2fd4e8' },
     { id: 'forest', name: '松林', sub: '翠绿 + 黄绿', p: '#2fbf8f', s: '#a8e05f' },
@@ -126,6 +127,8 @@
   ];
   const THEME_IDS = THEMES.map((t) => t.id);
   const isTheme = (v) => THEME_IDS.includes(v);
+  /** v55 一次迁移的本地标记：置位后永不再跑，用户手动选回紫色也不会被改 */
+  const THEME_MIGRATION_KEY = 'xgy-theme-migrated-v55';
 
   /* ══════════ 阵型板常量 ══════════ */
   const FX_SIZE = 9;      // 半场 9 × 9 米
@@ -218,7 +221,7 @@
 
   /* ══════════ 数据 ══════════ */
   function blankDB() {
-    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'aurora' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [], aiChat: [], shareNotes: {} };
+    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'court' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [], aiChat: [], shareNotes: {} };
   }
 
   function normalizeSkills(raw) {
@@ -316,7 +319,7 @@
       });
     }
     base.formation = normalizeFormation(raw.formation);
-    base.settings.theme = raw.settings && isTheme(raw.settings.theme) ? raw.settings.theme : 'aurora';
+    base.settings.theme = raw.settings && isTheme(raw.settings.theme) ? raw.settings.theme : 'court';
     // AI 配置（BYOK）必须原样带回，否则每次刷新 Key 都会丢
     if (raw.settings && raw.settings.ai && typeof raw.settings.ai === 'object') {
       const a = raw.settings.ai;
@@ -2492,11 +2495,28 @@
   let templateLocalAt = 0;
 
   function applyTheme(id) {
-    const t = isTheme(id) ? id : 'aurora';
+    const t = isTheme(id) ? id : 'court';
     const meta = THEMES.find((x) => x.id === t) || THEMES[0];
     document.documentElement.dataset.theme = t;
     document.documentElement.dataset.mode = meta.mode || 'dark';
     if (db.settings) db.settings.theme = t;
+  }
+
+  /** v55 一次性迁移：历史默认主题「极光」（紫）和登录门禁的奶油暖棕撞脸。
+      只跑一次（本地标记），且仅当库仍停在历史默认时迁到「排球」；
+      用户之后手动选回极光不会再被动。云端模式下必须在 applyServerState
+      之后调用——否则刚改完就被 pullCore 拉回来的旧值盖回去。 */
+  function migrateThemeOnce() {
+    try {
+      if (localStorage.getItem(THEME_MIGRATION_KEY)) return;
+      // 没迁就不置位：登录前本地还是新库默认（court），这时候判定没有意义，
+      // 置了标记反而让服务器真正数据（aurora）合并回来时再也没机会迁。
+      if (db.settings.theme !== 'aurora') return;
+      applyTheme('court');
+      save();
+      localStorage.setItem(THEME_MIGRATION_KEY, '1');
+      if (CloudOn()) { themeLocalAt = Date.now(); cloudFire(window.XGYCloud.push.theme('court'), null); }
+    } catch (e) { /* 隐私模式 localStorage 会抛：当作已迁移，不折腾 */ }
   }
 
   function setTheme(id) {
@@ -2514,7 +2534,7 @@
   }
 
   function openTheme() {
-    const body = `<p class="theme-hint">换的是界面的品牌色和背景。深色六套、浅色三套。出勤绿、缺席红、提醒琥珀这三个语义色都不跟着变 —— 不然颜色就不代表状态了。</p>
+    const body = `<p class="theme-hint">换的是界面的品牌色和背景。深色六套、浅色四套。出勤绿、缺席红、提醒琥珀这三个语义色都不跟着变 —— 不然颜色就不代表状态了。</p>
       <div class="theme-grid">${THEMES.map((t) => `
         <button type="button" class="theme-card" data-theme-id="${t.id}" data-mode="${t.mode || 'dark'}" style="--p1:${t.p};--p2:${t.s}">
           <span class="tc-preview"></span>
@@ -4413,6 +4433,7 @@
       });
     }
     save();
+    migrateThemeOnce(); // v55：服务器数据合并完再判主题迁移
   }
 
   function applyWeek(key, sessions) {
@@ -4773,6 +4794,7 @@ ${aiContext()}`;
 
   function init() {
     state.weekMonday = getMonday(new Date());
+    if (!CloudOn()) migrateThemeOnce();
     applyTheme(db.settings.theme);
     const fm = $('.footer-meta');
     if (fm) fm.textContent += ` · ${BUILD}`;

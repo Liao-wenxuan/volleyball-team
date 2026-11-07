@@ -73,7 +73,7 @@ function ensureTeam(teamName: string): string {
     db.prepare('INSERT INTO team_settings (team_id, template, theme, updated_at) VALUES (?, ?, ?, ?)').run(
       teamId,
       JSON.stringify(DEFAULT_TEMPLATE),
-      'aurora',
+      'court',
       ts
     );
     db.prepare('INSERT INTO formations (team_id, preset, pos, updated_at) VALUES (?, ?, ?, ?)').run(
