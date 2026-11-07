@@ -747,7 +747,7 @@
       ? `<text class="radar-center-num" x="${c}" y="${c + 6}">${esc(centerLabel)}</text><text class="radar-center-sub" x="${c}" y="${c + 20}">全队均值</text>`
       : '';
     return `<svg viewBox="0 0 ${size} ${size}" aria-hidden="true">
-      <defs><radialGradient id="${gid}" cx="50%" cy="50%" r="65%"><stop offset="0%" stop-color="rgba(168,155,255,.45)"/><stop offset="100%" stop-color="rgba(123,108,255,.14)"/></radialGradient></defs>
+      <defs><radialGradient id="${gid}" cx="50%" cy="50%" r="65%"><stop offset="0%" style="stop-color:rgba(var(--violet-rgb),.5)"/><stop offset="100%" style="stop-color:rgba(var(--violet-rgb),.12)"/></radialGradient></defs>
       ${grid}${axes}
       <polygon class="radar-poly" style="fill:url(#${gid})" points="${poly(values)}"/>
       ${dots}${center}${labels}
@@ -1021,9 +1021,9 @@
     if (cancelled) return 'rgba(255,107,138,.13)';
     if (rate == null) return 'rgba(255,255,255,.045)';
     if (rate >= 90) return 'rgba(255,187,85,.62)';
-    if (rate >= 75) return 'rgba(123,108,255,.55)';
-    if (rate >= 50) return 'rgba(123,108,255,.35)';
-    return 'rgba(123,108,255,.2)';
+    if (rate >= 75) return 'rgba(var(--violet-rgb),.55)';
+    if (rate >= 50) return 'rgba(var(--violet-rgb),.35)';
+    return 'rgba(var(--violet-rgb),.2)';
   }
 
   function renderHeatmap() {

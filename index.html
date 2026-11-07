@@ -7,13 +7,13 @@
 <meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%237b6cff'/%3E%3Crect%20x='12'%20y='12'%20width='40'%20height='40'%20rx='4'%20fill='none'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M12%2028h40'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M32%2012v40'%20stroke='%23fff'%20stroke-width='3'%20stroke-opacity='.55'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#05070f">
-<link rel="manifest" href="manifest.webmanifest?v=v53">
-<link rel="apple-touch-icon" href="assets/icon-180.png?v=v53">
+<link rel="manifest" href="manifest.webmanifest?v=v56">
+<link rel="apple-touch-icon" href="assets/icon-180.png?v=v56">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="排球队">
-<link rel="stylesheet" href="style.css?v=v53">
+<link rel="stylesheet" href="style.css?v=v56">
 <style>
 /* ── 首屏加载动画：必须在首帧前生效，所以内联在 head，不依赖 style.css ──
    r53 起整条「进站动线」（加载页 → 门禁 → 表单）统一为暖奶油排球风，
@@ -76,9 +76,9 @@ setTimeout(function () {
 <body>
 <div class="boot-loader" id="bootLoader" aria-hidden="true">
   <div class="boot-stage" id="bootStage">
-    <img class="boot-frame" src="assets/loader-pose1.png?v=v53" alt="">
-    <img class="boot-frame" src="assets/loader-pose2.png?v=v53" alt="">
-    <img class="boot-frame" src="assets/loader-pose3.png?v=v53" alt="">
+    <img class="boot-frame" src="assets/loader-pose1.png?v=v56" alt="">
+    <img class="boot-frame" src="assets/loader-pose2.png?v=v56" alt="">
+    <img class="boot-frame" src="assets/loader-pose3.png?v=v56" alt="">
   </div>
   <div class="boot-brand">信工院排球队</div>
   <div class="boot-dots"><span></span><span></span><span></span></div>
@@ -265,7 +265,7 @@ setTimeout(function () {
                 <g class="court-net">
                   <rect x="54" y="160" width="232" height="14" fill="url(#netMesh)"/>
                   <line x1="52" y1="160" x2="288" y2="160" stroke="url(#netGrad)" stroke-width="2.4"/>
-                  <line x1="52" y1="174" x2="288" y2="174" stroke="rgba(70,224,255,.32)" stroke-width="1"/>
+                  <line x1="52" y1="174" x2="288" y2="174" style="stroke:rgba(var(--cyan-rgb),.32)" stroke-width="1"/>
                   <line x1="54" y1="148" x2="54" y2="186" stroke="rgba(255,255,255,.4)" stroke-width="1.6"/>
                   <line x1="286" y1="148" x2="286" y2="186" stroke="rgba(255,255,255,.4)" stroke-width="1.6"/>
                   <circle cx="54" cy="148" r="2.2" style="fill:var(--cyan)"/><circle cx="286" cy="148" r="2.2" style="fill:var(--cyan)"/>
@@ -653,8 +653,8 @@ setTimeout(function () {
   <footer class="footer">
     <div class="wave" aria-hidden="true">
       <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
-        <path d="M0,64 C180,120 320,10 520,48 C720,86 820,20 1010,52 C1180,80 1300,30 1440,62 L1440,120 L0,120 Z" fill="rgba(123,108,255,.10)"/>
-        <path d="M0,80 C200,30 360,116 560,80 C760,44 880,108 1080,76 C1240,50 1360,100 1440,82 L1440,120 L0,120 Z" fill="rgba(70,224,255,.07)"/>
+        <path d="M0,64 C180,120 320,10 520,48 C720,86 820,20 1010,52 C1180,80 1300,30 1440,62 L1440,120 L0,120 Z" style="fill:rgba(var(--violet-rgb),.10)"/>
+        <path d="M0,80 C200,30 360,116 560,80 C760,44 880,108 1080,76 C1240,50 1360,100 1440,82 L1440,120 L0,120 Z" style="fill:rgba(var(--cyan-rgb),.07)"/>
       </svg>
     </div>
     <div class="footer-inner">
@@ -666,7 +666,7 @@ setTimeout(function () {
       <div class="social-row" id="footerActions">
         <button class="social-btn" style="--brand:#37e39b" data-action="export"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></span><span class="sb-txt">导出备份</span></button>
         <button class="social-btn" style="--brand:var(--violet)" data-action="template"><span class="sb-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="sb-txt">训练模板</span></button>
-        <button class="social-btn" style="--brand:#7b6cff" data-action="sheet-import"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h10M4 19h7"/><path d="M17 13v6M14.5 16.5l2.5 2.5 2.5-2.5"/></svg></span><span class="sb-txt">表格导入</span></button>
+        <button class="social-btn" style="--brand:var(--violet)" data-action="sheet-import"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h10M4 19h7"/><path d="M17 13v6M14.5 16.5l2.5 2.5 2.5-2.5"/></svg></span><span class="sb-txt">表格导入</span></button>
         <button class="social-btn" style="--brand:var(--cyan)" data-action="add-player"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="sb-txt">添加队员</span></button>
         <button class="social-btn" style="--brand:#ffbb55" data-action="help"><span class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7v.5"/><path d="M12 17h.01"/></svg></span><span class="sb-txt">使用说明</span></button>
       </div>
@@ -1142,9 +1142,9 @@ setTimeout(function () {
   sync();
 })();
 </script>
-<script src="cloud.js?v=v53"></script>
+<script src="cloud.js?v=v56"></script>
 <!-- qr / xlsx / card / share / playercard 改为按需加载（app.js 的 ensureMod），
      冷启动不再跟着下载。单文件版由 build.mjs 内联到 app.js 之前。 -->
-<script src="app.js?v=v53"></script>
+<script src="app.js?v=v56"></script>
 </body>
 </html>
