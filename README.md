@@ -245,14 +245,17 @@ Chrome 实测 `transferSize = 0`；配合 Caddy 的 immutable，即使 SW 未命
 **外部探活**（`.github/workflows/monitor.yml`）：探测 `/api/health` 与首页。跨境链路偶尔抖动，
 health 连试两次（间隔 5s、单次 20s 超时）才算真失败；首页还要校验 `<title`，
 防止反代把错误页当 200 糊弄过去。`workflow_dispatch` 可手动跑，`dry_run` 能验证告警动作
-而不真的开 issue。
+而不真的开 issue。2026-11-08 实测过完整闭环：用不可达地址触发 → 自动开 issue #1
+（写明现象、探测点、run 链接）→ 恢复正常地址再探 → 自动评论「已恢复」并关闭；
+演练 issue 已标注为测试，仓库当前 0 个 open issue。
 
 **深度 health**：`GET /api/health/deep` 返回四项 `checks` 与 `durationMs`：
 `database`（`SELECT 1` + `BEGIN IMMEDIATE`/`ROLLBACK` 验证写锁，**不写任何业务数据**）、
 `disk`（`statfsSync` 可用空间 ≥ 512 MB）、`memory`（系统可用 ≥ 128 MB + 进程 RSS）、
 `backup`（`backups/app-*.db` 最新一份 ≤ 36 小时，忽略 `-wal` / `-shm`）。
 浅 health 保持 `{ok,name,time}` 原契约不变——部署脚本和 Caddy 都靠它。
-194 条单测里有 6 条专门覆盖这四项判定。
+194 条单测里有 6 条专门覆盖这四项判定。线上部署后实测：`200 / durationMs=3`、
+`journal=wal`、磁盘可用 28,061 MB、系统可用 917 MB、最新备份 8.3 小时，四项全 ok。
 
 **内存看门狗**（`deploy/watchdog.sh`）：采样 `MemAvailable` / Swap 余量 / load1，
 连续 3 次超阈值（默认可用内存 < 200 MB、swap 剩余 < 512 MB、load1 > 4）才告警，
