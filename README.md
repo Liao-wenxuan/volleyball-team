@@ -289,6 +289,7 @@ server/public/m.html          队员端手机页（/m，r35 起停用，代码�
 docs/interview.md             面试讲点：每个模块的四段式复盘
 docs/战术板产品方案.md          阵型板的产品方案
 docs/shots/                   README 截图 + GitHub 分享预览图
+docs/shots/social-preview.jpg  分享预览图 JPG 版（68 KB）：网页上传用这版，PNG 是源图
 LICENSE                       MIT 许可证
 prototype/formation-editor.html  阵型板最早的独立原型
 ```
