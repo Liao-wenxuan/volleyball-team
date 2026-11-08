@@ -35,6 +35,9 @@ jobs:
       - name: 后端单元测试
         run: npm test
 
+      - name: 前端纯函数单测
+        run: npm run test:pure
+
       - name: 后端类型检查 / 编译
         run: npm run build --prefix server
 

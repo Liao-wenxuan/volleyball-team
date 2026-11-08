@@ -99,10 +99,11 @@ npm ci --prefix server # 后端：Express / SQLite / vitest / tsx
 改完源码要重新打包成单文件；仓库根目录已经把常用命令收好了：
 
 ```bash
-npm run build   # 等价于 node build.mjs，重新生成单文件 + 刷 ?v= 版本号
-npm test        # 194 条后端单元测试
-npm run e2e     # 3 条端到端（真浏览器 → 真前端 → 真后端 → 临时 SQLite）
-npm run test:all        # 上面三件一次跑完
+npm run build      # 等价于 node build.mjs，重新生成单文件 + 刷 ?v= 版本号
+npm test           # 194 条后端单元测试
+npm run test:pure  # 30 条前端纯函数单测（node:test，120ms，不开浏览器）
+npm run e2e        # 3 条端到端（真浏览器 → 真前端 → 真后端 → 临时 SQLite）
+npm run test:all   # 上面四件一次跑完
 ```
 
 e2e 在 Windows 上自动复用系统 Edge，不下载浏览器；Linux / CI 上先装一次
@@ -165,6 +166,15 @@ API 一览：`POST /api/auth/login`、`GET /api/auth/me`、`GET|POST|PATCH|DELET
 （重复登记以最后一次为准、只有一条记录）、批量改技能的事务回滚（半失败全不动）、
 跨队隔离（每条 SQL 都按 team_id 作用域）、备份导入的认人规则与脏数据兜底。
 
+**30 条前端纯函数单测**（`node:test`，`npm run test:pure`）：`tests/load-app.mjs` 用 `vm`
+把真实 `app.js` 加载进 Node，`app.js` 末尾留了一个 `typeof module !== 'undefined'` 的导出钩子
+（浏览器里没有 CommonJS 的 `module`，那段是死代码，启动调用也一并跳过），于是**测的是生产源码本身，
+不是复制出来的副本**，不必为了可测性引入打包链或多维护一份函数。六组边界：工具与 HTML 转义、
+日期与周跨月跨年、技能 0.5 步进与 0–10 夹取、数据规范化白名单、阵型 0.25m 吸附、
+粘贴名单的四类分隔符与单位解析。整套 120ms，不启浏览器。踩过一个 `vm` 特有的坑：
+沙箱里创建的对象带另一套原型，`deepStrictEqual` 会判「结构相同但引用不等」，
+测试里统一用 JSON 往返把结果压成当前 realm 的普通值再比。
+
 **3 条端到端测试**（`node:test` + playwright-core，仓库根目录 `npm run e2e`）：
 真浏览器 → 真前端 → 真后端 → 真 SQLite，只盖三条最关键的用户路径——
 登录门禁（错密码被拦 / 对密码进云端）、考勤登记（刷新后仍在、服务器确有这条数据）、
@@ -174,7 +184,7 @@ API 一览：`POST /api/auth/login`、`GET /api/auth/me`、`GET|POST|PATCH|DELET
 正确语义是 400。已修（`errorMiddleware` 识别 `entity.parse.failed`）。
 
 **CI 门禁**：`.github/workflows/ci.yml` 在 push 到 `main` / PR / 手动触发时，于干净的
-`ubuntu-latest` 上跑一遍完整链路：`npm ci`（根 + 后端）→ 194 条单测 → `tsc` 编译 →
+`ubuntu-latest` 上跑一遍完整链路：`npm ci`（根 + 后端）→ 194 条后端单测 → 30 条前端纯函数单测 → `tsc` 编译 →
 `npm run build` 并校验单文件产物确实内联了 CSS/JS 和三帧动画 → 安装 Chromium → 3 条 e2e。
 顶部那个徽章就是这次跑绿的结果；所以 README 里写的每一条命令，别人 clone 下来都能复现。
 `deploy.yml` 不再由 push 直接触发，改成监听 ci 的 `workflow_run` 且只在 `conclusion == success` 时部署——
@@ -254,7 +264,7 @@ health 连试两次（间隔 5s、单次 20s 超时）才算真失败；首页�
 `disk`（`statfsSync` 可用空间 ≥ 512 MB）、`memory`（系统可用 ≥ 128 MB + 进程 RSS）、
 `backup`（`backups/app-*.db` 最新一份 ≤ 36 小时，忽略 `-wal` / `-shm`）。
 浅 health 保持 `{ok,name,time}` 原契约不变——部署脚本和 Caddy 都靠它。
-194 条单测里有 6 条专门覆盖这四项判定。线上部署后实测：`200 / durationMs=3`、
+后端 194 条单测里有 6 条专门覆盖这四项判定。线上部署后实测：`200 / durationMs=3`、
 `journal=wal`、磁盘可用 28,061 MB、系统可用 917 MB、最新备份 8.3 小时，四项全 ok。
 
 **内存看门狗**（`deploy/watchdog.sh`）：采样 `MemAvailable` / Swap 余量 / load1，
@@ -318,9 +328,11 @@ build.mjs                     把 CSS / JS / 动画帧内联成单文件，并�
 sw.js                         Service Worker：HTML 网络优先、静态缓存优先、API 不缓存
 playercard.js                 队员档案「单文件 .html」导出器（r35）
 信工院排球队管理系统.html        构建产物，可直接分发
-package.json                  根目录脚本：build / test / e2e / test:all
+package.json                  根目录脚本：build / test / test:pure / e2e / test:all
 e2e/e2e.mjs                   3 条端到端测试（node:test + playwright-core）
-.github/workflows/ci.yml       CI 门禁：194 单测 + tsc + 构建校验 + 3 条 e2e
+tests/load-app.mjs            vm 加载真实 app.js 的纯函数导出（不开浏览器）
+tests/pure.test.mjs           30 条前端纯函数单测（node:test）
+.github/workflows/ci.yml       CI 门禁：224 单测 + tsc + 构建校验 + 3 条 e2e
 .github/workflows/monitor.yml  外部探活：定时探测 + 自动开/关告警 issue
 deploy/                       生产 Caddyfile / 部署脚本 / 备份脚本 / 内存看门狗
 server/                       可选后端：Express + SQLite + JWT（云端模式）

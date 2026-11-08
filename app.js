@@ -4904,7 +4904,23 @@ ${aiContext()}`;
     window.addEventListener('appinstalled', () => dismiss());
   }
 
-  init();
-  // 带 #backup= 打开链接时直接进导入流程（要在 init 之后，db 已经读进来了）
-  bootBackupHash();
+  // 带 #backup= 打开链接时直接进导入流程（要在 init 之后，db 已经读进来了）。
+  // 浏览器里没有 CommonJS 的 module，照常启动；Node 下用 vm 加载时跳过启动（没有 DOM）。
+  if (typeof module === 'undefined') {
+    init();
+    bootBackupHash();
+  }
+
+  /* 测试钩子：浏览器里 typeof module 恒为 'undefined'，这整段是死代码。
+   * tests/load-app.mjs 用 vm 在 Node 里加载本文件，跳过后只导出不依赖 DOM 的纯函数，
+   * 让 node:test 直接跑生产源码本身——不是复制出来的副本，也不必为了可测性引入打包链
+   * 或多维护一份函数。新增纯函数时记得同步加进这个列表。 */
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      clamp, roundHalf, esc, pad2, startOfDay, addDays, getMonday, dateKey, parseKey,
+      isSameDay, fmtMD, fmtRange, fmtDateCN, fxClamp, fxSnap, blankFormation, normalizeFormation,
+      normalizeSkills, normalizePlayer, normalizeSession, normalizeLog, overall, splitRow,
+      normalizeImportPosition, normalizeImportGrade, normalizeImportNumber, normalizeImportHeight
+    };
+  }
 })();

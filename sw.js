@@ -39,7 +39,8 @@
 // v22: 用户管理（角色/邀请码/成员管理/改密码/切队）
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v63';
+// v64: app.js 末尾加 Node 专用的纯函数导出钩子（浏览器里是死代码），配套 30 条前端单测
+const VERSION = 'v64';
 const CACHE = `xgy-pwa-${VERSION}`;
 // 预缓存只放「首屏一定会用到」的东西。下面两类刻意不放：
 // 1) qr / xlsx / card / share / playercard：分享、导出、表格导入才用，白下 37KB 抢跨境带宽；
@@ -50,13 +51,13 @@ const CACHE = `xgy-pwa-${VERSION}`;
 // 所以离线能力不受影响，只是不再在首次安装时抢带宽。
 const SHELL = [
   './index.html',
-  './style.css?v=v63',
-  './app.js?v=v63',
-  './cloud.js?v=v63',
-  './manifest.webmanifest?v=v63',
-  './assets/loader-pose1.png?v=v63',
-  './assets/loader-pose2.png?v=v63',
-  './assets/loader-pose3.png?v=v63'
+  './style.css?v=v64',
+  './app.js?v=v64',
+  './cloud.js?v=v64',
+  './manifest.webmanifest?v=v64',
+  './assets/loader-pose1.png?v=v64',
+  './assets/loader-pose2.png?v=v64',
+  './assets/loader-pose3.png?v=v64'
 ];
 
 self.addEventListener('install', (e) => {
