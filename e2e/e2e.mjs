@@ -1,15 +1,17 @@
 /**
  * 端到端测试：真浏览器（Edge headless）→ 真前端 → 真后端 → 真 SQLite。
  *
- * 覆盖三条最关键的用户路径（跑法：仓库根目录 `node e2e/e2e.mjs`）：
+ * 覆盖三条最关键的用户路径（跑法：仓库根目录 `npm run e2e`）：
  *   1. 登录门禁：错密码被拦、对密码进云端模式
  *   2. 考勤登记：点击格子 → 刷新后仍在 → 数据确实落到了服务器
  *   3. 阵型板拖拽：松手 0.25m 吸附 → 位置落到服务器（云端推送）
  *
- * 架子：node:test（Node 20+ 内置，不引第二个测试框架）+ playwright-core（复用系统 Edge，
- * 不下载浏览器）。后端用 tsx 起在临时 DB 上，前端用极简静态服务器托管仓库根目录。
+ * 架子：node:test（Node 20+ 内置，不引第二个测试框架）+ playwright-core
+ * （Windows 复用系统 Edge；Linux/CI 用已安装的 Chromium 或 E2E_CHROME 指定）。
+ * 后端用 tsx 起在系统临时目录的 DB 上，前端用极简静态服务器托管仓库根目录。
  */
 import http from 'node:http';
+import os from 'node:os';
 import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
@@ -61,7 +63,8 @@ before(async () => {
   await new Promise((r) => frontServer.listen(PORT_HTTP, '127.0.0.1', r));
 
   // 2. 临时库 + 种子 + 后端
-  tmpDir = mkdtempSync(path.join(ROOT, 'preview', 'e2e-db-'));
+  // 用系统临时目录：preview/ 被 .gitignore 忽略，CI checkout 后并不存在
+  tmpDir = mkdtempSync(path.join(os.tmpdir(), 'xgy-e2e-db-'));
   const dbPath = path.join(tmpDir, 'e2e.db');
   const env = { ...process.env, DB_PATH: dbPath, PORT: String(PORT_API), JWT_SECRET: 'e2e-secret' };
   const run = (args) =>
@@ -82,10 +85,15 @@ before(async () => {
     await new Promise((r) => setTimeout(r, 300));
   }
 
-  // 3. 浏览器（系统 Edge，不下载 Chromium）
-  const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
-  const exe = existsSync(EDGE) ? EDGE : 'C:/Program Files/Microsoft/Edge/Application/msedge.exe';
-  browser = await chromium.launch({ executablePath: exe, headless: true });
+  // 3. 浏览器：本机复用系统 Edge（不下载浏览器）；CI / Linux 用
+  //    `npx playwright-core install chromium` 装到默认缓存，不传 executablePath 即可。
+  //    也可用 E2E_CHROME 显式指定任意 Chromium 可执行文件。
+  const winEdge = [
+    'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+    'C:/Program Files/Microsoft/Edge/Application/msedge.exe'
+  ].find((p) => existsSync(p));
+  const exe = process.env.E2E_CHROME || winEdge;
+  browser = await chromium.launch({ ...(exe ? { executablePath: exe } : {}), headless: true });
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   page = await ctx.newPage();
   page.setDefaultTimeout(10000);

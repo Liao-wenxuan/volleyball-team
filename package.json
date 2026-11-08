@@ -1,0 +1,18 @@
+{
+  "name": "volleyball-team",
+  "version": "1.0.0",
+  "private": true,
+  "description": "排球阵型板 · 球队管理：本地优先的单文件系统 + 可选 Node/SQLite 云端",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "npm --prefix server test",
+    "e2e": "node e2e/e2e.mjs",
+    "test:all": "npm run test && npm run build && npm run e2e"
+  },
+  "devDependencies": {
+    "playwright-core": "1.64.1"
+  }
+}

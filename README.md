@@ -1,5 +1,7 @@
 # 排球阵型板 · 球队管理
 
+[![ci](https://github.com/Liao-wenxuan/volleyball-team/actions/workflows/ci.yml/badge.svg)](https://github.com/Liao-wenxuan/volleyball-team/actions/workflows/ci.yml)
+
 给高校排球队用的一套本地优先工具：**人员 · 考勤 · 技能成长 · 阵型板**。
 纯前端、零依赖，双击一个 HTML 就能用，数据存在浏览器本地，可导出 JSON 备份；
 也可以选配 `server/` 里的 Node + SQLite 后端，一键切换成多端同步的云端模式。
@@ -66,7 +68,7 @@
 
 ### 一、下载单文件（只是想用）
 
-点上面的「下载单文件」，得到一个 `volleyball-team.html`（约 314 KB）。
+点上面的「下载单文件」，得到一个 `volleyball-team.html`（约 762 KB，含三帧加载动画图片）。
 双击 → 浏览器打开 → 就能用。
 
 - 不需要装 Node、不需要联网、没有任何依赖，CSS 和 JS 全部内联在这个文件里
@@ -88,14 +90,22 @@
 ```bash
 git clone https://github.com/Liao-wenxuan/volleyball-team.git
 cd volleyball-team
+npm ci                 # 根目录：playwright-core（只有 e2e 用）
+npm ci --prefix server # 后端：Express / SQLite / vitest / tsx
 ```
 
 用浏览器直接打开 `index.html` 就能调试（它引用同目录的 `style.css` / `app.js`，改完刷新即可）。
-改完源码要重新打包成单文件：
+改完源码要重新打包成单文件；仓库根目录已经把常用命令收好了：
 
 ```bash
-node build.mjs
+npm run build   # 等价于 node build.mjs，重新生成单文件 + 刷 ?v= 版本号
+npm test        # 188 条后端单元测试
+npm run e2e     # 3 条端到端（真浏览器 → 真前端 → 真后端 → 临时 SQLite）
+npm run test:all        # 上面三件一次跑完
 ```
+
+e2e 在 Windows 上自动复用系统 Edge，不下载浏览器；Linux / CI 上先装一次
+`npx playwright-core install chromium --with-deps`，或用环境变量 `E2E_CHROME` 指定可执行文件。
 
 ### 四、云端模式（可选，Node + SQLite）
 
@@ -149,18 +159,87 @@ API 一览：`POST /api/auth/login`、`GET /api/auth/me`、`GET|POST|PATCH|DELET
 
 ## 测试
 
-**188 条后端单元测试**（vitest + 内存 SQLite，`cd server && npm test`）。
+**188 条后端单元测试**（vitest + 内存 SQLite，`npm test`，等价于 `cd server && npm test`）。
 覆盖按风险排序：鉴权边界（过期/伪造 token、越权、停用账号踢出）、考勤 UPSERT 幂等
 （重复登记以最后一次为准、只有一条记录）、批量改技能的事务回滚（半失败全不动）、
 跨队隔离（每条 SQL 都按 team_id 作用域）、备份导入的认人规则与脏数据兜底。
 
-**3 条端到端测试**（Playwright + 系统 Edge，仓库根目录 `node e2e/e2e.mjs`）：
+**3 条端到端测试**（`node:test` + playwright-core，仓库根目录 `npm run e2e`）：
 真浏览器 → 真前端 → 真后端 → 真 SQLite，只盖三条最关键的用户路径——
 登录门禁（错密码被拦 / 对密码进云端）、考勤登记（刷新后仍在、服务器确有这条数据）、
 阵型板拖拽（松手 0.25m 吸附、站位推送到服务器）。e2e 慢且脆，按金字塔配比只留主干。
 
 测试抓到过一个真 bug：非法 JSON 的请求体会被 body-parser 抛进兜底错误处理返回 500，
 正确语义是 400。已修（`errorMiddleware` 识别 `entity.parse.failed`）。
+
+**CI 门禁**：`.github/workflows/ci.yml` 在 push 到 `main` / PR / 手动触发时，于干净的
+`ubuntu-latest` 上跑一遍完整链路：`npm ci`（根 + 后端）→ 188 条单测 → `tsc` 编译 →
+`npm run build` 并校验单文件产物确实内联了 CSS/JS 和三帧动画 → 安装 Chromium → 3 条 e2e。
+顶部那个徽章就是这次跑绿的结果；所以 README 里写的每一条命令，别人 clone 下来都能复现。
+
+## 性能与稳定性实测
+
+数字都给了可复算的口径，不是估算。
+
+**冷启动体积（2026-11-08，sw v62）**：对首屏必需的四个外链资源
+`index.html` / `style.css` / `cloud.js` / `app.js` 做 `zlib.gzipSync(level: 9)` 求和。
+
+| | gzip |
+|---|---|
+| 启动即加载（当前） | **168.8 KB** |
+| 若 5 个模块也塞进启动脚本（r35.16 之前） | 209.1 KB |
+
+省下的 40.3 KB（约 19%）来自按需加载：`qr.js` / `xlsx.js` / `card.js` / `share.js` /
+`playercard.js` 改成 `ensureMod()` 动态注入，只有点开分享、表格导入、队员档案时才下载；
+单文件版仍把它们内联回 `app.js` 之前（`file://` 下没法拉外链）。首次加载动画的三帧图
+经抠背景 + 调色板量化后合计 **56.4 KB**（原 167 KB）。
+
+**重复加载**：r35.12 把 Service Worker 从静态资源「网络优先」改成「缓存优先」，
+HTML 保持网络优先、API 完全不缓存，`build.mjs` 每次发版给外链刷 `?v=<sw VERSION>`。
+改版前每次刷新都要跨境重下整套脚本（香港链路实测 20–80 KB/s），改版后二次加载静态资源
+Chrome 实测 `transferSize = 0`；发版靠版本号失效，不靠手动清缓存。
+
+**一次真实事故（2026-11-06）**：整机无响应 54 分钟，全站 0 字节超时。
+结论不是网络也不是应用：`journalctl` 里 `Under memory pressure` 从 12:01:28 起刷了 252 次，
+且**没有 OOM-killer 记录**——是 1.6G 内存机器上同住的 `/opt/vigil` 在跑 Docker build，
+`vigil-dashboard-1` 又因 nginx 模板里 `"set" directive is not allowed here` 无限重启。
+处置：`docker update --restart=no` + `docker stop vigil-dashboard-1`，实例重启后重跑部署恢复。
+顺带得到一个结论：这台机器上不要跑 `docker build`，容器化不是这个项目慢的解法——瓶颈在
+跨境链路和内存，不在部署形态。
+
+> 还没做的：外部探活告警、`/api/health` 深度检查（db 可写 / 磁盘 / 内存）、内存看门狗。
+> 这次是自己刷网页发现打不开，不是系统告诉我的。
+
+## 备份与恢复演练（2026-11-08）
+
+线上每天 03:20 由 cron 跑 `server/scripts/backup.mjs`：用 `better-sqlite3` 的 `.backup()`
+在线备份协议拿一致快照（WAL 模式下直接 `cp` 可能拷到半个页），落在
+`data/volleyball/backups/app-<时间戳>.db`，保留 14 份。**没演练过的备份等于没有备份**，
+所以拿最近一份真做了一次恢复：
+
+1. 把 `app-2026-11-07-19-20-01.db`（159,744 B）从服务器取回本机，以只读方式打开
+2. `PRAGMA integrity_check` → `ok`；`PRAGMA foreign_key_check` → 空
+3. 行数与现网（对 WAL 做一次 `.backup()` 快照后查）逐表一致：
+
+   | 表 | 备份 | 现网 |
+   |---|---|---|
+   | teams / users | 2 / 2 | 2 / 2 |
+   | players | 22 | 22 |
+   | sessions | 9 | 9 |
+   | attendance | 59 | 59 |
+   | skill_logs | 139 | 139 |
+
+4. 复制一份当 `DB_PATH` 起临时 API（不碰线上库）：`GET /api/health` 返回 200；
+   `POST /api/auth/login` 用错密码返回 `401 bad_credentials`（说明服务真的在读这份库，
+   不是只回了个静态 ok）；跑完 migration 后各表行数不变
+
+**结论：备份可用性已验证**——能打开、行数对得上、也能被真实服务接管。
+
+演练顺带查出一个真问题：同机另一套 03:10 的通用归档脚本 `backup-db.sh` 遍历 `~/data`
+下所有 `*.db`，却只按 basename 命名 tar。两个项目的库都叫 `app.db`，同名 tar 互相覆盖：
+解开当天的 `app-20261108-0310.tar.gz`，拿到的是另一个项目的 `posts / products / wallets`，
+不是 `players / sessions`。排球项目的数据不依赖这一路（03:20 那套是独立目录、独立命名），
+但通用归档目前不可信；修法是文件名带上父目录前缀（`volleyball-app-…` / `csp-app-…`）。
 
 ## 目录
 
@@ -169,10 +248,15 @@ index.html                    页面骨架
 style.css                     全部样式（含 9 套主题变量）
 app.js                        前端全部逻辑，按模块分段
 cloud.js                      云端同步模块（登录/拉取/推送/轮询，双模式切换）
-build.mjs                     把七者内联成单文件
+build.mjs                     把 CSS / JS / 动画帧内联成单文件，并刷 ?v= 版本号
+sw.js                         Service Worker：HTML 网络优先、静态缓存优先、API 不缓存
 playercard.js                 队员档案「单文件 .html」导出器（r35）
 信工院排球队管理系统.html        构建产物，可直接分发
+package.json                  根目录脚本：build / test / e2e / test:all
+e2e/e2e.mjs                   3 条端到端测试（node:test + playwright-core）
+.github/workflows/ci.yml       CI 门禁：188 单测 + tsc + 构建校验 + 3 条 e2e
 server/                       可选后端：Express + SQLite + JWT（云端模式）
+server/scripts/backup.mjs     每日在线备份（better-sqlite3 .backup()，保留 14 份）
 server/public/admin.html      管理端（/admin）
 server/public/m.html          队员端手机页（/m，r35 起停用，代码保留）
 docs/interview.md             面试讲点：每个模块的四段式复盘

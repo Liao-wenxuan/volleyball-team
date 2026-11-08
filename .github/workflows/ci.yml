@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+  workflow_dispatch: {}
+
+# 同分支只保留最新一次；测试跑一半有新 push 就直接重来
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      # 根目录只有 playwright-core（不下载浏览器），后端依赖单独装
+      - name: 安装依赖
+        run: |
+          npm ci
+          npm ci --prefix server
+
+      - name: 后端单元测试
+        run: npm test
+
+      - name: 后端类型检查 / 编译
+        run: npm run build --prefix server
+
+      - name: 校验单文件产物能构建且确实内联
+        run: |
+          npm run build
+          node -e 'const fs=require("node:fs");const f=fs.readdirSync(".").find(x=>/\.html$/.test(x)&&x!=="index.html");if(!f)process.exit(1);const s=fs.readFileSync(f,"utf8");const ok=s.length>300000&&!s.includes("<script src=")&&s.includes("data:image/png;base64,");if(!ok){console.error("单文件产物校验失败",f,s.length);process.exit(1)}console.log("单文件产物 OK",(s.length/1024).toFixed(1)+"KB")'
+
+      # e2e 用真实浏览器：装到 playwright-core 的默认缓存，测试里不指定 executablePath
+      - name: 安装 Chromium
+        run: npx playwright-core install chromium --with-deps
+
+      - name: 端到端测试
+        run: npm run e2e
