@@ -12,7 +12,7 @@
 - **本地试玩** → <https://liao-wenxuan.github.io/volleyball-team/>（纯前端，数据只存浏览器）
 - **下载单文件** → [volleyball-team.html](https://github.com/Liao-wenxuan/volleyball-team/releases/latest/download/volleyball-team.html)（双击就开，不装任何东西）
 
-演示账号：`demo` / `demo123456`（完整版里可登录体验三端同步）。
+账号：线上完整版由管理端发放；本地自建后端跑 `npm --prefix server run seed` 可得到演示账号 `demo` / `demo123456`。
 
 数据只存在你自己的浏览器里，随便点、随便拖。
 
@@ -23,7 +23,8 @@
 院队日常靠微信群接龙统计训练和考勤，练完之后谁都说不清这学期谁来了几次、谁的一传练上去了。
 市面上的球队管理工具是给职业俱乐部做的，注册、付费、云端，对 18 个人的院队是负担。
 
-所以定位很克制：**单机、单用户、不联网**。一个人（队长）维护全队数据，其他人不需要账号。
+所以最初的定位很克制：**单机、单用户、不联网**。一个人（队长）维护全队数据，其他人不需要账号。
+后来补了可选的云端模式和管理端，但本地优先这条没变——不登录、不联网，功能一个不少。
 
 ## 功能
 
@@ -37,7 +38,7 @@
 | 阵型板 | 半场 9×9m，6 个角色位手指拖动，0.25m 吸附，自动保存；标题跟阵型库名字走；自由人拖进 3m 线内自动换牌「副攻2 / 副攻1」（纯标牌，不动数据）；「存当前」把站位存进阵型库（改名 / 覆盖 / 删除），云端模式整库同步 |
 | 成长 | 全队技能矩阵、单人雷达、训练后批量加减、调整记录 |
 | 主题 | 9 套（6 深 3 浅），含浅色 |
-| 多端 | 云端模式下教练端（平板/电脑）、队员端手机页 `/m` 每 15 秒轮询同步，对方改动免刷新可见 |
+| 多端 | 云端模式下教练端（平板/电脑）每 15 秒轮询同步，对方改动免刷新可见；队员看数据改走单文件档案导出（`/m` 已停用） |
 | 队员档案 | 「分享队伍动态」一键导出**单文件 .html**（全队一份）：队员浏览器打开输姓名+号码看自己的出勤、技能雷达、点评、近 8 次记录，断网可看、不登录、不过服务器；请假在文件里选场次和原因生成回执码发回教练，考勤页「回执」粘贴登记 |
 
 ### 云端模式的三端
@@ -119,7 +120,7 @@ cd server
 npm install
 cp .env.example .env   # 改一下 JWT_SECRET
 npm run dev            # http://localhost:8787
-npm run seed           # 可选：演示账号 demo@xgy.com / demo123456
+npm run seed           # 可选：演示账号 demo / demo123456
 ```
 
 局域网里其他设备（平板）直接访问 `http://<电脑IP>:8787` 也能用同一份云端数据。
@@ -176,6 +177,8 @@ API 一览：`POST /api/auth/login`、`GET /api/auth/me`、`GET|POST|PATCH|DELET
 `ubuntu-latest` 上跑一遍完整链路：`npm ci`（根 + 后端）→ 188 条单测 → `tsc` 编译 →
 `npm run build` 并校验单文件产物确实内联了 CSS/JS 和三帧动画 → 安装 Chromium → 3 条 e2e。
 顶部那个徽章就是这次跑绿的结果；所以 README 里写的每一条命令，别人 clone 下来都能复现。
+`deploy.yml` 不再由 push 直接触发，改成监听 ci 的 `workflow_run` 且只在 `conclusion == success` 时部署——
+CI 挂了，那个提交就上不了服务器；手动 `workflow_dispatch` 留作救急通道。
 
 ## 性能与稳定性实测
 
@@ -239,7 +242,12 @@ Chrome 实测 `transferSize = 0`；发版靠版本号失效，不靠手动清缓
 下所有 `*.db`，却只按 basename 命名 tar。两个项目的库都叫 `app.db`，同名 tar 互相覆盖：
 解开当天的 `app-20261108-0310.tar.gz`，拿到的是另一个项目的 `posts / products / wallets`，
 不是 `players / sessions`。排球项目的数据不依赖这一路（03:20 那套是独立目录、独立命名），
-但通用归档目前不可信；修法是文件名带上父目录前缀（`volleyball-app-…` / `csp-app-…`）。
+但通用归档当时不可信。
+
+**当天已修复并复验**：`backup-db.sh` 改用父目录名做前缀（`volleyball-app-…` / `csp-app-…`），
+并在 `find` 里排除 `*/backups/*`——原来它连应用自己生成的滚动备份也打包一遍，一天多出好几个「备份的备份」。
+手动跑一次后两个项目各出各的 tar：排球归档解开是 `players 22 / sessions 9 / attendance 59`、
+`integrity_check = ok`，csp 归档是它自己的表，不再串台；cron 未改，旧脚本留了 `.bak` 可回滚。
 
 ## 目录
 

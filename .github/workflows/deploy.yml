@@ -1,9 +1,13 @@
 name: deploy
 
 on:
-  push:
+  # 只在 ci 跑绿之后部署：CI 挂了，main 上的提交就不该推到服务器。
+  # push 不再直接触发；PR 触发的 ci 因 branches: [main] 也不会触发这里。
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
     branches: [main]
-  workflow_dispatch: {}
+  workflow_dispatch: {} # 手动应急通道（不走校验，留给救急）
 
 # 一次只跑一个部署，后到的排队；不做 cancel-in-progress，避免半路打断服务器上的 npm ci
 concurrency:
@@ -11,6 +15,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: SSH 到服务器执行部署脚本
