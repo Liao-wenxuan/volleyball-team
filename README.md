@@ -184,23 +184,42 @@ CI 挂了，那个提交就上不了服务器；手动 `workflow_dispatch` 留�
 
 数字都给了可复算的口径，不是估算。
 
-**冷启动体积（2026-11-08，sw v62）**：对首屏必需的四个外链资源
+**冷启动体积（2026-11-08，sw v63）**：对首屏必需的四个外链资源
 `index.html` / `style.css` / `cloud.js` / `app.js` 做 `zlib.gzipSync(level: 9)` 求和。
 
 | | gzip |
 |---|---|
 | 启动即加载（当前） | **168.8 KB** |
+| 线上 Caddy 实际传输（默认压缩级别） | 182.7 KB |
 | 若 5 个模块也塞进启动脚本（r35.16 之前） | 209.1 KB |
 
+线上逐个实测：HTML 38.9 / `app.js` 79.8 / `style.css` 48.0 / `cloud.js` 16.0 KB；
+再加三帧加载动画 PNG 56.4 KB（图片不压缩），冷启动合计约 239 KB。
 省下的 40.3 KB（约 19%）来自按需加载：`qr.js` / `xlsx.js` / `card.js` / `share.js` /
 `playercard.js` 改成 `ensureMod()` 动态注入，只有点开分享、表格导入、队员档案时才下载；
 单文件版仍把它们内联回 `app.js` 之前（`file://` 下没法拉外链）。首次加载动画的三帧图
 经抠背景 + 调色板量化后合计 **56.4 KB**（原 167 KB）。
 
+**第二轮：少往返、少白下（2026-11-08，sw v63）**。先量后改，实测推翻了一个想当然的
+优化：zstd(level 19) 合计 174.3 KB，反而比 gzip(level 9) 的 172.1 KB 大（CSS 尤其明显），
+所以 Caddy 保留 `encode gzip zstd`，没去动压缩算法。真正动手的是三处：
+
+- **缓存头**：`vb.bscjs.top` 原先一个 `Cache-Control` 都没有。现在版本化 css/js/png/webmanifest
+  是 `public, max-age=31536000, immutable`；`/`、`/index.html`、`/sw.js` 是 `no-cache`
+  （SW 必须每次可更新）；`/api/*` 不设头、不受影响。条件请求实测 `304 / 0B`。
+- **预缓存瘦身**：SW SHELL 从 12 项 816.6 KB raw 减到 8 项 530.1 KB（-35%）。砍掉的是
+  3 张首屏用不到的大图标（187.7 KB）和 `./` 与 `./index.html` 重复下载的那份 HTML
+  （gzip 36.8 KB），首次安装少下约 203 KB。大图标改为按需缓存，断网重载实测仍有内容；
+  Chrome 做 PWA 可安装性检查仍会自拉一张 21 KB 的 `icon-192.png`，这没法也不该省。
+- **并行下载**：`cloud.js` / `app.js` 原本在 body 末尾，慢链路下要等整个 HTML 传完才发请求；
+  head 加 `rel=preload as=script` 与 CSS 并行。Playwright 实测 6 个启动资源各只请求 1 次，
+  preload 没造成重复下载；单文件版摘掉 preload 标签，避免 `file://` 下白发两次请求。
+
 **重复加载**：r35.12 把 Service Worker 从静态资源「网络优先」改成「缓存优先」，
 HTML 保持网络优先、API 完全不缓存，`build.mjs` 每次发版给外链刷 `?v=<sw VERSION>`。
 改版前每次刷新都要跨境重下整套脚本（香港链路实测 20–80 KB/s），改版后二次加载静态资源
-Chrome 实测 `transferSize = 0`；发版靠版本号失效，不靠手动清缓存。
+Chrome 实测 `transferSize = 0`；配合 Caddy 的 immutable，即使 SW 未命中也不再发 304 往返。
+发版靠版本号失效，不靠手动清缓存。
 
 **一次真实事故（2026-11-06）**：整机无响应 54 分钟，全站 0 字节超时。
 结论不是网络也不是应用：`journalctl` 里 `Under memory pressure` 从 12:01:28 起刷了 252 次，

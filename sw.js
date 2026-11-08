@@ -2,8 +2,8 @@
  * Service Worker：PWA 离线支持
  *
  * 策略
- * - 预缓存应用壳（页面 + 样式 + 脚本 + 图标）：装完即离线可用
- *   （业务数据本来就在 localStorage，不依赖网络）
+ * - 预缓存应用壳（页面 + 样式 + 脚本 + 加载动画帧）：装完即离线可用
+ *   （业务数据本来就在 localStorage，不依赖网络；大图标和按需模块不预缓存，见 SHELL 注释）
  * - 页面导航：网络优先，失败回缓存
  * - 静态资源：缓存优先，断网秒开。
  *   「发版拿到新代码」靠版本号：build.mjs 给 HTML 引用和本文件 SHELL 统一加 ?v=N，
@@ -14,6 +14,7 @@
  *
  * 发新版：把 VERSION 加一，跑 node build.mjs（会同步刷新 HTML 引用和 SHELL 的 ?v=N）。
  * ═══════════════════════════════════════════════════════════════ */
+// v63: 精简预缓存——3 个大图标 + 重复的 './' 移出 SHELL，首次安装少下约 286KB raw
 // v62: 进站转场——登录成功后用系统配色的刷子把黑白门禁刷走，消掉「进门风格突变」
 // v61: 门禁排球猫改整体扁平（修头身断裂 / 夜景黑身子）；v58-v60 猫保持原色 + 去猴化 + 按参考贴纸重绘
 // v57: 进站动线黑白化——加载页/门禁昼夜 token（昼白夜黑，随时间），星球开关切登录页背景
@@ -38,24 +39,24 @@
 // v22: 用户管理（角色/邀请码/成员管理/改密码/切队）
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
-const VERSION = 'v62';
+const VERSION = 'v63';
 const CACHE = `xgy-pwa-${VERSION}`;
-// qr / xlsx / card / share / playercard 是「分享、导出、表格导入」才用的按需模块，
-// 不放进预缓存——否则首次访问会在后台白下 37KB，抢本就稀薄的跨境带宽。
-// 它们第一次被用到时由 fetch 处理器缓存（cache-first → 网络 → 存缓存）。
+// 预缓存只放「首屏一定会用到」的东西。下面两类刻意不放：
+// 1) qr / xlsx / card / share / playercard：分享、导出、表格导入才用，白下 37KB 抢跨境带宽；
+// 2) icon-192 / icon-512 / maskable-512：只在 PWA 装到主屏时由浏览器自己取，
+//    首屏完全用不到，三张合计 187.7KB。另外 './' 与 './index.html' 是同一份 HTML，
+//    cache.addAll 会下两遍；断网回退用的是 caches.match('./index.html')，保留后者即可。
+// 这些资源第一次被真实请求时，下面的 fetch 处理器会 cache-first 兜底并存进缓存，
+// 所以离线能力不受影响，只是不再在首次安装时抢带宽。
 const SHELL = [
-  './',
   './index.html',
-  './style.css?v=v62',
-  './app.js?v=v62',
-  './cloud.js?v=v62',
-  './manifest.webmanifest?v=v62',
-  './assets/icon-192.png?v=v62',
-  './assets/icon-512.png?v=v62',
-  './assets/maskable-512.png?v=v62',
-  './assets/loader-pose1.png?v=v62',
-  './assets/loader-pose2.png?v=v62',
-  './assets/loader-pose3.png?v=v62'
+  './style.css?v=v63',
+  './app.js?v=v63',
+  './cloud.js?v=v63',
+  './manifest.webmanifest?v=v63',
+  './assets/loader-pose1.png?v=v63',
+  './assets/loader-pose2.png?v=v63',
+  './assets/loader-pose3.png?v=v63'
 ];
 
 self.addEventListener('install', (e) => {

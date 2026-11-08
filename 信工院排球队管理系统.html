@@ -3080,6 +3080,8 @@ html[data-daynight="night"] .gate-shell .gate-err{
 }
 
 </style>
+<!-- 两个启动脚本在 body 末尾，慢链路下要白等整个 HTML 传完才发请求；
+     preload 让它们跟 CSS 并行下载。URL 上的 ?v=N 由 build.mjs 统一注入，必须和实际 script 一致。 -->
 <style>
 /* ── 昼夜基调 token：加载页与登录页共用。默认随时间（19:00–06:00 夜，见下方脚本），
    登录页的星球开关可手动切换，选择记在 sessionStorage（本标签页内有效，

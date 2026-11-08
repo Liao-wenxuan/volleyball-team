@@ -58,7 +58,9 @@ const out = htmlPlain
   .replace(/src="assets\/loader-pose3\.png"/g, () => `src="data:image/png;base64,${png('assets/loader-pose3.png')}"`)
   // 单文件走 file://，PWA 相关外链资源没有意义，摘掉避免 404
   .replace(/<link rel="manifest"[^>]*>\n?/, '')
-  .replace(/<link rel="apple-touch-icon"[^>]*>\n?/, '');
+  .replace(/<link rel="apple-touch-icon"[^>]*>\n?/, '')
+  // 单文件把脚本内联了，再留 preload 会对着 file:// 下不存在的 cloud.js/app.js 白发两次请求
+  .replace(/<link rel="preload"[^>]*>\n?/g, '');
 
 const target = path.join(dir, '信工院排球队管理系统.html');
 fs.writeFileSync(target, out, 'utf8');
