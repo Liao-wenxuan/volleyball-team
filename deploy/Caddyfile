@@ -1,0 +1,70 @@
+vb.bscjs.top {
+	encode gzip zstd
+
+	# 版本化静态资源：build.mjs 给所有 css/js/图标引用统一加 ?v=N，内容写定不变，
+	# 可放心一年强缓存；sw.js 必须排除，浏览器得每次检查 Service Worker 更新。
+	@vbImmutable {
+		path_regexp \.(css|js|png|webmanifest)$
+		not path /sw.js
+	}
+	header @vbImmutable Cache-Control "public, max-age=31536000, immutable"
+
+	# HTML 入口与 sw.js 永远拿最新，靠 ETag 走 304，不启发式缓存
+	@vbNoCache path / /index.html /sw.js
+	header @vbNoCache Cache-Control "no-cache"
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	handle /admin* {
+		reverse_proxy 127.0.0.1:8787
+	}
+	handle /m* {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	handle {
+		root * /home/deploy/apps/volleyball/web
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+csp.bscjs.top {
+	encode gzip zstd
+
+	# 带内容哈希的构建产物：内容写定不变，可放心 immutable；index.html 永远走最新
+	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+
+	# HTML 入口（SPA 任意路径都回落 index.html）不缓存；
+	# /assets 和 /uploads 已各自拿到 immutable，排除掉避免叠加重复头
+	@html not path /assets/* /uploads/*
+	header @html Cache-Control "no-cache"
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	handle /ws* {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	handle /uploads/* {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	handle {
+		root * /home/deploy/apps/csp/repo/client/dist
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# Vigil 监控面板（容器在 127.0.0.1:8080）
+# token 注入与面板登录都由容器内的 nginx 负责，这一层只做 TLS 终止。
+vigil.bscjs.top {
+	encode gzip zstd
+
+	reverse_proxy 127.0.0.1:8080
+}

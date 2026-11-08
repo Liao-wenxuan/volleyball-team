@@ -100,7 +100,7 @@ npm ci --prefix server # 后端：Express / SQLite / vitest / tsx
 
 ```bash
 npm run build   # 等价于 node build.mjs，重新生成单文件 + 刷 ?v= 版本号
-npm test        # 188 条后端单元测试
+npm test        # 194 条后端单元测试
 npm run e2e     # 3 条端到端（真浏览器 → 真前端 → 真后端 → 临时 SQLite）
 npm run test:all        # 上面三件一次跑完
 ```
@@ -160,7 +160,7 @@ API 一览：`POST /api/auth/login`、`GET /api/auth/me`、`GET|POST|PATCH|DELET
 
 ## 测试
 
-**188 条后端单元测试**（vitest + 内存 SQLite，`npm test`，等价于 `cd server && npm test`）。
+**194 条后端单元测试**（vitest + 内存 SQLite，`npm test`，等价于 `cd server && npm test`）。
 覆盖按风险排序：鉴权边界（过期/伪造 token、越权、停用账号踢出）、考勤 UPSERT 幂等
 （重复登记以最后一次为准、只有一条记录）、批量改技能的事务回滚（半失败全不动）、
 跨队隔离（每条 SQL 都按 team_id 作用域）、备份导入的认人规则与脏数据兜底。
@@ -174,7 +174,7 @@ API 一览：`POST /api/auth/login`、`GET /api/auth/me`、`GET|POST|PATCH|DELET
 正确语义是 400。已修（`errorMiddleware` 识别 `entity.parse.failed`）。
 
 **CI 门禁**：`.github/workflows/ci.yml` 在 push 到 `main` / PR / 手动触发时，于干净的
-`ubuntu-latest` 上跑一遍完整链路：`npm ci`（根 + 后端）→ 188 条单测 → `tsc` 编译 →
+`ubuntu-latest` 上跑一遍完整链路：`npm ci`（根 + 后端）→ 194 条单测 → `tsc` 编译 →
 `npm run build` 并校验单文件产物确实内联了 CSS/JS 和三帧动画 → 安装 Chromium → 3 条 e2e。
 顶部那个徽章就是这次跑绿的结果；所以 README 里写的每一条命令，别人 clone 下来都能复现。
 `deploy.yml` 不再由 push 直接触发，改成监听 ci 的 `workflow_run` 且只在 `conclusion == success` 时部署——
@@ -229,8 +229,44 @@ Chrome 实测 `transferSize = 0`；配合 Caddy 的 immutable，即使 SW 未命
 顺带得到一个结论：这台机器上不要跑 `docker build`，容器化不是这个项目慢的解法——瓶颈在
 跨境链路和内存，不在部署形态。
 
-> 还没做的：外部探活告警、`/api/health` 深度检查（db 可写 / 磁盘 / 内存）、内存看门狗。
-> 这次是自己刷网页发现打不开，不是系统告诉我的。
+**当时确实没有任何告警**：这次是自己刷网页发现打不开，不是系统告诉我的。
+2026-11-08 补了三层监控，见下一节。
+
+## 可观测性（2026-11-08 补齐）
+
+三层各管一种失败，谁都替代不了谁：
+
+| 层 | 在哪跑 | 抓什么 | 怎么通知 |
+|---|---|---|---|
+| 外部探活 | GitHub Actions 境外 runner，每 15 分钟 | 整机僵死 / 断网 / Caddy 挂了 | 自动开或复用 `[监控] 站点不可用` issue，恢复后自动评论并关闭 |
+| 深度 health | 应用内 `/api/health/deep` | 磁盘满、库不可写、内存见底、备份断更 | 任一子项失败返回 **503**，外部只看 HTTP 码 |
+| 内存看门狗 | 服务器 cron 每 2 分钟 | 内存压力苗头（上次事故的真正前兆） | 写 `watchdog.log` + Top RSS 进程快照 + `watchdog.state`，同步进 journal |
+
+**外部探活**（`.github/workflows/monitor.yml`）：探测 `/api/health` 与首页。跨境链路偶尔抖动，
+health 连试两次（间隔 5s、单次 20s 超时）才算真失败；首页还要校验 `<title`，
+防止反代把错误页当 200 糊弄过去。`workflow_dispatch` 可手动跑，`dry_run` 能验证告警动作
+而不真的开 issue。
+
+**深度 health**：`GET /api/health/deep` 返回四项 `checks` 与 `durationMs`：
+`database`（`SELECT 1` + `BEGIN IMMEDIATE`/`ROLLBACK` 验证写锁，**不写任何业务数据**）、
+`disk`（`statfsSync` 可用空间 ≥ 512 MB）、`memory`（系统可用 ≥ 128 MB + 进程 RSS）、
+`backup`（`backups/app-*.db` 最新一份 ≤ 36 小时，忽略 `-wal` / `-shm`）。
+浅 health 保持 `{ok,name,time}` 原契约不变——部署脚本和 Caddy 都靠它。
+194 条单测里有 6 条专门覆盖这四项判定。
+
+**内存看门狗**（`deploy/watchdog.sh`）：采样 `MemAvailable` / Swap 余量 / load1，
+连续 3 次超阈值（默认可用内存 < 200 MB、swap 剩余 < 512 MB、load1 > 4）才告警，
+日志附 Top RSS 进程——上次就是靠同类证据定位到 `dockerd` 和无限重启的容器。
+**只告警、不自动杀进程**：误杀线上服务比晚几分钟发现更贵。
+服务器实测（2026-11-08 11:36）：强制阈值触发 `ALERT` → 恢复触发 `RECOVERED`，
+生产 state `status=ok / avail=898MB / swap_used=0 / load1=0.09`，cron 每 2 分钟已挂。
+
+**部署资产入库**：`deploy/` 收了生产 `Caddyfile`、部署脚本、修好的备份脚本和看门狗，
+重装机器照着复制即可；改 Caddy 配置记得先 `caddy validate` 再 `reload`。
+
+**局限，别吹成秒级监控**：GitHub Actions 的 cron 会排队（高峰可能延迟十几分钟），
+仓库连续 60 天无活动会被 GitHub 暂停定时工作流；看门狗在整机僵死时也会一起停，
+所以外部探活才是最后一道。三者都不做自动重启。
 
 ## 备份与恢复演练（2026-11-08）
 
@@ -281,8 +317,11 @@ playercard.js                 队员档案「单文件 .html」导出器（r35�
 信工院排球队管理系统.html        构建产物，可直接分发
 package.json                  根目录脚本：build / test / e2e / test:all
 e2e/e2e.mjs                   3 条端到端测试（node:test + playwright-core）
-.github/workflows/ci.yml       CI 门禁：188 单测 + tsc + 构建校验 + 3 条 e2e
+.github/workflows/ci.yml       CI 门禁：194 单测 + tsc + 构建校验 + 3 条 e2e
+.github/workflows/monitor.yml  外部探活：定时探测 + 自动开/关告警 issue
+deploy/                       生产 Caddyfile / 部署脚本 / 备份脚本 / 内存看门狗
 server/                       可选后端：Express + SQLite + JWT（云端模式）
+server/src/health.ts          深度健康检查（db 写锁 / 磁盘 / 内存 / 备份）
 server/scripts/backup.mjs     每日在线备份（better-sqlite3 .backup()，保留 14 份）
 server/public/admin.html      管理端（/admin）
 server/public/m.html          队员端手机页（/m，r35 起停用，代码保留）
@@ -299,6 +338,7 @@ prototype/formation-editor.html  阵型板最早的独立原型
 - 本机模式下数据只在当前浏览器（localStorage），换设备要手动导出/导入 JSON；云端模式需自建后端
 - 云端同步是 15 秒轮询（弱实时），不是 WebSocket 推送；两台设备同时写同一条数据时后写者胜
 - AI 聊天记录只存本机（临时工作区），不进云端同步；云端模式下 API Key 存服务器、不回传浏览器
+- 监控不是实时的：外部探活 15 分钟一轮且 GitHub cron 会排队，看门狗 2 分钟一轮；三者都只告警、不自动重启服务
 
 ## Roadmap
 

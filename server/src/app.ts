@@ -11,6 +11,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
 import { errorMiddleware, HttpError } from './http';
+import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
 import accountRoutes from './routes/accounts';
 import adminRoutes from './routes/admin';
@@ -36,9 +37,9 @@ export function createApp(): express.Express {
   // Caddy 反代后面，让 req.ip 拿到 x-forwarded-for 里的真实客户端 IP（限流用）
   app.set('trust proxy', 1);
 
-  app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, name: 'volleyball-team-server', time: Date.now() });
-  });
+  // 浅 health 保持「部署脚本 curl 一下就知道进程活着」的契约；
+  // 深度检查在 /api/health/deep，见 routes/health.ts。
+  app.use('/api/health', healthRoutes);
 
   app.use('/api/auth', authRoutes);
   app.use('/api/accounts', accountRoutes);

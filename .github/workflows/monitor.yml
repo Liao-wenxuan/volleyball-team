@@ -1,0 +1,126 @@
+name: 外部探活
+
+# 从 GitHub 的境外 runner 定时探测线上服务。为什么不用服务器自己盯自己：
+# 2026-11-06 整机僵死 54 分钟时，服务器上的任何脚本都一起停了。
+#
+# 局限（README 里也写明了）：GitHub Actions 的 cron 会排队、不是秒级；
+# 仓库连续 60 天无活动时 GitHub 会暂停定时工作流，需要手动 re-enable。
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: '探测的站点根地址（留空用线上；演练时可填一个必然失败的地址）'
+        required: false
+        default: ''
+      dry_run:
+        description: '只打印告警动作，不真的开/关 issue'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: uptime-monitor
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 探测 /api/health 与首页
+        id: probe
+        env:
+          INPUT_URL: ${{ inputs.url }}
+        run: |
+          set +e
+          BASE="${INPUT_URL:-https://vb.bscjs.top}"
+          echo "探测目标: $BASE"
+          ok=0
+          detail=''
+
+          # 跨境链路偶尔抖动，health 连试两次才算真失败
+          for attempt in 1 2; do
+            code=$(curl -sS -L --max-time 20 -o /tmp/vb-health.json -w '%{http_code}' "$BASE/api/health" 2>/dev/null) || code=000
+            body=$(tr -d '\n' < /tmp/vb-health.json 2>/dev/null | head -c 120)
+            if [ "$code" = "200" ] && grep -q '"ok"[[:space:]]*:[[:space:]]*true' /tmp/vb-health.json 2>/dev/null; then
+              ok=1
+              break
+            fi
+            detail="health HTTP ${code} body=${body}"
+            [ "$attempt" = 1 ] && sleep 5
+          done
+
+          if [ "$ok" = 1 ]; then
+            hcode=$(curl -sS -L --max-time 20 -o /tmp/vb-index.html -w '%{http_code}' "$BASE/" 2>/dev/null) || hcode=000
+            if [ "$hcode" != "200" ] || ! grep -qi '<title' /tmp/vb-index.html 2>/dev/null; then
+              ok=0
+              detail="首页 HTTP ${hcode}"
+            fi
+          fi
+
+          if [ "$ok" = 1 ]; then
+            echo "result=up" >> "$GITHUB_OUTPUT"
+            echo "站点正常：health 200、首页 200"
+          else
+            detail="${detail//$'\n'/ }"
+            echo "result=down" >> "$GITHUB_OUTPUT"
+            echo "detail=${detail:0:180}" >> "$GITHUB_OUTPUT"
+            echo "站点异常：${detail}"
+          fi
+
+      - name: 异常 → 开或复用告警 issue
+        if: steps.probe.outputs.result == 'down'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          DETAIL: ${{ steps.probe.outputs.detail }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE='[监控] 站点不可用'
+          NUMBER=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 100 \
+            --json number,title --jq '.[] | select(.title == "[监控] 站点不可用") | .number' | head -1 || true)
+          if [ "$INPUT_DRY_RUN" = "true" ]; then
+            echo "[DRY_RUN] result=down, 已有 open issue=${NUMBER:-无}，将要：${NUMBER:+追加评论}${NUMBER:-新建 issue}"
+            echo "[DRY_RUN] detail=$DETAIL"
+            exit 0
+          fi
+          if [ -n "$NUMBER" ]; then
+            gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --body "仍然不可用（$(date -u '+%F %T UTC')）：${DETAIL:-无详情}。本次探活：${RUN_URL}"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" \
+              --body "定时外部探活发现站点不可用（$(date -u '+%F %T UTC')）。
+
+          - 现象：${DETAIL:-无详情}
+          - 探测点：GitHub Actions 境外 runner，检查 \`/api/health\` 与首页，连续两次失败
+          - 本次探活：${RUN_URL}
+
+          恢复后本工作流会自动评论并关闭此 issue。"
+          fi
+
+      - name: 正常 → 关闭未恢复的告警 issue
+        if: steps.probe.outputs.result == 'up'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          NUMBER=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 100 \
+            --json number,title --jq '.[] | select(.title == "[监控] 站点不可用") | .number' | head -1 || true)
+          if [ -z "$NUMBER" ]; then
+            echo "没有未恢复的告警 issue，无需操作"
+            exit 0
+          fi
+          if [ "$INPUT_DRY_RUN" = "true" ]; then
+            echo "[DRY_RUN] 将评论并关闭 issue #${NUMBER}"
+            exit 0
+          fi
+          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --body "已恢复（$(date -u '+%F %T UTC')）：health 与首页均 200。本次探活：${RUN_URL}"
+          gh issue close "$NUMBER" --repo "$GITHUB_REPOSITORY"
