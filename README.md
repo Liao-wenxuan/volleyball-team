@@ -269,7 +269,8 @@ server/public/admin.html      管理端（/admin）
 server/public/m.html          队员端手机页（/m，r35 起停用，代码保留）
 docs/interview.md             面试讲点：每个模块的四段式复盘
 docs/战术板产品方案.md          阵型板的产品方案
-docs/shots/                   README 截图
+docs/shots/                   README 截图 + GitHub 分享预览图
+LICENSE                       MIT 许可证
 prototype/formation-editor.html  阵型板最早的独立原型
 ```
 
@@ -287,3 +288,7 @@ prototype/formation-editor.html  阵型板最早的独立原型
 - [x] 多端准实时同步（轮询）+ AI Key 服务端代理
 - [ ] 阵型导出 PNG，直接发群里讲站位
 - [x] 数据上云（Node + SQLite）
+
+## 许可证
+
+MIT，见 [LICENSE](LICENSE)。可以自由使用、修改和分发，保留版权声明即可。
