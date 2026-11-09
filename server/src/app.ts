@@ -11,6 +11,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
 import { errorMiddleware, HttpError } from './http';
+import { securityHeaders } from './security';
 import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
 import accountRoutes from './routes/accounts';
@@ -27,6 +28,9 @@ import aiRoutes from './routes/ai';
 
 export function createApp(): express.Express {
   const app = express();
+
+  // 安全响应头挂在所有中间件之前：连 404 和错误响应也要带，别只保护成功路径
+  app.use(securityHeaders);
 
   // 前端是纯静态页（GitHub Pages / file://），Origin 五花八门，直接放开；
   // 鉴权靠 Bearer token，不依赖 cookie，所以 CORS 放开没有凭证泄露面。

@@ -35,7 +35,7 @@
   }
 
   /* ══════════ 按需加载的模块 ══════════
-   * qr / xlsx / card / share / playercard 只有「分享、导出、表格导入」时才用得到，
+   * qr / xlsx / card / share / playercard / courtcard 只有「分享、导出、表格导入」时才用得到，
    * 冷启动不再跟着下载（省约 37KB gzip，跨境链路下就是好几秒）。
    * 版本号从自己的 script src 里取，保证和 index.html 的 ?v=N 一致；
    * 单文件版里这些模块是内联的，window.XGY* 已存在，直接 resolve。 */
@@ -50,7 +50,8 @@
     xlsx: ['xlsx.js', 'XGYXlsx'],
     card: ['card.js', 'XGYCard'],
     share: ['share.js', 'XGYShare'],
-    playercard: ['playercard.js', 'XGYPlayerCard']
+    playercard: ['playercard.js', 'XGYPlayerCard'],
+    courtcard: ['courtcard.js', 'XGYCourt']
   };
   const modPending = {};
   function ensureMod(...names) {
@@ -2831,6 +2832,46 @@
     };
   }
 
+  /* ══════════ 阵型图：把当前 6 个角色位导成一张可转发的 PNG ══════════
+   * 和训练卡/赛季卡同一套路：按需加载 courtcard.js，canvas 在本机画完再交给弹窗。
+   * 角色位绑的是「角色」不是真人（r35 用户拍板），所以这里也只带 label+坐标，
+   * 不查队员名单——空队也能导出讲站位。 */
+  async function openCourtCard() {
+    try {
+      await ensureMod('courtcard');
+      const title = ($('#fxTitle') && $('#fxTitle').textContent.trim()) || '默认站位';
+      const team = ($('#footerTeam') && $('#footerTeam').textContent.trim()) || '信工院排球队';
+      const roles = FX_ROLES.map((r) => {
+        const pt = (db.formation.pos || {})[r.id] || { x: 0, y: 0 };
+        // fxRoleName 会处理「自由人进 3m 线内换牌」，导出的图跟屏幕上标牌一致
+        return { id: r.id, label: fxRoleName(r.id), color: r.color, x: pt.x, y: pt.y };
+      });
+      const card = await window.XGYCourt.render({
+        team, name: title, date: dateKey(new Date()), roles
+      });
+      openModal('阵型图', `<div class="card-wrap">
+        <p class="share-hint">把当前站位导成一张图，直接发群里讲跑位。<b>图片在你自己设备上生成</b>，不经过任何服务器；手机上可以长按图片保存。</p>
+        <img class="card-preview" src="${card.dataURL}" alt="阵型图预览">
+        <div class="share-foot"><button type="button" class="btn btn-primary" id="courtSave">保存图片</button><button type="button" class="btn btn-ghost" id="courtClose">关闭</button></div>
+      </div>`, { mid: true });
+      $('#courtClose').onclick = closeModal;
+      $('#courtSave').onclick = () => {
+        const url = URL.createObjectURL(card.blob);
+        const a = document.createElement('a');
+        a.href = url;
+        // 阵型名是用户自定义的，Windows 文件名非法字符要先洗掉
+        a.download = `阵型图-${title.replace(/[\\/:*?"<>|]/g, '_')}-${dateKey(new Date())}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        toast('阵型图已保存，发群里讲站位吧');
+      };
+    } catch (e) {
+      toast('导出失败：' + (e && e.message ? e.message : '未知错误'), 'warn');
+    }
+  }
+
   /* ══════════ 分享队伍动态（队员只读视图） ══════════ */
   // 每项技能的「起点分」：取该队员该项最早一条调整记录里的 before。
   // 从来没调过就当没变化（起点 = 现在），进步显示 0，不会凭空夸。
@@ -3725,6 +3766,7 @@
       paintFxSaves();
     });
 
+    $('#fxExport').addEventListener('click', () => openCourtCard());
     $('#fxReset').addEventListener('click', () => applyFxPreset('base'));
     $('#fxFull').addEventListener('click', toggleFxFull);
     $('#fxExit').addEventListener('click', exitFxFull);

@@ -40,10 +40,11 @@
 // v7: 分享弹窗加二维码（链接缩短 + 扫码进）
 // v5: 训练卡 canvas；v4: 分享只读视图 share.js
 // v64: app.js 末尾加 Node 专用的纯函数导出钩子（浏览器里是死代码），配套 30 条前端单测
-const VERSION = 'v64';
+// v65: 阵型导出 PNG（courtcard.js 按需加载）+ loader 三帧 WebP（PNG 回退）
+const VERSION = 'v65';
 const CACHE = `xgy-pwa-${VERSION}`;
 // 预缓存只放「首屏一定会用到」的东西。下面两类刻意不放：
-// 1) qr / xlsx / card / share / playercard：分享、导出、表格导入才用，白下 37KB 抢跨境带宽；
+// 1) qr / xlsx / card / courtcard / share / playercard：分享、导出、表格导入才用，白下 37KB 抢跨境带宽；
 // 2) icon-192 / icon-512 / maskable-512：只在 PWA 装到主屏时由浏览器自己取，
 //    首屏完全用不到，三张合计 187.7KB。另外 './' 与 './index.html' 是同一份 HTML，
 //    cache.addAll 会下两遍；断网回退用的是 caches.match('./index.html')，保留后者即可。
@@ -51,13 +52,14 @@ const CACHE = `xgy-pwa-${VERSION}`;
 // 所以离线能力不受影响，只是不再在首次安装时抢带宽。
 const SHELL = [
   './index.html',
-  './style.css?v=v64',
-  './app.js?v=v64',
-  './cloud.js?v=v64',
-  './manifest.webmanifest?v=v64',
-  './assets/loader-pose1.png?v=v64',
-  './assets/loader-pose2.png?v=v64',
-  './assets/loader-pose3.png?v=v64'
+  './style.css?v=v65',
+  './app.js?v=v65',
+  './cloud.js?v=v65',
+  './manifest.webmanifest?v=v65',
+  // 只预缓存 WebP；PNG 是 onerror 回退源，老设备第一次用到时由 fetch 处理器按需缓存
+  './assets/loader-pose1.webp?v=v65',
+  './assets/loader-pose2.webp?v=v65',
+  './assets/loader-pose3.webp?v=v65'
 ];
 
 self.addEventListener('install', (e) => {

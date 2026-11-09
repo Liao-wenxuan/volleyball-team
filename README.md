@@ -35,7 +35,7 @@
 | AI 助手 | OpenAI 兼容接口（DeepSeek / 智谱 / Kimi…）。本地模式 BYOK 直连、Key 只存本机；云端模式 Key 只存服务器、由服务端代理转发并流式透传，浏览器不接触明文 Key。一键生成本周小结、首发阵容建议、队员点评，流式输出可中断，上下文自动带全队真实数据 |
 | 考勤 | 按周 × 每次训练登记，四态循环：出勤 / 迟到 / 请假 / 缺席；未登记不计入出勤率 |
 | 训练编排 | 周二 / 周五 / 周日固定模板，单次可改时间地点或标记「因雨取消」 |
-| 阵型板 | 半场 9×9m，6 个角色位手指拖动，0.25m 吸附，自动保存；标题跟阵型库名字走；自由人拖进 3m 线内自动换牌「副攻2 / 副攻1」（纯标牌，不动数据）；「存当前」把站位存进阵型库（改名 / 覆盖 / 删除），云端模式整库同步 |
+| 阵型板 | 半场 9×9m，6 个角色位手指拖动，0.25m 吸附，自动保存；标题跟阵型库名字走；自由人拖进 3m 线内自动换牌「副攻2 / 副攻1」（纯标牌，不动数据）；「存当前」把站位存进阵型库（改名 / 覆盖 / 删除），云端模式整库同步；「导出图片」把当前站位画成 750×1220 PNG 发群里讲跑位（本机 canvas 生成，不经过服务器，手机上可长按保存） |
 | 成长 | 全队技能矩阵、单人雷达、训练后批量加减、调整记录 |
 | 主题 | 9 套（6 深 3 浅），含浅色 |
 | 多端 | 云端模式下教练端（平板/电脑）每 15 秒轮询同步，对方改动免刷新可见；队员看数据改走单文件档案导出（`/m` 已停用） |
@@ -69,7 +69,7 @@
 
 ### 一、下载单文件（只是想用）
 
-点上面的「下载单文件」，得到一个 `volleyball-team.html`（约 762 KB，含三帧加载动画图片）。
+点上面的「下载单文件」，得到一个 `volleyball-team.html`（约 820 KB，含三帧加载动画图片与全部按需模块的内联副本）。
 双击 → 浏览器打开 → 就能用。
 
 - 不需要装 Node、不需要联网、没有任何依赖，CSS 和 JS 全部内联在这个文件里
@@ -100,14 +100,18 @@ npm ci --prefix server # 后端：Express / SQLite / vitest / tsx
 
 ```bash
 npm run build      # 等价于 node build.mjs，重新生成单文件 + 刷 ?v= 版本号
-npm test           # 194 条后端单元测试
-npm run test:pure  # 30 条前端纯函数单测（node:test，120ms，不开浏览器）
+npm test           # 199 条后端单元测试
+npm run test:pure  # 39 条前端纯函数单测（node:test，约 125ms，不开浏览器）
 npm run e2e        # 3 条端到端（真浏览器 → 真前端 → 真后端 → 临时 SQLite）
 npm run test:all   # 上面四件一次跑完
 ```
 
 e2e 在 Windows 上自动复用系统 Edge，不下载浏览器；Linux / CI 上先装一次
 `npx playwright-core install chromium --with-deps`，或用环境变量 `E2E_CHROME` 指定可执行文件。
+每轮用动态空闲端口 + 独立临时库，跑完递归杀掉后端进程树，不会和残留进程串库。
+
+**发新版**只认 `sw.js` 里的 `VERSION`（`build.mjs` 用它统一刷 `?v=` 和 SW 缓存名），
+`package.json` 的 1.0.0 不随每次发版变；完整流程与历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 ### 四、云端模式（可选，Node + SQLite）
 
@@ -161,17 +165,19 @@ API 一览：`POST /api/auth/login`、`GET /api/auth/me`、`GET|POST|PATCH|DELET
 
 ## 测试
 
-**194 条后端单元测试**（vitest + 内存 SQLite，`npm test`，等价于 `cd server && npm test`）。
+**199 条后端单元测试**（vitest + 内存 SQLite，`npm test`，等价于 `cd server && npm test`）。
 覆盖按风险排序：鉴权边界（过期/伪造 token、越权、停用账号踢出）、考勤 UPSERT 幂等
 （重复登记以最后一次为准、只有一条记录）、批量改技能的事务回滚（半失败全不动）、
 跨队隔离（每条 SQL 都按 team_id 作用域）、备份导入的认人规则与脏数据兜底。
 
-**30 条前端纯函数单测**（`node:test`，`npm run test:pure`）：`tests/load-app.mjs` 用 `vm`
+**39 条前端纯函数单测**（`node:test`，`npm run test:pure`）：`tests/load-app.mjs` 用 `vm`
 把真实 `app.js` 加载进 Node，`app.js` 末尾留了一个 `typeof module !== 'undefined'` 的导出钩子
 （浏览器里没有 CommonJS 的 `module`，那段是死代码，启动调用也一并跳过），于是**测的是生产源码本身，
-不是复制出来的副本**，不必为了可测性引入打包链或多维护一份函数。六组边界：工具与 HTML 转义、
+不是复制出来的副本**，不必为了可测性引入打包链或多维护一份函数。八组边界：工具与 HTML 转义、
 日期与周跨月跨年、技能 0.5 步进与 0–10 夹取、数据规范化白名单、阵型 0.25m 吸附、
-粘贴名单的四类分隔符与单位解析。整套 120ms，不启浏览器。踩过一个 `vm` 特有的坑：
+粘贴名单的四类分隔符与单位解析，外加 `tests/courtcard.test.mjs` 里阵型导出图的
+**米→像素换算**（锁死「导出图和屏幕战术板同为 x/9 × 边长」这个口径）与角色短标。
+整套约 125ms，不启浏览器。踩过一个 `vm` 特有的坑：
 沙箱里创建的对象带另一套原型，`deepStrictEqual` 会判「结构相同但引用不等」，
 测试里统一用 JSON 往返把结果压成当前 realm 的普通值再比。
 
@@ -184,8 +190,8 @@ API 一览：`POST /api/auth/login`、`GET /api/auth/me`、`GET|POST|PATCH|DELET
 正确语义是 400。已修（`errorMiddleware` 识别 `entity.parse.failed`）。
 
 **CI 门禁**：`.github/workflows/ci.yml` 在 push 到 `main` / PR / 手动触发时，于干净的
-`ubuntu-latest` 上跑一遍完整链路：`npm ci`（根 + 后端）→ 194 条后端单测 → 30 条前端纯函数单测 → `tsc` 编译 →
-`npm run build` 并校验单文件产物确实内联了 CSS/JS 和三帧动画 → 安装 Chromium → 3 条 e2e。
+`ubuntu-latest` 上跑一遍完整链路：`npm ci`（根 + 后端）→ 199 条后端单测 → 39 条前端纯函数单测 → `tsc` 编译 →
+`npm run build` 并校验单文件产物确实内联了 CSS/JS、按需模块和三帧动画（WebP + PNG 回退）→ 安装 Chromium → 3 条 e2e。
 顶部那个徽章就是这次跑绿的结果；所以 README 里写的每一条命令，别人 clone 下来都能复现。
 `deploy.yml` 不再由 push 直接触发，改成监听 ci 的 `workflow_run` 且只在 `conclusion == success` 时部署——
 CI 挂了，那个提交就上不了服务器；手动 `workflow_dispatch` 留作救急通道。
@@ -204,11 +210,11 @@ CI 挂了，那个提交就上不了服务器；手动 `workflow_dispatch` 留�
 | 若 5 个模块也塞进启动脚本（r35.16 之前） | 209.1 KB |
 
 线上逐个实测：HTML 38.9 / `app.js` 79.8 / `style.css` 48.0 / `cloud.js` 16.0 KB；
-再加三帧加载动画 PNG 56.4 KB（图片不压缩），冷启动合计约 239 KB。
+再加三帧加载动画 WebP 32.9 KB（图片不压缩），冷启动合计约 216 KB。
 省下的 40.3 KB（约 19%）来自按需加载：`qr.js` / `xlsx.js` / `card.js` / `share.js` /
 `playercard.js` 改成 `ensureMod()` 动态注入，只有点开分享、表格导入、队员档案时才下载；
 单文件版仍把它们内联回 `app.js` 之前（`file://` 下没法拉外链）。首次加载动画的三帧图
-经抠背景 + 调色板量化后合计 **56.4 KB**（原 167 KB）。
+经抠背景 + 调色板量化后从 167 KB 压到 56.4 KB，2026-11-09 再转 WebP 到 **32.9 KB**。
 
 **第二轮：少往返、少白下（2026-11-08，sw v63）**。先量后改，实测推翻了一个想当然的
 优化：zstd(level 19) 合计 174.3 KB，反而比 gzip(level 9) 的 172.1 KB 大（CSS 尤其明显），
@@ -230,6 +236,17 @@ HTML 保持网络优先、API 完全不缓存，`build.mjs` 每次发版给外�
 改版前每次刷新都要跨境重下整套脚本（香港链路实测 20–80 KB/s），改版后二次加载静态资源
 Chrome 实测 `transferSize = 0`；配合 Caddy 的 immutable，即使 SW 未命中也不再发 304 往返。
 发版靠版本号失效，不靠手动清缓存。
+
+**第三轮：loader 三帧 WebP（2026-11-09，sw v65）**：PNG 56.4 KB → WebP(q90) **32.9 KB**，
+省 23.5 KB 实打实的网络字节（图片不再压缩）。用浏览器 canvas 转、不引图片库，转完再解码
+验证 `ALPH` 块存在 + 四角 alpha=0，透明没丢。**刻意没用 `<picture>`**：`.boot-frame` 的三帧
+轮播靠 `:nth-child(1/2/3)` 排 `animation-delay`，包一层会让三帧全变成 `nth-child(1)`、
+动画同步。改成 `<img src=webp onerror=回退 png>`，保持 img 仍是 `.boot-stage` 的直接子元素。
+`preview/verify-webp.mjs` 三个场景实测：正常只下 3 张 WebP / 0 张 PNG；把 WebP 全打成 404
+也能回退 PNG、三帧照样加载、`boot-ready` 照样触发；三档延迟仍是 `0 / -0.6 / -1.2s`；
+单文件版三帧都是内联 data URI、零外部图片请求。单文件版把 WebP 和 PNG 回退都内联成
+base64（否则 `file://` 下回退路径指向不存在的文件），代价是单文件 763 → 820 KB——
+本地双击打开，不进任何网络链路，这个体积不心疼。
 
 **一次真实事故（2026-11-06）**：整机无响应 54 分钟，全站 0 字节超时。
 结论不是网络也不是应用：`journalctl` 里 `Under memory pressure` 从 12:01:28 起刷了 252 次，
@@ -264,7 +281,7 @@ health 连试两次（间隔 5s、单次 20s 超时）才算真失败；首页�
 `disk`（`statfsSync` 可用空间 ≥ 512 MB）、`memory`（系统可用 ≥ 128 MB + 进程 RSS）、
 `backup`（`backups/app-*.db` 最新一份 ≤ 36 小时，忽略 `-wal` / `-shm`）。
 浅 health 保持 `{ok,name,time}` 原契约不变——部署脚本和 Caddy 都靠它。
-后端 194 条单测里有 6 条专门覆盖这四项判定。线上部署后实测：`200 / durationMs=3`、
+后端 199 条单测里有 6 条专门覆盖这四项判定。线上部署后实测：`200 / durationMs=3`、
 `journal=wal`、磁盘可用 28,061 MB、系统可用 917 MB、最新备份 8.3 小时，四项全 ok。
 
 **内存看门狗**（`deploy/watchdog.sh`）：采样 `MemAvailable` / Swap 余量 / load1，
@@ -327,21 +344,30 @@ cloud.js                      云端同步模块（登录/拉取/推送/轮询�
 build.mjs                     把 CSS / JS / 动画帧内联成单文件，并刷 ?v= 版本号
 sw.js                         Service Worker：HTML 网络优先、静态缓存优先、API 不缓存
 playercard.js                 队员档案「单文件 .html」导出器（r35）
+card.js                       训练卡 / 赛季卡（手绘 canvas，按需加载）
+courtcard.js                  阵型导出 PNG（手绘 9×9m 半场，按需加载）
+share.js / qr.js / xlsx.js    分享、二维码、表格导入（按需加载）
+assets/loader-pose*.webp      首屏加载动画三帧（PNG 同名文件作 onerror 回退）
 信工院排球队管理系统.html        构建产物，可直接分发
 package.json                  根目录脚本：build / test / test:pure / e2e / test:all
 e2e/e2e.mjs                   3 条端到端测试（node:test + playwright-core）
 tests/load-app.mjs            vm 加载真实 app.js 的纯函数导出（不开浏览器）
-tests/pure.test.mjs           30 条前端纯函数单测（node:test）
-.github/workflows/ci.yml       CI 门禁：224 单测 + tsc + 构建校验 + 3 条 e2e
+tests/pure.test.mjs           app.js 的 30 条前端纯函数单测（node:test）
+tests/load-courtcard.mjs      vm 加载真实 courtcard.js（同上）
+tests/courtcard.test.mjs      阵型导出图的 9 条米→像素 / 短标单测（node:test）
+.github/workflows/ci.yml       CI 门禁：238 单测 + tsc + 构建校验 + 3 条 e2e
 .github/workflows/monitor.yml  外部探活：定时探测 + 自动开/关告警 issue
 deploy/                       生产 Caddyfile / 部署脚本 / 备份脚本 / 内存看门狗
 server/                       可选后端：Express + SQLite + JWT（云端模式）
 server/src/health.ts          深度健康检查（db 写锁 / 磁盘 / 内存 / 备份）
+server/src/security.ts        安全响应头（自研，刻意不下发 CSP，见文件注释）
 server/scripts/backup.mjs     每日在线备份（better-sqlite3 .backup()，保留 14 份）
 server/public/admin.html      管理端（/admin）
 server/public/m.html          队员端手机页（/m，r35 起停用，代码保留）
 docs/interview.md             面试讲点：每个模块的四段式复盘
 docs/战术板产品方案.md          阵型板的产品方案
+docs/上线清单.md                上线打包清单（2026-10-24 写，2026-11-09 按现状对齐：已完成 / 明确不做 / 需外部条件）
+CHANGELOG.md                  发布记录 + 版本号体系（vN 真源在 sw.js）
 docs/shots/                   README 截图 + GitHub 分享预览图
 docs/shots/social-preview.jpg  分享预览图 JPG 版（68 KB）：网页上传用这版，PNG 是源图
 LICENSE                       MIT 许可证
@@ -361,8 +387,10 @@ prototype/formation-editor.html  阵型板最早的独立原型
 - [x] PWA：可安装到桌面 / 主屏，离线可用（Service Worker 缓存应用壳）
 - [x] 多角色：管理端 `/admin` 建队发号；队员看数据改走单文件档案导出（`/m` 手机页停用保留）
 - [x] 多端准实时同步（轮询）+ AI Key 服务端代理
-- [ ] 阵型导出 PNG，直接发群里讲站位
+- [x] 阵型导出 PNG，直接发群里讲站位（2026-11-09，courtcard.js）
 - [x] 数据上云（Node + SQLite）
+- [x] 加载动画三帧转 WebP（56.4 → 32.9 KB，PNG 回退零退化）
+- [x] 后端安全响应头（自研，不引 helmet；CSP 刻意不下发）
 
 ## 许可证
 

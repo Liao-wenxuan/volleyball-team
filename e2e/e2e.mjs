@@ -11,9 +11,10 @@
  * 后端用 tsx 起在系统临时目录的 DB 上，前端用极简静态服务器托管仓库根目录。
  */
 import http from 'node:http';
+import net from 'node:net';
 import os from 'node:os';
 import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test, before, after } from 'node:test';
@@ -21,17 +22,28 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PORT_HTTP = 5588; // 前端
-const PORT_API = 8799;  // 后端
-const BASE_HTTP = `http://127.0.0.1:${PORT_HTTP}`;
-const BASE_API = `http://127.0.0.1:${PORT_API}`;
+// 端口每轮动态取空闲值：万一上一轮有残留进程没杀干净，也不会被这一轮误连
+let PORT_HTTP, PORT_API, BASE_HTTP, BASE_API;
 const DEMO = { username: 'demo', password: 'demo123456' };
+
+/** 让内核分配一个当前空闲端口，取完立刻释放（只用于挑号，真正监听在后面） */
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.once('error', reject);
+    srv.listen(0, '127.0.0.1', () => {
+      const port = srv.address().port;
+      srv.close(() => resolve(port));
+    });
+  });
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.png': 'image/png',
+  '.webp': 'image/webp', // v65 起首屏三帧是 WebP，MIME 不对浏览器可能不走 onerror 回退
   '.webmanifest': 'application/manifest+json',
   '.svg': 'image/svg+xml'
 };
@@ -43,6 +55,14 @@ let coachToken = '';
 /* ── 环境起停 ── */
 
 before(async () => {
+  // 0. 先挑两个空闲端口（固定端口 + 残留进程 = 静默跑在旧库上，这个坑真踩过）
+  PORT_HTTP = await freePort();
+  do {
+    PORT_API = await freePort();
+  } while (PORT_API === PORT_HTTP);
+  BASE_HTTP = `http://127.0.0.1:${PORT_HTTP}`;
+  BASE_API = `http://127.0.0.1:${PORT_API}`;
+
   // 1. 静态托管前端（禁 sw.js：测试不需要离线缓存插进来）
   frontServer = http.createServer((req, res) => {
     const u = decodeURIComponent(req.url.split('?')[0]);
@@ -67,23 +87,32 @@ before(async () => {
   tmpDir = mkdtempSync(path.join(os.tmpdir(), 'xgy-e2e-db-'));
   const dbPath = path.join(tmpDir, 'e2e.db');
   const env = { ...process.env, DB_PATH: dbPath, PORT: String(PORT_API), JWT_SECRET: 'e2e-secret' };
+  // 直接 node + tsx CLI，不用 `npx`/shell:true：Windows 下 shell 包一层后 kill 只杀到 cmd，
+  // 真正跑 tsx 的 node 会残留占住端口，下一轮 health 就会连到上一轮的旧库
+  const serverDir = path.join(ROOT, 'server');
+  const tsxCli = path.join(serverDir, 'node_modules', 'tsx', 'dist', 'cli.mjs');
   const run = (args) =>
     new Promise((resolve, reject) => {
-      const p = spawn('npx', ['tsx', ...args], { cwd: path.join(ROOT, 'server'), env, shell: true });
+      const p = spawn(process.execPath, [tsxCli, ...args], { cwd: serverDir, env });
       let out = '';
       p.stdout.on('data', (d) => (out += d));
       p.stderr.on('data', (d) => (out += d));
       p.on('exit', (code) => (code === 0 ? resolve(out) : reject(new Error(`tsx ${args}: ${out}`))));
     });
   await run(['src/seed.ts']);
-  apiProc = spawn('npx', ['tsx', 'src/index.ts'], { cwd: path.join(ROOT, 'server'), env, shell: true, stdio: 'ignore' });
+  apiProc = spawn(process.execPath, [tsxCli, 'src/index.ts'], {
+    cwd: serverDir, env, stdio: 'ignore',
+    detached: process.platform !== 'win32' // Linux 下成组，after() 才能连子进程一起杀
+  });
+  let healthy = false;
   for (let i = 0; i < 60; i++) {
     try {
       const r = await fetch(`${BASE_API}/api/health`);
-      if (r.ok) break;
+      if (r.ok) { healthy = true; break; }
     } catch {}
     await new Promise((r) => setTimeout(r, 300));
   }
+  assert.ok(healthy, '后端 18s 内未就绪（启动失败或端口被占用）——不要静默连到残留进程');
 
   // 3. 浏览器：本机复用系统 Edge（不下载浏览器）；CI / Linux 用
   //    `npx playwright-core install chromium` 装到默认缓存，不传 executablePath 即可。
@@ -101,7 +130,15 @@ before(async () => {
 
 after(async () => {
   await browser?.close();
-  apiProc?.kill();
+  // tsx CLI 会再 exec 一个 node 来加载 TS：只 kill 直接子进程会留下真正干活的那个
+  if (apiProc?.pid) {
+    if (process.platform === 'win32') {
+      try { spawnSync('taskkill', ['/PID', String(apiProc.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    } else {
+      try { process.kill(-apiProc.pid, 'SIGTERM'); } catch {}
+    }
+    try { apiProc.kill(); } catch {}
+  }
   frontServer?.close();
   try {
     rmSync(tmpDir, { recursive: true, force: true });
