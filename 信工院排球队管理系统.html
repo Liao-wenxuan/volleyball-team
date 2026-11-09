@@ -4320,26 +4320,50 @@ setTimeout(function () {
     return enabled() && (role === 'admin' || role === 'coach');
   }
 
+  /* 请求超时：fetch 默认永不超时。跨境链路、代理或内置预览窗口偶尔会把请求
+     挂住不返回，登录弹窗就会永远停在「登录中…」——既没结果、也没法重试。
+     统一 15 秒兜底，失败时给出能照着做的提示，而不是干等。 */
+  const API_TIMEOUT_MS = 15000;
+
   async function api(path, opts) {
     const o = opts || {};
-    const res = await fetch(base() + path, {
-      method: o.method || 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token() ? { Authorization: 'Bearer ' + token() } : {}),
-        ...(o.teamId ? { 'X-Team-Id': o.teamId } : {})
-      },
-      body: o.body ? JSON.stringify(o.body) : undefined
-    });
-    let data = null;
-    try { data = await res.json(); } catch (e) { /* 非 JSON */ }
-    if (!res.ok) {
-      const msg = (data && data.message) || `请求失败（${res.status}）`;
-      const err = new Error(msg);
-      err.code = data && data.error;
-      throw err;
+    const timeout = o.timeout || API_TIMEOUT_MS;
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), timeout) : null;
+    try {
+      let res;
+      try {
+        res = await fetch(base() + path, {
+          method: o.method || 'GET',
+          ...(ctrl ? { signal: ctrl.signal } : {}),
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token() ? { Authorization: 'Bearer ' + token() } : {}),
+            ...(o.teamId ? { 'X-Team-Id': o.teamId } : {})
+          },
+          body: o.body ? JSON.stringify(o.body) : undefined
+        });
+      } catch (e) {
+        if (e && e.name === 'AbortError') {
+          throw new Error(`服务器没有响应（超过 ${Math.round(timeout / 1000)} 秒）：${base()}。检查网络/代理，或换系统浏览器重试`);
+        }
+        throw new Error(`连不上服务器 ${base()}：${(e && e.message) || '网络错误'}。请检查服务器地址与网络`);
+      }
+      let data = null;
+      try { data = await res.json(); } catch (e) {
+        // body 读取阶段也可能被 abort；其余「非 JSON」响应按原逻辑留空
+        if (e && e.name === 'AbortError') throw new Error(`服务器响应超时：${base()}`);
+      }
+      if (!res.ok) {
+        const msg = (data && data.message) || `请求失败（${res.status}）`;
+        const err = new Error(msg);
+        err.code = data && data.error;
+        throw err;
+      }
+      return data;
+    } finally {
+      if (timer) clearTimeout(timer);
     }
-    return data;
   }
 
   /* ── 会话恢复 ── */
@@ -4759,6 +4783,7 @@ setTimeout(function () {
         ${field('密码', '<input name="password" type="password" required autocomplete="current-password">')}
       </div>
       <p class="form-note">账号由球队管理员发放。还没有账号？找管理员要一个。</p>
+      ${location.protocol === 'file:' ? '<p class="form-note">当前是单文件离线版（file://），浏览器可能拦下跨站请求；连云端建议打开线上完整版。请求超过 15 秒会自动报错，不会一直等。</p>' : ''}
       <div class="form-foot"><button type="submit" class="btn btn-primary" id="cloudSubmit">登录并同步</button></div>
       </form>
     </div>`;

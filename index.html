@@ -7,17 +7,17 @@
 <meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%237b6cff'/%3E%3Crect%20x='12'%20y='12'%20width='40'%20height='40'%20rx='4'%20fill='none'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M12%2028h40'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M32%2012v40'%20stroke='%23fff'%20stroke-width='3'%20stroke-opacity='.55'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#05070f">
-<link rel="manifest" href="manifest.webmanifest?v=v65">
-<link rel="apple-touch-icon" href="assets/icon-180.png?v=v65">
+<link rel="manifest" href="manifest.webmanifest?v=v66">
+<link rel="apple-touch-icon" href="assets/icon-180.png?v=v66">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="排球队">
-<link rel="stylesheet" href="style.css?v=v65">
+<link rel="stylesheet" href="style.css?v=v66">
 <!-- 两个启动脚本在 body 末尾，慢链路下要白等整个 HTML 传完才发请求；
      preload 让它们跟 CSS 并行下载。URL 上的 ?v=N 由 build.mjs 统一注入，必须和实际 script 一致。 -->
-<link rel="preload" as="script" href="cloud.js?v=v65">
-<link rel="preload" as="script" href="app.js?v=v65">
+<link rel="preload" as="script" href="cloud.js?v=v66">
+<link rel="preload" as="script" href="app.js?v=v66">
 <style>
 /* ── 昼夜基调 token：加载页与登录页共用。默认随时间（19:00–06:00 夜，见下方脚本），
    登录页的星球开关可手动切换，选择记在 sessionStorage（本标签页内有效，
@@ -121,9 +121,9 @@ setTimeout(function () {
        :nth-child(1/2/3) 排延迟，包一层会全变成 nth-child(1)。onerror 回退 PNG，
        老设备（iOS 13 及以下）只是换个源，动画和首帧 load 检测都不受影响。 -->
   <div class="boot-stage" id="bootStage">
-    <img class="boot-frame" src="assets/loader-pose1.webp?v=v65" onerror="this.onerror=null;this.src='assets/loader-pose1.png'" alt="">
-    <img class="boot-frame" src="assets/loader-pose2.webp?v=v65" onerror="this.onerror=null;this.src='assets/loader-pose2.png'" alt="">
-    <img class="boot-frame" src="assets/loader-pose3.webp?v=v65" onerror="this.onerror=null;this.src='assets/loader-pose3.png'" alt="">
+    <img class="boot-frame" src="assets/loader-pose1.webp?v=v66" onerror="this.onerror=null;this.src='assets/loader-pose1.png'" alt="">
+    <img class="boot-frame" src="assets/loader-pose2.webp?v=v66" onerror="this.onerror=null;this.src='assets/loader-pose2.png'" alt="">
+    <img class="boot-frame" src="assets/loader-pose3.webp?v=v66" onerror="this.onerror=null;this.src='assets/loader-pose3.png'" alt="">
   </div>
   <div class="boot-brand">信工院排球队</div>
   <div class="boot-dots"><span></span><span></span><span></span></div>
@@ -1144,9 +1144,9 @@ setTimeout(function () {
   sync();
 })();
 </script>
-<script src="cloud.js?v=v65"></script>
+<script src="cloud.js?v=v66"></script>
 <!-- qr / xlsx / card / share / playercard 改为按需加载（app.js 的 ensureMod），
      冷启动不再跟着下载。单文件版由 build.mjs 内联到 app.js 之前。 -->
-<script src="app.js?v=v65"></script>
+<script src="app.js?v=v66"></script>
 </body>
 </html>
