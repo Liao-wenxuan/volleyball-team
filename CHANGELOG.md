@@ -16,6 +16,17 @@
 
 后端 / 文档 / CI 的改动不 bump `vN`：它们不进 SW 预缓存，版本号变了反而会白清一次用户缓存。这类变更在下面按日期记，不打版本标签。
 
+## 服务端配置 · 2026-11-11（不 bump vN）
+
+**修复两处线上缺陷，前端代码零改动**
+
+- **关掉 HTTP/3**：Caddy 默认启用 h3 并下发 `Alt-Svc: h3=":443"; ma=2592000`，浏览器记住后 30 天内优先走 QUIC/UDP 443，跨境链路常被丢包。全局 `servers { protocols h1 h2 }` 关掉，并给 vb 站点下发 `Alt-Svc: clear` 清掉已有缓存记录。
+- **修 PWA 清单 404**：`handle /m*` 是前缀匹配，把 `/manifest.webmanifest` 一并反代到 Express（文件其实一直都在 web 目录）。拆成 `handle /m` + `handle /m/*`；顺手补 `Content-Type: application/manifest+json`（Go 的 mime 库不认识 `.webmanifest`，会回落 `text/plain`）。
+- **运维通道**：本机到服务器 22 端口被跨境链路重置，改由 `server-ops.yml` 借 GitHub Actions runner 的 SSH 执行 `deploy/server-ops.sh`。四个动作 `probe / fix / tls12 / undo-tls12` 都先备份 Caddyfile，`caddy validate` 或 reload 失败自动回滚。服务器配置与 `deploy/Caddyfile` 副本已对齐。
+- **验证**：线上 `Alt-Svc: clear`、manifest 200 且 MIME 正确、`/admin` `/m/` `/api/health/deep` 全绿；真 Edge 跑 `LIVE_TLS12=1 node preview/verify-live.mjs` 全绿（v67、三帧 WebP、按需 `courtcard.js`、750×1220 阵型导出、零 JS 异常 / 零失败请求）。
+
+**遗留（非代码问题，别再往 Caddy 方向查）**：这条跨境链路会稳定丢弃 Chromium 的 **TLS 1.3 ClientHello**——交错对照实验「默认 TLS 0/6」、客户端加 `--ssl-version-max=tls1.2` 则「6/6 稳定打开（1.0–2.1s）」，而 curl 的 TLS 1.3 能通，说明是按 ClientHello 特征选择性丢包。服务端把 Caddy 限制为只协商 TLS 1.2 的实验**无效**（默认浏览器仍 0/6，因为服务器根本收不到那个包），已回滚，TLS 1.3 恢复。真正根治要换线路 / 套 CDN / 换 IP，属产品决策，未擅自实施。
+
 ## v67 · 2026-11-11
 
 **变更：登录前品牌中性化，修掉多球队串队**
