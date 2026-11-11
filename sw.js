@@ -42,7 +42,8 @@
 // v64: app.js 末尾加 Node 专用的纯函数导出钩子（浏览器里是死代码），配套 30 条前端单测
 // v65: 阵型导出 PNG（courtcard.js 按需加载）+ loader 三帧 WebP（PNG 回退）
 // v66: 云端请求加 15s 超时兜底（挂起时不再永远停在「登录中…」）+ 单文件版连云端提示
-const VERSION = 'v66';
+// v67: 登录前品牌中性化——首屏 / 门禁 / 页脚 / title / manifest 用「排球队管理系统」，登录后仍显示真实队名
+const VERSION = 'v67';
 const CACHE = `xgy-pwa-${VERSION}`;
 // 预缓存只放「首屏一定会用到」的东西。下面两类刻意不放：
 // 1) qr / xlsx / card / courtcard / share / playercard：分享、导出、表格导入才用，白下 37KB 抢跨境带宽；
@@ -53,14 +54,14 @@ const CACHE = `xgy-pwa-${VERSION}`;
 // 所以离线能力不受影响，只是不再在首次安装时抢带宽。
 const SHELL = [
   './index.html',
-  './style.css?v=v66',
-  './app.js?v=v66',
-  './cloud.js?v=v66',
-  './manifest.webmanifest?v=v66',
+  './style.css?v=v67',
+  './app.js?v=v67',
+  './cloud.js?v=v67',
+  './manifest.webmanifest?v=v67',
   // 只预缓存 WebP；PNG 是 onerror 回退源，老设备第一次用到时由 fetch 处理器按需缓存
-  './assets/loader-pose1.webp?v=v66',
-  './assets/loader-pose2.webp?v=v66',
-  './assets/loader-pose3.webp?v=v66'
+  './assets/loader-pose1.webp?v=v67',
+  './assets/loader-pose2.webp?v=v67',
+  './assets/loader-pose3.webp?v=v67'
 ];
 
 self.addEventListener('install', (e) => {

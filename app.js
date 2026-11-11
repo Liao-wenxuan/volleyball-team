@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   信工院排球队 · 本地球队管理
+   排球队管理系统 · 本地优先
    队员 / 训练 / 考勤 / 技能点 · 纯原生 JS
    ═══════════════════════════════════════════════════════ */
 (function () {
@@ -2740,7 +2740,7 @@
     if (!s) return;
     await ensureMod('card');
     const card = await window.XGYCard.render({
-      team: '信工院排球队',
+      team: '排球队管理系统',
       session: s,
       players: db.players,
       logs: db.skillLogs.filter((l) => l.date === s.date),
@@ -2800,7 +2800,7 @@
       ? `${weeks[0].label} – ${parseKey(keys[keys.length - 1]).getMonth() + 1}.${parseKey(keys[keys.length - 1]).getDate()}`
       : '';
     return {
-      team: '信工院排球队',
+      team: '排球队管理系统',
       range,
       totals: { sessions: activeTotal, rate: attMarked ? Math.round((attSum / attMarked) * 100) : null, players: db.players.length, logs: logCount },
       weeks,
@@ -2840,7 +2840,7 @@
     try {
       await ensureMod('courtcard');
       const title = ($('#fxTitle') && $('#fxTitle').textContent.trim()) || '默认站位';
-      const team = ($('#footerTeam') && $('#footerTeam').textContent.trim()) || '信工院排球队';
+      const team = ($('#footerTeam') && $('#footerTeam').textContent.trim()) || '排球队管理系统';
       const roles = FX_ROLES.map((r) => {
         const pt = (db.formation.pos || {})[r.id] || { x: 0, y: 0 };
         // fxRoleName 会处理「自由人进 3m 线内换牌」，导出的图跟屏幕上标牌一致
@@ -2935,7 +2935,7 @@
       });
     }
     next.sort((a, b) => (`${a.d}T${a.t}` < `${b.d}T${b.t}` ? -1 : 1));
-    return { v: 1, team: '信工院排球队', at: Date.now(), players, sessions, next: next.slice(0, 4) };
+    return { v: 1, team: '排球队管理系统', at: Date.now(), players, sessions, next: next.slice(0, 4) };
   }
 
   /** 用队长的 AI Key 一次性给全队写点评（存本机，生成过就不重复花钱） */
@@ -3058,7 +3058,7 @@
           : `V${info.version} · 偏密，建议存图发群里长按识别`;
         const save = $('#shareQrSave');
         if (save) save.onclick = () => {
-          const name = `信工院排球队-队员码-${new Date().toISOString().slice(0, 10)}.png`;
+          const name = `排球队管理系统-队员码-${new Date().toISOString().slice(0, 10)}.png`;
           // 导出单独画一张 1240px 的：屏幕上 620 够用，存图发群/打印要更密更清晰
           let exportCv = cv;
           try {

@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>信工院排球队 · 球队管理</title>
-<meta name="description" content="信工院排球队本地管理系统：队员、训练考勤、技能点。">
+<title>排球队管理系统</title>
+<meta name="description" content="排球队管理系统：队员、训练考勤、技能成长、战术阵型。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%237b6cff'/%3E%3Crect%20x='12'%20y='12'%20width='40'%20height='40'%20rx='4'%20fill='none'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M12%2028h40'%20stroke='%23fff'%20stroke-width='3'/%3E%3Cpath%20d='M32%2012v40'%20stroke='%23fff'%20stroke-width='3'%20stroke-opacity='.55'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#05070f">
-<link rel="manifest" href="manifest.webmanifest?v=v66">
-<link rel="apple-touch-icon" href="assets/icon-180.png?v=v66">
+<link rel="manifest" href="manifest.webmanifest?v=v67">
+<link rel="apple-touch-icon" href="assets/icon-180.png?v=v67">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="排球队">
-<link rel="stylesheet" href="style.css?v=v66">
+<link rel="stylesheet" href="style.css?v=v67">
 <!-- 两个启动脚本在 body 末尾，慢链路下要白等整个 HTML 传完才发请求；
      preload 让它们跟 CSS 并行下载。URL 上的 ?v=N 由 build.mjs 统一注入，必须和实际 script 一致。 -->
-<link rel="preload" as="script" href="cloud.js?v=v66">
-<link rel="preload" as="script" href="app.js?v=v66">
+<link rel="preload" as="script" href="cloud.js?v=v67">
+<link rel="preload" as="script" href="app.js?v=v67">
 <style>
 /* ── 昼夜基调 token：加载页与登录页共用。默认随时间（19:00–06:00 夜，见下方脚本），
    登录页的星球开关可手动切换，选择记在 sessionStorage（本标签页内有效，
@@ -121,11 +121,11 @@ setTimeout(function () {
        :nth-child(1/2/3) 排延迟，包一层会全变成 nth-child(1)。onerror 回退 PNG，
        老设备（iOS 13 及以下）只是换个源，动画和首帧 load 检测都不受影响。 -->
   <div class="boot-stage" id="bootStage">
-    <img class="boot-frame" src="assets/loader-pose1.webp?v=v66" onerror="this.onerror=null;this.src='assets/loader-pose1.png'" alt="">
-    <img class="boot-frame" src="assets/loader-pose2.webp?v=v66" onerror="this.onerror=null;this.src='assets/loader-pose2.png'" alt="">
-    <img class="boot-frame" src="assets/loader-pose3.webp?v=v66" onerror="this.onerror=null;this.src='assets/loader-pose3.png'" alt="">
+    <img class="boot-frame" src="assets/loader-pose1.webp?v=v67" onerror="this.onerror=null;this.src='assets/loader-pose1.png'" alt="">
+    <img class="boot-frame" src="assets/loader-pose2.webp?v=v67" onerror="this.onerror=null;this.src='assets/loader-pose2.png'" alt="">
+    <img class="boot-frame" src="assets/loader-pose3.webp?v=v67" onerror="this.onerror=null;this.src='assets/loader-pose3.png'" alt="">
   </div>
-  <div class="boot-brand">信工院排球队</div>
+  <div class="boot-brand">排球队管理系统</div>
   <div class="boot-dots"><span></span><span></span><span></span></div>
   <div class="boot-credit">排球猫 · 抖音 @EvitaFfffff</div>
 </div>
@@ -150,9 +150,9 @@ setTimeout(function () {
 <div class="grain" aria-hidden="true"></div>
 
 <aside class="sidebar" id="sidebar">
-  <a class="brand" href="#" data-goto="dashboard" aria-label="信工院排球队首页">
+  <a class="brand" href="#" data-goto="dashboard" aria-label="排球队管理系统首页">
     <span class="brand-mark"><img class="brand-img" src="data:image/png;base64,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" alt="" aria-hidden="true"></span>
-    <span class="brand-txt"><strong id="brandTeam">信工院排球队</strong><em id="brandMode">VOLLEYBALL · LOCAL</em></span>
+    <span class="brand-txt"><strong id="brandTeam">排球队管理系统</strong><em id="brandMode">VOLLEYBALL · LOCAL</em></span>
   </a>
 
   <nav class="nav" aria-label="主导航">
@@ -709,7 +709,7 @@ setTimeout(function () {
       <div class="footer-top">
         <div class="footer-brand">
           <span class="brand-mark small"><img class="brand-img" src="data:image/png;base64,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" alt="" aria-hidden="true"></span>
-        <div><strong id="footerTeam">信工院排球队</strong><p>数据保存在本机浏览器 · 建议每周导出一次备份</p></div>
+        <div><strong id="footerTeam">排球队管理系统</strong><p>数据保存在本机浏览器 · 建议每周导出一次备份</p></div>
       </div>
       <div class="social-row" id="footerActions">
         <button class="social-btn" style="--brand:#37e39b" data-action="export"><span class="sb-ico"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></span><span class="sb-txt">导出备份</span></button>
@@ -719,7 +719,7 @@ setTimeout(function () {
         <button class="social-btn" style="--brand:#ffbb55" data-action="help"><span class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7v.5"/><path d="M12 17h.01"/></svg></span><span class="sb-txt">使用说明</span></button>
       </div>
       </div>
-      <div class="footer-meta">© 2026 信工院排球队 · 本地优先 · 数据可随时导出</div>
+      <div class="footer-meta">© 2026 排球队管理系统 · 本地优先 · 数据可随时导出</div>
     </div>
   </footer>
 </main>
@@ -771,7 +771,7 @@ setTimeout(function () {
   <!-- ── 左：猫主场。纯装饰，aria-hidden；三只猫按用户的排球猫表情包复刻 ── -->
   <aside class="gate-stage" aria-hidden="true">
     <div class="gate-stage-top">
-      <span class="gate-tag">信工院排球队 · 队务系统</span>
+      <span class="gate-tag">排球队管理系统 · 队务系统</span>
       <h2>接好每一个<em>一传</em>，<br>才扣得下每一分。</h2>
       <p class="gc-sub">队员 · 考勤 · 技能点 · 阵容</p>
     </div>
@@ -815,7 +815,7 @@ setTimeout(function () {
         </svg>
       </span>
       <div>
-        <h1>信工院排球队</h1>
+        <h1>排球队管理系统</h1>
         <p id="gateSub">用管理员发给你的账号登录</p>
       </div>
       <!-- 昼夜星球开关（参考 16.昼-星球动画，黑白化适配）：
@@ -1144,9 +1144,9 @@ setTimeout(function () {
   sync();
 })();
 </script>
-<script src="cloud.js?v=v66"></script>
+<script src="cloud.js?v=v67"></script>
 <!-- qr / xlsx / card / share / playercard 改为按需加载（app.js 的 ensureMod），
      冷启动不再跟着下载。单文件版由 build.mjs 内联到 app.js 之前。 -->
-<script src="app.js?v=v66"></script>
+<script src="app.js?v=v67"></script>
 </body>
 </html>

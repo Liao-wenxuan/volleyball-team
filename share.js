@@ -601,7 +601,7 @@
     let remembered = '';
     try { remembered = localStorage.getItem(NAME_KEY) || ''; } catch (e) { /* ignore */ }
 
-    const el = shell(data.team || '信工院排球队', `
+    const el = shell(data.team || '排球队管理系统', `
       <section class="sv-hero">
         ${heroTop()}
         <h1 class="sv-h1">
@@ -639,7 +639,7 @@
         <p>数据快照 · ${esc(fmtSnapshot(data.at || Date.now()))}</p>
         <p class="mono">NO SIGN-UP · NO APP · JUST A LINK</p>
       </footer>`);
-    document.title = `${data.team || '信工院排球队'} · 我的训练档案`;
+    document.title = `${data.team || '排球队管理系统'} · 我的训练档案`;
 
     const form = el.querySelector('#svForm');
     const err = el.querySelector('#svErr');
@@ -716,7 +716,7 @@
     const note = aiNote || localNote(r, sk, base);
     const isAi = Number(me.nc) === 1 && !!aiNote;
 
-    const el = shell(data.team || '信工院排球队', `
+    const el = shell(data.team || '排球队管理系统', `
       <section class="sv-hero">
         ${heroTop(me.no ? '#' + me.no : (me.pos || 'XGY'))}
         <h1 class="sv-h1">
@@ -813,7 +813,7 @@
   }
 
   function renderError() {
-    const el = shell('信工院排球队', `
+    const el = shell('排球队管理系统', `
       <section class="sv-hero sv-hero-err">
         ${heroTop().replace('LIVE', 'LOST')}
         <h1 class="sv-h1"><span class="sv-line">链接不完整</span><span class="sv-line">或已<em>过期。</em></span></h1>
