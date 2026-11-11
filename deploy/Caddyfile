@@ -25,6 +25,11 @@ vb.bscjs.top {
 	@vbNoCache path / /index.html /sw.js
 	header @vbNoCache Cache-Control "no-cache"
 
+	# Go 的 mime 库不认识 .webmanifest，file_server 会回落 text/plain；
+	# PWA 规范要求 application/manifest+json，显式补上。
+	@vbManifest path /manifest.webmanifest
+	header @vbManifest Content-Type "application/manifest+json"
+
 	handle /api/* {
 		reverse_proxy 127.0.0.1:8787
 	}

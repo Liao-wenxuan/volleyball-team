@@ -6,13 +6,15 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'probe（只读体检）或 fix（备份 + 修 Caddy + reload）'
+        description: 'probe 只读体检 / fix 修配置 / tls12 试降级 / undo-tls12 撤销降级'
         required: true
         default: 'probe'
         type: choice
         options:
           - probe
           - fix
+          - tls12
+          - undo-tls12
 
 jobs:
   ops:

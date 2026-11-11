@@ -4,14 +4,17 @@
 # 为什么需要它：本机到服务器 22 端口被跨境链路重置，直连不通；GitHub Actions
 # runner 在境外可以 SSH。所有生产配置变更走这个脚本，做到「可审计 + 可回滚」。
 #
-# 用法：bash ~/server-ops.sh probe | fix
-#   probe  只读体检，打印 Caddyfile / web 目录 / 响应头 / 健康状态
-#   fix    备份 → 三处幂等修改 → caddy validate（失败自动回滚）→ reload → 自检
+# 用法：bash ~/server-ops.sh probe | fix | tls12 | undo-tls12
+#   probe       只读体检，打印 Caddyfile / web 目录 / 响应头 / 健康状态
+#   fix         备份 → 幂等修改 → caddy validate（失败自动回滚）→ reload → 自检
+#   tls12       在 fix 基础上，额外插入「只协商 TLS1.2」实验块（验证跨境链路假设）
+#   undo-tls12  撤销实验块，保留 fix 的四项修复
 #
 # 三处修改：
 #   1. 全局 servers { protocols h1 h2 } 关掉 HTTP/3，Caddy 不再下发 Alt-Svc: h3
 #   2. handle /m* 拆成 /m + /m/*，修 /manifest.webmanifest 被前缀匹配吞掉
 #   3. vb 站点下发 Alt-Svc: clear，让已缓存 h3 记录的浏览器立刻丢弃
+#   4. 给 .webmanifest 补正确的 Content-Type（Go mime 库会回落 text/plain）
 set -euo pipefail
 
 ACTION="${1:-probe}"
@@ -58,14 +61,15 @@ probe() {
   echo "=== probe done ==="
 }
 
-fix() {
+apply() {
+  MODE="$1"
   BK="/etc/caddy/Caddyfile.bak-$(date +%Y%m%d-%H%M%S)"
   sudo -n cp -a "$CF" "$BK"
-  echo "backup: $BK"
+  echo "backup: $BK (mode=$MODE)"
 
-  sudo -n python3 - "$CF" <<'PY'
+  sudo -n python3 - "$CF" "$MODE" <<'PY'
 import sys, re
-p = sys.argv[1]
+p, mode = sys.argv[1], sys.argv[2]
 s = open(p, encoding='utf-8').read()
 changed = []
 
@@ -108,6 +112,42 @@ else:
     s = s2
     changed.append('Alt-Svc clear: inserted into vb site')
 
+# 4) .webmanifest 的 Content-Type：Go mime 库不认识这个扩展名，会回落 text/plain
+if 'application/manifest+json' in s:
+    changed.append('manifest MIME: already present (skip)')
+else:
+    anchor = re.search(r'(?m)^(\s*)@vbNoCache[^\n]*\n', s)
+    if not anchor:
+        raise SystemExit('ERROR: @vbNoCache anchor not found - abort')
+    i = anchor.group(1)
+    ins = (f'{i}# Go 的 mime 库不认识 .webmanifest，file_server 会回落 text/plain；\n'
+           f'{i}# PWA 规范要求 application/manifest+json，显式补上。\n'
+           f'{i}@vbManifest path /manifest.webmanifest\n'
+           f'{i}header @vbManifest Content-Type "application/manifest+json"\n\n')
+    s = s[:anchor.end()] + ins + s[anchor.end():]
+    changed.append('manifest MIME: inserted')
+
+# 5) 可回滚实验：只协商 TLS 1.2。跨境链路稳定丢弃 Chromium 的 TLS1.3 ClientHello，
+#    验证「服务端主动不选 1.3」能否让默认浏览器直接打开（不改变客户端发出的 ClientHello）。
+if mode == 'tls12':
+    if 'TLS12-TRIAL-BEGIN' in s:
+        changed.append('tls12: already present (skip)')
+    else:
+        marker = ('\t# TLS12-TRIAL-BEGIN（跨境链路丢 TLS1.3 ClientHello，临时只协商 TLS1.2）\n'
+                  '\ttls {\n'
+                  '\t\tprotocols tls1.2 tls1.2\n'
+                  '\t}\n'
+                  '\t# TLS12-TRIAL-END\n\n')
+        s2 = re.sub(r'(?m)^(\s*vb\.bscjs\.top\s*\{[^\n]*\n)',
+                    lambda mm: mm.group(0) + marker, s, count=1)
+        if s2 == s:
+            raise SystemExit('ERROR: vb.bscjs.top site block not found - abort')
+        s = s2
+        changed.append('tls12: inserted tls1.2-only block')
+elif mode == 'undo-tls12':
+    s, n = re.subn(r'(?m)^\s*# TLS12-TRIAL-BEGIN[\s\S]*?# TLS12-TRIAL-END[ \t]*\n+', '', s, count=1)
+    changed.append(f'undo-tls12: removed {n} block(s)')
+
 open(p, 'w', encoding='utf-8').write(s)
 print('\n'.join(changed))
 PY
@@ -149,14 +189,23 @@ PY
     curl -sk -o /dev/null -w "%{http_code} %{content_type} %{size_download}B\n" \
       --resolve vb.bscjs.top:443:127.0.0.1 "https://vb.bscjs.top$u" || echo FAIL
   done
+  echo "--- TLS 协商（tls12 模式下 1.3 应被拒）---"
+  for v in "tls1.3 --tlsv1.3 --tls-max 1.3" "tls1.2 --tlsv1.2 --tls-max 1.2"; do
+    set -- $v; name=$1; shift
+    printf "%-10s " "$name"
+    curl -sk "$@" -o /dev/null -w "%{http_code}\n" --max-time 6 \
+      --resolve vb.bscjs.top:443:127.0.0.1 https://vb.bscjs.top/api/health || echo "rejected/failed"
+  done
   echo "--- API ---"
   curl -s --max-time 5 http://127.0.0.1:8787/api/health | head -c 250 || true
   echo
-  echo "=== fix done (backup: $BK) ==="
+  echo "=== apply done mode=$MODE (backup: $BK) ==="
 }
 
 case "$ACTION" in
-  probe) probe ;;
-  fix)   fix ;;
-  *) echo "unknown action: $ACTION (use probe|fix)"; exit 2 ;;
+  probe)       probe ;;
+  fix)         apply fix ;;
+  tls12)       apply tls12 ;;
+  undo-tls12)  apply undo-tls12 ;;
+  *) echo "unknown action: $ACTION (use probe|fix|tls12|undo-tls12)"; exit 2 ;;
 esac
