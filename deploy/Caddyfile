@@ -1,5 +1,17 @@
+# 全局：关掉 HTTP/3。Caddy 默认启用 h3 并下发 Alt-Svc: h3=":443"; ma=2592000，
+# 浏览器记住后 30 天内优先走 QUIC/UDP 443，跨境链路常被丢包 → 页面一直转 / ERR_CONNECTION_RESET。
+# 只留 h1/h2 后不再下发 Alt-Svc；已缓存的记录由各站点的 Alt-Svc: clear 清掉。
+{
+	servers {
+		protocols h1 h2
+	}
+}
+
 vb.bscjs.top {
 	encode gzip zstd
+
+	# 让之前缓存了 h3 记录的浏览器立刻丢弃（RFC 7838 的 clear 语义）
+	header Alt-Svc "clear"
 
 	# 版本化静态资源：build.mjs 给所有 css/js/图标引用统一加 ?v=N，内容写定不变，
 	# 可放心一年强缓存；sw.js 必须排除，浏览器得每次检查 Service Worker 更新。
@@ -20,7 +32,11 @@ vb.bscjs.top {
 	handle /admin* {
 		reverse_proxy 127.0.0.1:8787
 	}
-	handle /m* {
+	# 注意：不能用 /m*（前缀匹配会把 /manifest.webmanifest 也吞进反代，导致 PWA 清单 404）
+	handle /m {
+		reverse_proxy 127.0.0.1:8787
+	}
+	handle /m/* {
 		reverse_proxy 127.0.0.1:8787
 	}
 

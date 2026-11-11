@@ -1,0 +1,32 @@
+name: server-ops
+
+# 生产服务器运维通道：本机到服务器 22 端口被跨境链路重置，只有 Actions runner 能 SSH。
+# probe 只读体检；fix 会备份 /etc/caddy/Caddyfile 后做幂等修改，validate 失败自动回滚。
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'probe（只读体检）或 fix（备份 + 修 Caddy + reload）'
+        required: true
+        default: 'probe'
+        type: choice
+        options:
+          - probe
+          - fix
+
+jobs:
+  ops:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 上传运维脚本并执行
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          ACTION: ${{ inputs.action }}
+        run: |
+          install -m 600 /dev/null ~/deploy_key
+          printf '%s\n' "$SSH_KEY" > ~/deploy_key
+          SSHOPT="-i $HOME/deploy_key -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ConnectTimeout=30"
+          TARGET="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
+          scp $SSHOPT deploy/server-ops.sh "$TARGET:~/server-ops.sh"
+          ssh $SSHOPT "$TARGET" "bash ~/server-ops.sh $ACTION"
