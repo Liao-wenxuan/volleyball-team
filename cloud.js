@@ -171,6 +171,11 @@
     if (role && !['admin', 'coach', 'player'].includes(role)) role = null;
   }
 
+  /** 换队 / 换号：主题、模板的本地保护期按「同一队内自己刚改过」算，跨队立即作废 */
+  function resetSettingsGrace() {
+    hooks && hooks.resetSettingsGrace && hooks.resetSettingsGrace();
+  }
+
   function saveSession(payload) {
     sessSet(LS.token, payload.token);
     sessSet(LS.user, JSON.stringify(payload.user));
@@ -203,6 +208,7 @@
     sessSet(LS.team, JSON.stringify(team));
     sessSet(LS.role, role);
     paintBodyClass();
+    resetSettingsGrace();
     await pullCore();
     await syncWeek(currentMondayKey(), true);
     hooks.renderAll();
@@ -222,6 +228,7 @@
     localStorage.removeItem(LS.skip); // 主动退出 = 想换账号，下次必须重新登录
     user = null; team = null; role = null;
     lastTouch = 0; // 换队登录后轮询要重新定基线，不然旧队的时间戳会误触发刷新
+    resetSettingsGrace();
     paintBodyClass();
     paintCloudUI();
     // 内存里的 db 还是刚退出那个队的名单，切回本机那份
@@ -339,6 +346,7 @@
       body: { username: vals.username, password: vals.password }
     });
     saveSession(data);
+    resetSettingsGrace();
     localStorage.removeItem(LS.skip);
     paintBodyClass();
     paintCloudUI();

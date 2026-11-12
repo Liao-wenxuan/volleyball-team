@@ -269,3 +269,70 @@ test('E2E-3 阵型板：拖拽松手按 0.25m 吸附，且推送到了服务器'
   assert.ok(Math.abs(f.formation.pos.oh1.x - endX) < TOL, '服务器 x 应与页面一致');
   assert.ok(Math.abs(f.formation.pos.oh1.y - endY) < TOL, '服务器 y 应与页面一致');
 });
+
+/* ── E2E-4：换号 / 换队登录后，主题配色必须跟「服务器该队的设置」一致 ──
+ * 用户实测的 bug：A 队刚点过「暖砂」→ 退出 → 60s 内登录 B 队，
+ * 弹窗选中态读 db（素纸）、真实配色读 html[data-theme]（暖砂），两边串了。
+ * 三个叠加原因：① reloadLocal 换 db 不刷 DOM；② applyServerState 只在「采用服务器值」
+ * 时刷 DOM，而 60s 保护期内整段跳过；③ 保护期是全局时间戳，跨队不清零。
+ * 这里用「同账号退出→立刻重登」复现同一条代码路径，省去第二支队的 fixture。 */
+test('E2E-4 主题：重新登录后配色与选中态一致，且等于服务器该队设置', async () => {
+  const auth = { Authorization: `Bearer ${coachToken}`, 'Content-Type': 'application/json' };
+
+  // 1. 服务器基线设成「素纸」，刷新让前端拉到它
+  await fetch(`${BASE_API}/api/settings/theme`, {
+    method: 'PUT', headers: auth, body: JSON.stringify({ theme: 'paper' })
+  });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('body.cloud-on');
+  assert.equal(
+    await page.evaluate(() => document.documentElement.dataset.theme),
+    'paper', '刷新后应拉到服务器的「素纸」'
+  );
+
+  // 2. 页面上主动切「暖砂」：这一步会置 themeLocalAt，进入 60s 保护期
+  await page.click('#themeBtn');
+  await page.click('.theme-card[data-theme-id="sand"]');
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'sand');
+  await page.click('#modalClose');
+
+  // 等自己的 PUT 落定，避免断言读到「还在排队的旧值」
+  let serverTheme = '';
+  for (let i = 0; i < 20; i++) {
+    const me = await (await fetch(`${BASE_API}/api/auth/me`, { headers: auth })).json();
+    serverTheme = me.settings.theme;
+    if (serverTheme === 'sand') break;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  assert.equal(serverTheme, 'sand', '主动改的主题应已落到服务器');
+
+  // 3. 退出登录（不刷新页面）：内存切回本机那份，配色也必须跟着切回去
+  await page.evaluate(() => window.XGYCloud.logout());
+  const localTheme = await page.evaluate(() => {
+    const raw = localStorage.getItem('xgy_volleyball_v2');
+    // 本地库从未落盘时 loadDB() 建 blankDB，默认主题就是 court
+    return raw ? ((JSON.parse(raw).settings || {}).theme || 'court') : 'court';
+  });
+  assert.equal(
+    await page.evaluate(() => document.documentElement.dataset.theme),
+    localTheme, '退出云端后配色应回到本机那份的主题'
+  );
+
+  // 4. 60s 保护期内重新登录（复用门禁表单，全程不刷新页面）
+  await page.evaluate(() => {
+    const d = document.querySelector('.gate-adv');
+    if (d) d.open = true;
+  });
+  await page.fill('#gateForm input[name=base]', BASE_API);
+  await page.fill('#gateForm input[name=username]', DEMO.username);
+  await page.fill('#gateForm input[name=password]', DEMO.password);
+  await page.click('#gateSubmit');
+  await page.waitForSelector('body.cloud-on');
+  await page.waitForTimeout(800); // 等 finishLogin → pullCore → applyServerState
+
+  const domTheme = await page.evaluate(() => document.documentElement.dataset.theme);
+  assert.equal(domTheme, serverTheme, '重新登录后真实配色必须等于服务器该队的主题');
+  await page.click('#themeBtn');
+  const picked = await page.getAttribute('.theme-card.on', 'data-theme-id');
+  assert.equal(picked, domTheme, '弹窗选中态必须和真实配色一致');
+});

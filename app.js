@@ -4448,12 +4448,15 @@
         venue: String(t.venue || '')
       }));
     }
-    // 保护期内不应用服务器带来的主题/模板：本地刚被用户主动改过，
-    // 服务器值大概率是「上一笔还没落定的旧请求」，盖掉就出现主题来回跳
+    // 保护期的语义：同一队内「用户刚改过、自己的 PUT 还在排队」，别让轮询带回的旧值盖掉。
+    // 换队 / 重新登录时 cloud.js 会调 resetSettingsGrace() 清零 —— 新队的服务器值是唯一权威。
     if (payload.theme && isTheme(payload.theme) && Date.now() - themeLocalAt > SETTINGS_GRACE) {
       db.settings.theme = payload.theme;
-      applyTheme(payload.theme);
     }
+    // 无论有没有采用服务器值，DOM 都要跟最终 db 对齐。登录是 SPA 不刷新页面，
+    // init() 里的 applyTheme 不会再跑；以前只在「采用服务器值」时刷 DOM，
+    // 保护期内就留下上一队的配色，弹窗选中态（读 db）显示 A、真实配色（读 dataset）还是 B。
+    applyTheme(db.settings.theme);
     if (payload.formation && payload.formation.pos) {
       db.formation = normalizeFormation({ version: 1, preset: payload.formation.preset, name: payload.formation.name, pos: payload.formation.pos });
     }
@@ -4865,7 +4868,12 @@ ${aiContext()}`;
         // 退出云端后把内存切回本机数据：否则内存里还是上一个队的名单，
         // 用户在「仅在本机使用」里一编辑就把云端数据写进了本机那份，或者
         // 换号登录时被当成「本机原有名单」搬到新队去（串队事故）。
-        reloadLocal: () => { db = loadDB(); renderAllCurrent(); },
+        // 退出云端回本地模式：内存切回本机那份，配色也要跟着切回去
+        // （不然界面还挂着刚退出那个队的主题，而 db 已经是本机的）
+        reloadLocal: () => { db = loadDB(); applyTheme(db.settings.theme); renderAllCurrent(); },
+        // 主题/模板的保护期只针对「同一队内自己刚改过」。换队、换号登录必须清零，
+        // 否则上一队的时间戳会把新队的服务器设置挡在门外，造成跨队串主题。
+        resetSettingsGrace: () => { themeLocalAt = 0; templateLocalAt = 0; },
         // 「本机原有数据」＝本地模式那份（不带球队后缀）。登录时用它判断要不要提示搬迁，
         // 不能拿内存里的 db —— 那可能是上一个云端队的名单，搬过去就是串队。
         localDB: () => {

@@ -27,6 +27,16 @@
 
 **遗留（非代码问题，别再往 Caddy 方向查）**：这条跨境链路会稳定丢弃 Chromium 的 **TLS 1.3 ClientHello**——交错对照实验「默认 TLS 0/6」、客户端加 `--ssl-version-max=tls1.2` 则「6/6 稳定打开（1.0–2.1s）」，而 curl 的 TLS 1.3 能通，说明是按 ClientHello 特征选择性丢包。服务端把 Caddy 限制为只协商 TLS 1.2 的实验**无效**（默认浏览器仍 0/6，因为服务器根本收不到那个包），已回滚，TLS 1.3 恢复。真正根治要换线路 / 套 CDN / 换 IP，属产品决策，未擅自实施。
 
+## v68 · 2026-11-12
+
+**修复：跨队 / 换号登录后主题色串色**
+
+- **现象**：在 A 队刚把主题改成「暖砂」，退出后 60 秒内登录 B 队，主题弹窗显示选中「素纸」，界面却仍渲染暖砂。
+- **定位**：选中态读内存 `db.settings.theme`，真实配色读 `<html data-theme>`，云端登录不刷新页面、启动时的 `applyTheme()` 不会再跑。三个缺口叠加：① `applyServerState()` 只在「采用服务器值」时刷 DOM，而 60s 保护期内整段跳过；② `logout()` 的 `reloadLocal()` 换 db 不刷 DOM；③ 保护期是全局时间戳、不区分队伍，但主题在服务端按 `team_id` 存。
+- **改动**：`applyServerState()` 段后无条件 `applyTheme(db.settings.theme)`；`reloadLocal()` 退出时也刷新配色；新增 `resetSettingsGrace()`，在 `runAuth` / `switchTeam` / `logout` 三处清零。同队内「自己刚改、PUT 还在排队」的保护期语义不变。
+- **验证**：新增 `E2E-4`（真后端 + 真浏览器，不刷新页面的退出→重登，断言「配色 === 服务器该队主题 === 弹窗选中」）。`npm run test:all` 全绿（199 后端单测 + 39 纯函数 + 4 e2e）；对照实验：把 `app.js`/`cloud.js` 临时换回修复前 `HEAD` 只跑 e2e，E2E-4 精确失败 `'sand' !== 'court'`、前三条仍过，随后恢复修复版。
+- 前端源码变了必须 bump `vN`，否则 SW 预缓存会让用户继续拿旧 HTML；已登录用户若仍显示旧版，需注销一次 Service Worker 再硬刷新。
+
 ## v67 · 2026-11-11
 
 **变更：登录前品牌中性化，修掉多球队串队**
