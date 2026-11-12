@@ -336,3 +336,69 @@ test('E2E-4 主题：重新登录后配色与选中态一致，且等于服务�
   const picked = await page.getAttribute('.theme-card.on', 'data-theme-id');
   assert.equal(picked, domTheme, '弹窗选中态必须和真实配色一致');
 });
+
+/* ── E2E-5：换号 / 换队后，上一份库的状态不能残留 ──
+ * 和 E2E-4 同源但更隐蔽：applyServerState 以前是「按字段增量覆盖」——
+ * db.weeks 只覆盖服务器返回的 key、aiChat 根本不清、settings.ai 在服务器返回
+ * null 时不覆盖。于是本机库 / 上一队的历史周会被 Object.keys(db.weeks) 的赛季统计
+ * 算进来，AI 会话和「已配置」状态也会串过去，save() 还会把脏数据写进新 scope 缓存。
+ * 这里往「本机那份」无后缀库注入三项脏数据，退出后不刷新直接重登，复现真实路径。 */
+test('E2E-5 跨队残留：历史周 / AI 会话 / AI 配置不得跟着换号带过去', async () => {
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('body.cloud-on');
+
+  // 1. 以当前云端 scope 的库为底，往「本机那份」注入上一份库的状态
+  const scopeKey = await page.evaluate(() => {
+    const k = Object.keys(localStorage).find((x) => x.startsWith('xgy_volleyball_v2::'));
+    if (!k) return '';
+    const src = JSON.parse(localStorage.getItem(k));
+    const real = Object.values(src.weeks || {}).find((a) => Array.isArray(a) && a.length);
+    const dirty = {
+      ...src,
+      players: [], // 本机名单为空 → offerImport 不会弹「搬到云端」打断后续步骤
+      weeks: { '2020-01-06': real ? real.slice(0, 1) : [] },
+      aiChat: [{ role: 'user', content: 'A 队私密提问' }],
+      settings: {
+        ...(src.settings || {}),
+        ai: { base: 'https://api.deepseek.com', model: 'deepseek-chat', key: 'sk-leak-from-A' }
+      }
+    };
+    localStorage.setItem('xgy_volleyball_v2', JSON.stringify(dirty));
+    return k;
+  });
+  assert.ok(scopeKey, '云端模式应有带球队后缀的本机缓存');
+
+  // 2. 退出：内存 db 被 reloadLocal() 切回这份带脏数据的本机库
+  await page.evaluate(() => window.XGYCloud.logout());
+  await page.waitForTimeout(300);
+
+  // 3. 全程不刷新页面重新登录，走 finishLogin → pullCore(true) → applyServerState
+  await page.evaluate(() => {
+    const d = document.querySelector('.gate-adv');
+    if (d) d.open = true;
+  });
+  await page.fill('#gateForm input[name=base]', BASE_API);
+  await page.fill('#gateForm input[name=username]', DEMO.username);
+  await page.fill('#gateForm input[name=password]', DEMO.password);
+  await page.click('#gateSubmit');
+  await page.waitForSelector('body.cloud-on');
+  await page.waitForTimeout(800);
+
+  const after = await page.evaluate(() => {
+    const t = window.XGYCloud.team();
+    const raw = localStorage.getItem('xgy_volleyball_v2::' + (t && t.id));
+    return raw ? JSON.parse(raw) : null;
+  });
+  assert.ok(after, '登录后应写回新 scope 的缓存');
+  assert.equal(
+    (after.weeks || {})['2020-01-06'], undefined,
+    '上一份库的历史周不得残留（会被赛季统计算进来）'
+  );
+  assert.equal((after.aiChat || []).length, 0, '上一份库的 AI 会话不得残留');
+  assert.notEqual(
+    ((after.settings || {}).ai || {}).key, 'sk-leak-from-A',
+    '上一份库的 AI 配置不得残留'
+  );
+
+  await page.evaluate(() => localStorage.removeItem('xgy_volleyball_v2'));
+});

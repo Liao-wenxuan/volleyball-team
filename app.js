@@ -4430,14 +4430,16 @@
     // r30：点评以服务器为准重建镜像（分享链接 / AI 上下文都读 shareNotes）
     db.shareNotes = {};
     db.players.forEach((p) => { if (p.note) db.shareNotes[p.id] = p.note; });
-    // AI 配置跟随球队（换设备免重填 Key）；aiChat 是临时工作区，刻意不上云
-    if (payload.ai && typeof payload.ai === 'object') {
-      db.settings.ai = {
-        base: String(payload.ai.base || 'https://api.deepseek.com'),
-        model: String(payload.ai.model || 'deepseek-chat'),
-        key: String(payload.ai.key || '')
-      };
-    }
+    // AI 配置跟随球队（换设备免重填 Key）。服务器没配时必须显式清成空配置，
+    // 不能沿用上一份库的值：以前只在 payload.ai 是对象时赋值，而 getSettings()
+    // 在球队没配过 AI 时返回 ai:null，A 队的「已配置」状态就会残留到 B 队。
+    db.settings.ai = payload.ai && typeof payload.ai === 'object'
+      ? {
+          base: String(payload.ai.base || 'https://api.deepseek.com'),
+          model: String(payload.ai.model || 'deepseek-chat'),
+          key: String(payload.ai.key || '')
+        }
+      : { base: 'https://api.deepseek.com', model: 'deepseek-chat', key: '' };
     if (Array.isArray(payload.template) && Date.now() - templateLocalAt > SETTINGS_GRACE) {
       db.settings.template = payload.template.map((t, i) => ({
         id: t.id || uid('t'),
@@ -4468,7 +4470,11 @@
         return { id: f.id || uid('f'), name: String(f.name || '未命名').slice(0, 16), pos, at: Number(f.at) || Date.now() };
       }).filter(Boolean);
     }
-    // 全量周数据：登录时一次拉齐所有历史周，赛季统计不再只算「翻过的周」
+    // 全量周数据：登录时一次拉齐所有历史周，赛季统计不再只算「翻过的周」。
+    // /api/weeks/all 是「这支队」的全量，所以整份重建而不是逐 key 覆盖：
+    // 以前只覆盖服务器返回的 key，上一队/本机库独有的周会留在 db.weeks 里，
+    // 赛季统计遍历 Object.keys(db.weeks) 就把别队训练算进来了，save() 还会写脏缓存。
+    db.weeks = {};
     if (payload.weeks && typeof payload.weeks === 'object') {
       Object.keys(payload.weeks).forEach((k) => {
         const arr = payload.weeks[k];
@@ -4874,6 +4880,14 @@ ${aiContext()}`;
         // 主题/模板的保护期只针对「同一队内自己刚改过」。换队、换号登录必须清零，
         // 否则上一队的时间戳会把新队的服务器设置挡在门外，造成跨队串主题。
         resetSettingsGrace: () => { themeLocalAt = 0; templateLocalAt = 0; },
+        // 换队 / 换号：内存 db 是单例，只有 logout 会 reloadLocal() 换成本机那份。
+        // 不先重建骨架，applyServerState 里带 if 守卫的字段就会沿用上一份库的值。
+        resetForTeam: () => {
+          if (state.ai && state.ai.abort) { try { state.ai.abort.abort(); } catch (_) { /* ignore */ } }
+          state.ai = { messages: [], busy: false, abort: null }; // AI 面板读 state.ai，光清 db.aiChat 不够
+          clearTimeout(fxPushTimer); fxPushTimer = null;          // 别把 A 队的阵型防抖推送落到 B 队
+          db = blankDB();
+        },
         // 「本机原有数据」＝本地模式那份（不带球队后缀）。登录时用它判断要不要提示搬迁，
         // 不能拿内存里的 db —— 那可能是上一个云端队的名单，搬过去就是串队。
         localDB: () => {

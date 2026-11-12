@@ -27,6 +27,16 @@
 
 **遗留（非代码问题，别再往 Caddy 方向查）**：这条跨境链路会稳定丢弃 Chromium 的 **TLS 1.3 ClientHello**——交错对照实验「默认 TLS 0/6」、客户端加 `--ssl-version-max=tls1.2` 则「6/6 稳定打开（1.0–2.1s）」，而 curl 的 TLS 1.3 能通，说明是按 ClientHello 特征选择性丢包。服务端把 Caddy 限制为只协商 TLS 1.2 的实验**无效**（默认浏览器仍 0/6，因为服务器根本收不到那个包），已回滚，TLS 1.3 恢复。真正根治要换线路 / 套 CDN / 换 IP，属产品决策，未擅自实施。
 
+## v69 · 2026-11-12
+
+**修复：跨队 / 换号后历史周、AI 会话、AI 配置残留（主题串色的同源问题）**
+
+- **现象**：沿用 v68 的排查继续审计发现，`applyServerState()` 是「按字段增量覆盖」而内存 `db` 是单例，只有 `logout()` 会 `reloadLocal()` 换成本机那份。于是换队时若干带 `if` 守卫的字段会沿用上一份库的值。
+- **影响最重的是周数据**：`/api/weeks/all` 只返回**该队**有的周，旧代码只逐 key 覆盖、从不删旧 key，本机库或上一队独有的周会留在 `db.weeks`；赛季统计遍历 `Object.keys(db.weeks)` 会把别队的训练与出勤算进来，`save()` 还会把脏数据写进新球队 scope 的缓存，刷新后仍在。此外 `aiChat` 完全不清（A 队聊天记录出现在 B 队 AI 面板）、`settings.ai` 在服务器返回 `ai: null`（该队没配过 AI）时不覆盖（「已配置」状态残留）。
+- **改动**：`applyServerState()` 里 `db.weeks` 改为整份重建、`db.settings.ai` 无条件以服务器为准；`cloud.js` 的 `pullCore(freshTeam)` 在身份变化时调 `hooks.resetForTeam()`——重建 `blankDB()` 骨架、清空 AI 面板的 `state.ai`（含中止进行中的请求）、取消阵型防抖定时器；`switchTeam` / `finishLogin` 传 `true`，`switchTeam` 另把 `lastTouch` 归零重新定轮询基线。同队内的手动同步 / 15 秒轮询仍走增量路径，保护期语义不变。
+- **验证**：新增 `E2E-5`——往「本机那份」无后缀库注入一条带考勤的历史周、一条 AI 会话、一个假 Key，退出后**不刷新页面**重登，断言三项都不出现在新 scope 缓存里。`npm run test:all` 全绿（199 后端单测 + 39 纯函数 + 5 e2e）；对照实验：把 `app.js`/`cloud.js` 临时换回 v68 只跑 e2e，E2E-5 精确失败在「上一份库的历史周不得残留」（残留的是带 `attendance` 的真实训练记录），前四条仍过，随后恢复修复版。
+- 前端源码变了必须 bump `vN`；已登录用户若仍显示旧版，需注销一次 Service Worker 再硬刷新。
+
 ## v68 · 2026-11-12
 
 **修复：跨队 / 换号登录后主题色串色**

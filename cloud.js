@@ -209,7 +209,8 @@
     sessSet(LS.role, role);
     paintBodyClass();
     resetSettingsGrace();
-    await pullCore();
+    lastTouch = 0; // 切队后轮询要按新队的时间戳重新定基线
+    await pullCore(true);
     await syncWeek(currentMondayKey(), true);
     hooks.renderAll();
     hooks.toast(`已切换到 ${team.name}`);
@@ -241,7 +242,8 @@
   }
 
   /* ── 拉取 ── */
-  async function pullCore() {
+  /** freshTeam=true 表示球队身份刚变（登录 / 切队）：内存 db 要先重建骨架 */
+  async function pullCore(freshTeam) {
     const [players, logs, formation, lib, me, allWeeks] = await Promise.all([
       api('/api/players'),
       api('/api/skills/logs?limit=500'),
@@ -255,6 +257,9 @@
     role = me.role || role;
     sessSet(LS.role, role);
     paintBodyClass();
+    // 身份变了：先丢掉上一份库的内存状态，再由服务器值重建，避免跨队残留。
+    // 放在 API 全部返回之后，请求失败时不会把界面清成空白。
+    if (freshTeam && hooks.resetForTeam) hooks.resetForTeam();
     hooks.applyServerState({
       players: players.players,
       skillLogs: logs.logs,
@@ -358,7 +363,7 @@
 
   async function finishLogin() {
     const snap = localSnapshot();
-    await pullCore();
+    await pullCore(true);
     await syncWeek(currentMondayKey(), true);
     paintCloudUI();
     // 先渲染再揭幕：刷子扫出去露出来的第一帧就该是这套数据，
