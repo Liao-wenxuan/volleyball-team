@@ -45,7 +45,8 @@
 // v67: 登录前品牌中性化——首屏 / 门禁 / 页脚 / title / manifest 用「排球队管理系统」，登录后仍显示真实队名
 // v68: 修跨队/换号登录后主题串色——DOM 配色始终跟随 db，换队时清掉设置保护期
 // v69: 修跨队/换号后历史周、AI 会话、AI 配置残留——切队时重建内存 db 骨架，周数据整份重建
-const VERSION = 'v69';
+// v70: SW 装好新版本后页面弹「立即重载」提示（不再需要手动注销 SW）；前端源码变动故 bump
+const VERSION = 'v70';
 const CACHE = `xgy-pwa-${VERSION}`;
 // 预缓存只放「首屏一定会用到」的东西。下面两类刻意不放：
 // 1) qr / xlsx / card / courtcard / share / playercard：分享、导出、表格导入才用，白下 37KB 抢跨境带宽；
@@ -56,14 +57,14 @@ const CACHE = `xgy-pwa-${VERSION}`;
 // 所以离线能力不受影响，只是不再在首次安装时抢带宽。
 const SHELL = [
   './index.html',
-  './style.css?v=v69',
-  './app.js?v=v69',
-  './cloud.js?v=v69',
-  './manifest.webmanifest?v=v69',
+  './style.css?v=v70',
+  './app.js?v=v70',
+  './cloud.js?v=v70',
+  './manifest.webmanifest?v=v70',
   // 只预缓存 WebP；PNG 是 onerror 回退源，老设备第一次用到时由 fetch 处理器按需缓存
-  './assets/loader-pose1.webp?v=v69',
-  './assets/loader-pose2.webp?v=v69',
-  './assets/loader-pose3.webp?v=v69'
+  './assets/loader-pose1.webp?v=v70',
+  './assets/loader-pose2.webp?v=v70',
+  './assets/loader-pose3.webp?v=v70'
 ];
 
 self.addEventListener('install', (e) => {

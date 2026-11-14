@@ -17,7 +17,7 @@
   const roundHalf = (v) => Math.round(Number(v) * 2) / 2;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   let uidSeq = 0;
-  const BUILD = '2026-11-06 · r35.16'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
+  const BUILD = '2026-11-14 · r35.17'; // 每次改版手动加一，页脚会显示，用来确认「跑的是哪一版」
   const uid = (p) => `${p}_${Date.now().toString(36)}_${(++uidSeq).toString(36)}`;
   const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -4907,12 +4907,55 @@ ${aiContext()}`;
     dismissLoader();
   }
 
+  /* ══════════ PWA：Service Worker 更新提示 ══════════ */
+  /* sw.js 里 skipWaiting() + clients.claim() 会让新 SW 立刻接管，但已经打开的页面
+   * 仍跑旧 HTML/JS，以前只能 F12 → 注销 Service Worker → 硬刷新。这里补上可见提示。
+   * 只在「已有 controller」时才提示（首次安装是 controller 从无到有，不算更新）；
+   * 也绝不自动 reload —— 用户可能正填考勤或摆阵型，刷新会打断没保存的操作。 */
+  function watchSwUpdate(reg) {
+    let offered = false;
+    let reloading = false;
+    const offer = () => {
+      if (offered || !navigator.serviceWorker.controller || document.querySelector('.sw-update')) return;
+      offered = true;
+      const bar = document.createElement('div');
+      bar.className = 'pwa-install sw-update';
+      bar.innerHTML = `
+        <div class="pwa-install-txt"><b>发现新版本</b><i>当前还是旧界面，重载后生效</i></div>
+        <button type="button" class="pwa-install-go">立即重载</button>
+        <button type="button" class="pwa-install-x" aria-label="稍后再说">×</button>`;
+      document.body.appendChild(bar);
+      requestAnimationFrame(() => bar.classList.add('show'));
+      const close = () => { bar.classList.remove('show'); setTimeout(() => bar.remove(), 400); };
+      bar.querySelector('.pwa-install-x').addEventListener('click', close);
+      bar.querySelector('.pwa-install-go').addEventListener('click', () => {
+        if (reloading) return;
+        reloading = true;
+        location.reload();
+      });
+    };
+    const watch = (worker) => {
+      if (!worker) return;
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) offer();
+      });
+      // 页面刚加载时，新 SW 可能已经装完停在 waiting
+      if (worker.state === 'installed' && navigator.serviceWorker.controller) offer();
+    };
+    reg.addEventListener('updatefound', () => watch(reg.installing));
+    if (reg.waiting) watch(reg.waiting);
+    // 浏览器自己通常 24h 才查一次；页面可见时主动查一次，不轮询打扰
+    if (document.visibilityState === 'visible') reg.update().catch(() => { /* 断网就等下次 */ });
+  }
+
   /* ══════════ PWA：Service Worker 注册 + 安装引导 ══════════ */
   function initPWA() {
     // file://（单文件分发）下 SW 不可用，直接跳过；线上（https）和本地调试（http）才注册
     if (!/^https?:$/.test(location.protocol)) return;
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(() => { /* 注册失败不影响使用 */ });
+      navigator.serviceWorker.register('sw.js')
+        .then(watchSwUpdate)
+        .catch(() => { /* 注册失败不影响使用 */ });
     }
 
     const DISMISS_KEY = 'xgy_pwa_install_dismiss';
