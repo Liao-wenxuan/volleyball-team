@@ -32,10 +32,11 @@ const UPSTREAM_HOST = process.env.VB_PROXY_HOST || 'vb.bscjs.top';
 const UPSTREAM_IP = process.env.VB_PROXY_IP || '47.84.52.175';
 const TIMEOUT_MS = Number(process.env.VB_PROXY_TIMEOUT || 20000);
 
-/** 把上游响应里的 Location 改写回本地 origin，否则浏览器会跳回那条坏链路。 */
+/** 把上游响应里的 Location 改写回本地 origin，否则浏览器会跳回那条坏链路。
+ *  只匹配开头：query 里恰好出现上游完整 URL 时不能误改，相对路径也保持原样。 */
 export function rewriteLocation(value, upstreamHost, localOrigin) {
   const escaped = String(upstreamHost).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return String(value).replace(new RegExp(`https?://${escaped}`, 'g'), localOrigin);
+  return String(value).replace(new RegExp(`^https?://${escaped}`, 'i'), localOrigin);
 }
 
 /**
@@ -48,7 +49,7 @@ export function cleanHeaders(headers, upstreamHost, localOrigin) {
   delete h['alt-svc'];
   if (h.location) h.location = rewriteLocation(h.location, upstreamHost, localOrigin);
   if (Array.isArray(h['set-cookie'])) {
-    h['set-cookie'] = h['set-cookie'].map((c) => c.replace(/;\s*Domain=[^;]+/gi, ''));
+    h['set-cookie'] = h['set-cookie'].map((c) => c.replace(/;\s*Domain\s*=\s*[^;]+/gi, ''));
   }
   return h;
 }
