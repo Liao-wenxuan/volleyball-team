@@ -11,6 +11,7 @@
     "test": "npm --prefix server test",
     "test:pure": "node --test tests/*.test.mjs",
     "e2e": "node e2e/e2e.mjs",
+    "proxy": "node tools/local-proxy.mjs",
     "test:all": "npm run test && npm run test:pure && npm run build && npm run e2e"
   },
   "devDependencies": {
