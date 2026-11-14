@@ -16,6 +16,16 @@
 
 后端 / 文档 / CI 的改动不 bump `vN`：它们不进 SW 预缓存，版本号变了反而会白清一次用户缓存。这类变更在下面按日期记，不打版本标签。
 
+## v70 · 2026-11-14
+
+**新增：SW 装好新版本后页面提示「立即重载」**
+
+- **现象**：`sw.js` 的 `skipWaiting()` + `clients.claim()` 会让新 SW 立刻接管，但已打开的页面仍跑旧 HTML/JS。v67 / v68 / v69 三次发版，都要用户 F12 → Application → Unregister → Ctrl+F5 才能看到新界面。
+- **改动**：`app.js` 新增 `watchSwUpdate(reg)`，监听 `updatefound` / `waiting`，**仅在已有 controller 时**弹「发现新版本 · 立即重载」；首次安装不提示，也**不自动 reload**（会打断未保存的考勤 / 阵型）。页面可见时主动 `reg.update()` 查一次，断网静默跳过。`style.css` 复用 `.pwa-install` 外壳，`.sw-update` 上移 88px 避免与安装引导条叠加。
+- **诚实边界**：这条改不了「跨境链路丢弃 TLS 1.3 ClientHello」。旧 SW 拿不到新 HTML 时提示根本不会出现，**第一次仍需手动注销一次 SW**；此后每次发版自动提示。根治链路见下方 2026-11-11 条目，属产品决策。
+- **同批发版但不单独 bump 的两项**：① `tools/local-proxy.mjs` 把此前只放在 `preview/`（gitignore）的 TLS 1.2 本地应急代理收进仓库，加 `npm run proxy`；② `tests/proxy.test.mjs` 补 9 条纯函数断言，含「改了 `VERSION` 忘跑 `build.mjs` 就变红」的版本一致性守卫。两者不进 SW 预缓存，不另起版本号。
+- **验证**：`npm run test:all` 全绿（199 后端单测 + 48 纯函数 + 5 e2e）；`node build.mjs` 重生成单文件 762.3 KB，`index.html` 与 SHELL 的 `?v=` 全部刷到 `v70`。
+
 ## 服务端配置 · 2026-11-11（不 bump vN）
 
 **修复两处线上缺陷，前端代码零改动**

@@ -86,6 +86,22 @@
 
 省事，但它和单文件版**各存各的数据**——同一个浏览器里，线上版和本地文件的数据不互通。
 
+### 二·补、线上站点打不开时（跨境链路应急）
+
+如果 `vb.bscjs.top` 在浏览器里一直转、或登录报 `Failed to fetch`，但 curl 访问 `/api/health` 正常，
+多半是链路丢弃了 Chromium 默认发出的 TLS 1.3 ClientHello（服务端改 TLS 配置无效，包根本没到）。
+仓库自带零依赖的本机反向代理：浏览器只连纯 HTTP 的 localhost，由 Node 进程强制 TLS 1.2 连上游。
+
+```bash
+npm run proxy     # 然后打开 http://localhost:8787/
+```
+
+- **端口固定 8787**：登录页「服务器地址」会自动填成页面自己，零配置；换成别的端口就得手动填地址
+- 同一 WiFi 的手机：`VB_PROXY_LAN=1 npm run proxy`，用终端打印的局域网地址访问（Windows 防火墙首次弹窗，勾「专用网络」放行）
+- 上游 / 端口 / 超时可用 `VB_PROXY_HOST` `VB_PROXY_IP` `VB_PROXY_PORT` `VB_PROXY_TIMEOUT` 覆盖
+- 只改网络路径，不动产品代码和服务器，关掉窗口即失效；**根治要靠 CDN / 换 IP / 换线路**，属产品决策
+- 代理是独立 origin，本机数据与线上站不互通；云端数据存服务器，登录后即可
+
 ### 三、改代码
 
 ```bash
@@ -100,10 +116,11 @@ npm ci --prefix server # 后端：Express / SQLite / vitest / tsx
 
 ```bash
 npm run build      # 等价于 node build.mjs，重新生成单文件 + 刷 ?v= 版本号
-npm test           # 199 条后端单元测试
-npm run test:pure  # 39 条前端纯函数单测（node:test，约 125ms，不开浏览器）
-npm run e2e        # 3 条端到端（真浏览器 → 真前端 → 真后端 → 临时 SQLite）
-npm run test:all   # 上面四件一次跑完
+npm test           # 199 条后端单元测试（vitest，11 个测试文件）
+npm run test:pure  # 48 条前端纯函数 / 版本号守卫单测（node:test，不开浏览器）
+npm run e2e        # 5 条端到端（真浏览器 → 真前端 → 真后端 → 临时 SQLite）
+npm run test:all   # 测试 + 构建 + e2e 一次跑完
+npm run proxy      # 本地 TLS 1.2 应急代理（线上站点打不开时，见「二·补」）
 ```
 
 e2e 在 Windows 上自动复用系统 Edge，不下载浏览器；Linux / CI 上先装一次
@@ -349,13 +366,15 @@ courtcard.js                  阵型导出 PNG（手绘 9×9m 半场，按需加
 share.js / qr.js / xlsx.js    分享、二维码、表格导入（按需加载）
 assets/loader-pose*.webp      首屏加载动画三帧（PNG 同名文件作 onerror 回退）
 信工院排球队管理系统.html        构建产物，可直接分发
-package.json                  根目录脚本：build / test / test:pure / e2e / test:all
-e2e/e2e.mjs                   3 条端到端测试（node:test + playwright-core）
+package.json                  根目录脚本：build / test / test:pure / e2e / test:all / proxy
+tools/local-proxy.mjs         本地 TLS 1.2 应急代理（线上站点打不开时用，npm run proxy）
+e2e/e2e.mjs                   5 条端到端测试（node:test + playwright-core）
 tests/load-app.mjs            vm 加载真实 app.js 的纯函数导出（不开浏览器）
 tests/pure.test.mjs           app.js 的 30 条前端纯函数单测（node:test）
+tests/proxy.test.mjs          代理头改写 + 版本号一致性守卫，9 条（node:test）
 tests/load-courtcard.mjs      vm 加载真实 courtcard.js（同上）
 tests/courtcard.test.mjs      阵型导出图的 9 条米→像素 / 短标单测（node:test）
-.github/workflows/ci.yml       CI 门禁：238 单测 + tsc + 构建校验 + 3 条 e2e
+.github/workflows/ci.yml       CI 门禁：247 单测（199 后端 + 48 纯函数）+ tsc + 构建校验 + 5 条 e2e
 .github/workflows/monitor.yml  外部探活：定时探测 + 自动开/关告警 issue
 deploy/                       生产 Caddyfile / 部署脚本 / 备份脚本 / 内存看门狗
 server/                       可选后端：Express + SQLite + JWT（云端模式）
@@ -381,6 +400,8 @@ prototype/formation-editor.html  阵型板最早的独立原型
 - AI 聊天记录只存本机（临时工作区），不进云端同步；云端模式下 API Key 存服务器、不回传浏览器
 - 监控不是实时的：外部探活 15 分钟一轮且 GitHub cron 会排队，看门狗 2 分钟一轮；三者都只告警、不自动重启服务
 - 单文件 `file://` 离线版**不能可靠连接云端**：浏览器会挂起跨站请求（连 `/api/health` 也一样），表现是登录按钮一直转。要登录云端请用同源的线上完整版；v66 起请求超过 15 秒会明确报错，不会无限等
+- 跨境链路会稳定丢弃 Chromium 默认发出的 TLS 1.3 ClientHello：浏览器直连线上站点可能一直转 / 登录 `Failed to fetch`，而 curl 或强制 TLS 1.2 的客户端正常。服务端改 TLS 配置无效；本机可用 `npm run proxy` 应急，根治要换线路 / 套 CDN / 换 IP
+- 已发版用户若仍停在某版旧壳（比如队名还是旧品牌），需**手动注销一次** Service Worker 再硬刷新；v70 起此后每次发版会自动弹「发现新版本 · 立即重载」
 
 ## Roadmap
 
