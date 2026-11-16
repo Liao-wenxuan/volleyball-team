@@ -408,7 +408,7 @@ prototype/formation-editor.html  阵型板最早的独立原型
 - AI 聊天记录只存本机（临时工作区），不进云端同步；云端模式下 API Key 存服务器、不回传浏览器
 - 监控不是实时的：外部探活 15 分钟一轮且 GitHub cron 会排队，看门狗 2 分钟一轮；三者都只告警、不自动重启服务
 - 单文件 `file://` 离线版**不能可靠连接云端**：浏览器会挂起跨站请求（连 `/api/health` 也一样），表现是登录按钮一直转。要登录云端请用同源的线上完整版；v66 起请求超过 15 秒会明确报错，不会无限等
-- 跨境链路会稳定丢弃 Chromium 默认发出的 TLS 1.3 ClientHello：浏览器直连线上站点可能一直转 / 登录 `Failed to fetch`，而 curl 或强制 TLS 1.2 的客户端正常。服务端改 TLS 配置无效；本机可用 `npm run proxy` 应急，根治要换线路 / 套 CDN / 换 IP
+- 跨境链路**间歇性**丢弃 Chromium 默认发出的 TLS 1.3 ClientHello：浏览器直连线上站点可能一直转 / 登录 `Failed to fetch`，而 curl 或强制 TLS 1.2 的客户端正常。服务端改 TLS 配置无效（包根本到不了）；本机可用 `npm run proxy` 应急。**根治方案已定**：把 `vb.bscjs.top` 接到 Cloudflare CDN（csp / vigil 保持 DNS only 直连），操作步骤见 [docs/Cloudflare接入手册.md](docs/Cloudflare接入手册.md)
 - 已发版用户若仍停在某版旧壳（比如队名还是旧品牌），需**手动注销一次** Service Worker 再硬刷新；v70 起此后每次发版会自动弹「发现新版本 · 立即重载」
 
 ## Roadmap
@@ -421,6 +421,8 @@ prototype/formation-editor.html  阵型板最早的独立原型
 - [x] 数据上云（Node + SQLite）
 - [x] 加载动画三帧转 WebP（56.4 → 32.9 KB，PNG 回退零退化）
 - [x] 后端安全响应头（自研，不引 helmet；CSP 刻意不下发）
+- [x] 生产环境强制 `JWT_SECRET`（缺失 / 用默认值 / 短于 16 位 → 拒绝启动，2026-11-16）
+- [ ] 接 Cloudflare CDN 根治跨境可达性（vb 走橙云，csp / vigil 灰云；手册见 `docs/Cloudflare接入手册.md`）
 
 ## 许可证
 
