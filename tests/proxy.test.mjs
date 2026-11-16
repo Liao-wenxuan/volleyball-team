@@ -9,12 +9,14 @@
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
   cleanHeaders,
   rewriteLocation,
   upstreamHeaders,
-  localOriginOf
+  localOriginOf,
+  probeSummary
 } from '../tools/local-proxy.mjs';
 
 const read = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
@@ -112,5 +114,59 @@ describe('发版版本号 · 一致性守卫', () => {
     const refs = sw.match(/\?v=v\d+/g) || [];
     assert.ok(refs.length >= 5, `SHELL 只有 ${refs.length} 处版本引用`);
     assert.ok(refs.every((r) => r === `?v=${version[1]}`), `SHELL 版本引用不一致：${[...new Set(refs)].join(', ')} vs ${version[1]}`);
+  });
+});
+
+describe('应急代理 · 上游自检文案', () => {
+  test('可达：带 HTTP 状态与耗时，不出现失败提示', () => {
+    const s = probeSummary({ ok: true, status: 200, ms: 396, error: '' }, HOST);
+    assert.match(s, /可达/);
+    assert.match(s, /HTTP 200/);
+    assert.match(s, /396ms/);
+    assert.doesNotMatch(s, /交叉核对/);
+  });
+
+  test('超时：明确说连接超时，并给出交叉核对路径', () => {
+    const s = probeSummary({ ok: false, status: 0, ms: 2000, error: 'timeout' }, HOST);
+    assert.match(s, /连接超时/);
+    assert.match(s, /交叉核对/);
+    assert.match(s, new RegExp(HOST.replace(/\./g, '\\.')));
+    assert.doesNotMatch(s, /可达（HTTP/);
+  });
+
+  test('连接错误 / 空错误都渲染得出来，不抛异常', () => {
+    assert.match(probeSummary({ ok: false, error: 'ECONNRESET' }, HOST), /ECONNRESET/);
+    assert.match(probeSummary({ ok: false, error: '' }, HOST), /未知错误/);
+  });
+});
+
+describe('按需模块 · 四处清单一致性守卫', () => {
+  const app = read('../app.js');
+  const build = read('../build.mjs');
+  const mods = [...app.matchAll(/^\s*(\w+):\s*\['([^']+\.js)',\s*'([^']+)'\]/gm)]
+    .map((m) => ({ key: m[1], file: m[2], globalName: m[3] }));
+  const lazy = (build.match(/const lazyMods\s*=\s*\[([^\]]+)\]/) || [])[1];
+  const assetRe = build.split('\n').find((l) => l.includes('const ASSET_RE')) || '';
+
+  test('app.js 的 MODS 解析得到 6 个按需模块，文件与全局名都对得上', () => {
+    assert.equal(mods.length, 6, `解析到 ${mods.length} 个：${mods.map((m) => m.key).join(',')}`);
+    for (const m of mods) {
+      const url = new URL('../' + m.file, import.meta.url);
+      assert.ok(existsSync(fileURLToPath(url)), `${m.file} 不存在`);
+      assert.ok(read('../' + m.file).includes(m.globalName), `${m.file} 里找不到 ${m.globalName}`);
+    }
+  });
+
+  test('build.mjs 的 lazyMods 与 MODS 是同一批模块（新增模块漏内联会在这里变红）', () => {
+    assert.ok(lazy, 'build.mjs 里找不到 const lazyMods');
+    const names = lazy.split(',').map((s) => s.trim()).filter(Boolean).sort();
+    assert.deepEqual(names, mods.map((m) => m.key).sort());
+  });
+
+  test('ASSET_RE 覆盖所有按需模块（漏了发版时 ?v= 不刷新，旧缓存会 404）', () => {
+    assert.ok(assetRe, 'build.mjs 里找不到 ASSET_RE');
+    for (const m of mods) {
+      assert.ok(assetRe.includes(m.file.replace('.', '\\.')), `${m.file} 没进 ASSET_RE`);
+    }
   });
 });
