@@ -10,6 +10,7 @@
 //   npm run proxy                    # 本机，http://localhost:8787/
 //   VB_PROXY_LAN=1 npm run proxy    # 同一 WiFi 的手机也能访问
 //   VB_PROXY_PORT=9000 npm run proxy
+//   npm run proxy -- --check     # 只体检上游（不占端口、不启动服务），排查「是不是服务器挂了」
 //
 // 端口 8787 是刻意的：cloud.js 的 DEFAULT_BASE = 'http://localhost:8787'，
 // 页面跑在 localhost:8787 时登录地址自动等于自己，零配置；
@@ -67,15 +68,59 @@ export function localOriginOf(req, port) {
   return `http://${host}`;
 }
 
-function createProxy() {
-  const agent = new https.Agent({
-    keepAlive: true,
-    maxSockets: 8,
-    servername: UPSTREAM_HOST,
-    minVersion: 'TLSv1.2',
-    maxVersion: 'TLSv1.2', // 关键：避开被丢弃的 TLS 1.3 ClientHello 特征
-    rejectUnauthorized: true
+const upstreamAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 8,
+  servername: UPSTREAM_HOST,
+  minVersion: 'TLSv1.2',
+  maxVersion: 'TLSv1.2', // 关键：避开被丢弃的 TLS 1.3 ClientHello 特征
+  rejectUnauthorized: true
+});
+
+/**
+ * 上游健康探测：走和代理完全相同的 TLS 1.2 通道打 /api/health。
+ * 单独跑 --check 时不占端口、不启动服务，就能区分「上游挂了」和「本机链路问题」。
+ * 所有失败路径都 resolve，绝不 reject —— 体检失败不该把代理进程带崩。
+ */
+export async function checkUpstream(opts = {}) {
+  const host = opts.host || UPSTREAM_HOST;
+  const ip = opts.ip || UPSTREAM_IP;
+  const timeout = opts.timeout || 8000;
+  const agent = opts.agent || upstreamAgent;
+  const started = Date.now();
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (r) => { if (!done) { done = true; resolve(r); } };
+    const req = https.request(
+      {
+        host: ip, port: 443, servername: host, path: '/api/health', method: 'GET',
+        headers: { host }, agent, timeout
+      },
+      (res) => {
+        res.resume();
+        finish({
+          ok: res.statusCode >= 200 && res.statusCode < 400,
+          status: res.statusCode, ms: Date.now() - started, error: ''
+        });
+      }
+    );
+    req.on('timeout', () => req.destroy(new Error('timeout')));
+    req.on('error', (e) => finish({
+      ok: false, status: 0, ms: Date.now() - started, error: e.message || String(e)
+    }));
+    req.end();
   });
+}
+
+/** 探测结果渲染成人话；抽成纯函数便于测试，也保证 --check 与启动自检文案一致。 */
+export function probeSummary(r, upstreamHost = UPSTREAM_HOST) {
+  if (r.ok) return `上游自检：可达（HTTP ${r.status} / ${r.ms}ms）`;
+  const why = /timeout|timed out/i.test(r.error || '') ? '连接超时' : `连不上（${r.error || '未知错误'}）`;
+  return `上游自检：${why} —— 服务器可能正常，也可能是本机网络 / 跨境链路问题；可另开浏览器访问 https://${upstreamHost}/api/health 交叉核对`;
+}
+
+function createProxy() {
+  const agent = upstreamAgent;
 
   let okCount = 0;
   let failCount = 0;
@@ -134,6 +179,14 @@ function createProxy() {
 }
 
 function start() {
+  if (process.argv.slice(2).includes('--check')) {
+    checkUpstream().then((r) => {
+      console.log(probeSummary(r));
+      upstreamAgent.destroy(); // 关掉 keepAlive socket，否则 --check 不会自己退出
+      if (!r.ok) process.exitCode = 1;
+    });
+    return;
+  }
   const server = createProxy();
   server.listen(PORT, BIND, () => {
     const ips = [];
@@ -146,12 +199,18 @@ function start() {
     console.log(' 排球队管理系统 · 本地加速代理已启动（强制 TLS 1.2 连线上）');
     console.log('='.repeat(66));
     console.log(` 上游：${UPSTREAM_HOST} (${UPSTREAM_IP})`);
+    checkUpstream().then((r) => console.log(' ' + probeSummary(r))).catch(() => {});
+    if (PORT !== 8787) {
+      console.log(` 注意：端口不是默认的 8787，登录页「服务器地址」要手动填 http://localhost:${PORT}`);
+    }
     console.log(`\n 本机浏览器打开：  http://localhost:${PORT}/`);
     if (BIND === '0.0.0.0' && ips.length) {
       console.log(' 同一 WiFi 的手机： ' + ips.map((ip) => `http://${ip}:${PORT}/`).join(' 或 '));
       console.log(' （手机打不开就是防火墙/不同网段，可忽略这一行）');
     }
-    console.log('\n 登录页「服务器地址」会自动填成页面自己，不用手动改。');
+    console.log(PORT === 8787
+      ? '\n 登录页「服务器地址」会自动填成页面自己，不用手动改。'
+      : '\n 登录页「服务器地址」请填上面的本机地址。');
     console.log(' 用完直接关掉这个窗口即可，不会改动任何项目代码。');
     console.log('\n 请求日志：');
   });
