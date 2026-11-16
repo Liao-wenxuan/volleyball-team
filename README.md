@@ -93,10 +93,12 @@
 仓库自带零依赖的本机反向代理：浏览器只连纯 HTTP 的 localhost，由 Node 进程强制 TLS 1.2 连上游。
 
 ```bash
-npm run proxy     # 然后打开 http://localhost:8787/
+npm run proxy                 # 然后打开 http://localhost:8787/
+npm run proxy -- --check      # 只体检上游，不占端口、不启动服务
 ```
 
-- **端口固定 8787**：登录页「服务器地址」会自动填成页面自己，零配置；换成别的端口就得手动填地址
+- **`--check` 先跑它**：用同一条强制 TLS 1.2 的通道打 `/api/health`，可达打印 `HTTP 200 / 耗时` 并退出 0，不可达给出交叉核对提示并退出 1。分不清「上游挂了」还是「本机链路问题」时，一次就够；正常启动代理也会异步自检一次
+- **端口固定 8787**：登录页「服务器地址」会自动填成页面自己，零配置；换成别的端口，启动日志会提示手动填地址
 - 同一 WiFi 的手机：`VB_PROXY_LAN=1 npm run proxy`，用终端打印的局域网地址访问（Windows 防火墙首次弹窗，勾「专用网络」放行）
 - 上游 / 端口 / 超时可用 `VB_PROXY_HOST` `VB_PROXY_IP` `VB_PROXY_PORT` `VB_PROXY_TIMEOUT` 覆盖
 - 只改网络路径，不动产品代码和服务器，关掉窗口即失效；**根治要靠 CDN / 换 IP / 换线路**，属产品决策
@@ -117,7 +119,7 @@ npm ci --prefix server # 后端：Express / SQLite / vitest / tsx
 ```bash
 npm run build      # 等价于 node build.mjs，重新生成单文件 + 刷 ?v= 版本号
 npm test           # 199 条后端单元测试（vitest，11 个测试文件）
-npm run test:pure  # 48 条前端纯函数 / 版本号守卫单测（node:test，不开浏览器）
+npm run test:pure  # 54 条前端纯函数 / 版本号与模块清单守卫（node:test，不开浏览器）
 npm run e2e        # 5 条端到端（真浏览器 → 真前端 → 真后端 → 临时 SQLite）
 npm run test:all   # 测试 + 构建 + e2e 一次跑完
 npm run proxy      # 本地 TLS 1.2 应急代理（线上站点打不开时，见「二·补」）
@@ -371,10 +373,10 @@ tools/local-proxy.mjs         本地 TLS 1.2 应急代理（线上站点打不�
 e2e/e2e.mjs                   5 条端到端测试（node:test + playwright-core）
 tests/load-app.mjs            vm 加载真实 app.js 的纯函数导出（不开浏览器）
 tests/pure.test.mjs           app.js 的 30 条前端纯函数单测（node:test）
-tests/proxy.test.mjs          代理头改写 + 版本号一致性守卫，9 条（node:test）
+tests/proxy.test.mjs          代理头改写 / 自检文案 + 版本号、按需模块清单守卫，15 条（node:test）
 tests/load-courtcard.mjs      vm 加载真实 courtcard.js（同上）
 tests/courtcard.test.mjs      阵型导出图的 9 条米→像素 / 短标单测（node:test）
-.github/workflows/ci.yml       CI 门禁：247 单测（199 后端 + 48 纯函数）+ tsc + 构建校验 + 5 条 e2e
+.github/workflows/ci.yml       CI 门禁：253 单测（199 后端 + 54 纯函数）+ tsc + 构建校验 + 5 条 e2e
 .github/workflows/monitor.yml  外部探活：定时探测 + 自动开/关告警 issue
 deploy/                       生产 Caddyfile / 部署脚本 / 备份脚本 / 内存看门狗
 server/                       可选后端：Express + SQLite + JWT（云端模式）
