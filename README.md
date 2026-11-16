@@ -359,6 +359,22 @@ health 连试两次（间隔 5s、单次 20s 超时）才算真失败；首页�
 手动跑一次后两个项目各出各的 tar：排球归档解开是 `players 22 / sessions 9 / attendance 59`、
 `integrity_check = ok`，csp 归档是它自己的表，不再串台；cron 未改，旧脚本留了 `.bak` 可回滚。
 
+## 前端源码结构
+
+`app.js` 有 5000 行，是**构建产物**；真正的源码在 `src/` 下按领域分成 15 个分片
+（`core` / `theme` / `players` / `attendance` / `skills` / `formation` /
+`cards` / `settings` / `backup` / `ui` / `router` / `cloud` / `ai` / `boot`）。
+
+`npm run build` 会把分片拼成单个 `app.js`，再内联进单文件 HTML。
+**改代码请改 `src/` 下的分片，直接改 `app.js` 会在下次构建时被覆盖。**
+
+之所以不直接改成 ESM：`tests/load-app.mjs` 用 `node:vm` 加载**单个** app.js 跑纯函数测试
+（测生产源码本身，不维护副本），单文件分发版也需要内联一段完整 JS ——
+保持 app.js 仍是「一个 IIFE 的单文件」，这两件事都不用动。
+
+结构说明、三条不能违反的规则（分片顺序不能重排 / 切分源必须是 git 原始版 /
+段落合并必须紧邻）见 [docs/前端源码结构.md](docs/前端源码结构.md)。
+
 ## 目录
 
 ```

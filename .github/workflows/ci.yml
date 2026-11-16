@@ -46,6 +46,26 @@ jobs:
           npm run build
           node -e 'const fs=require("node:fs");const f=fs.readdirSync(".").find(x=>/\.html$/.test(x)&&x!=="index.html");if(!f)process.exit(1);const s=fs.readFileSync(f,"utf8");const ok=s.length>300000&&!s.includes("<script src=")&&s.includes("data:image/png;base64,");if(!ok){console.error("单文件产物校验失败",f,s.length);process.exit(1)}console.log("单文件产物 OK",(s.length/1024).toFixed(1)+"KB")'
 
+      # app.js 是 src/ 分片的**构建产物**。如果改了 src/ 却忘了重新构建提交，
+      # 仓库里的 app.js 就是过期的 —— 线上跑的是旧代码，而源码看着是新的。
+      # 这里重新构建后与提交版本做字节级比较，不一致直接失败。
+      - name: 校验 app.js 与 src/ 分片同步
+        run: |
+          node -e '
+          const fs=require("node:fs"),cp=require("node:child_process");
+          const before=fs.readFileSync("app.js","utf8");
+          cp.execFileSync("node",["build.mjs"],{stdio:"inherit"});
+          const after=fs.readFileSync("app.js","utf8");
+          if(before!==after){
+            console.error("app.js 与 src/ 分片不同步 —— 请本地跑 npm run build 后提交 app.js");
+            const a=before.split("\n"),b=after.split("\n");
+            let d=0;for(let i=0;i<Math.max(a.length,b.length);i++)if(a[i]!==b[i])d++;
+            console.error("差异行数:",d);
+            process.exit(1);
+          }
+          console.log("app.js 与 src/ 分片同步 OK");
+          '
+
       # e2e 用真实浏览器：装到 playwright-core 的默认缓存，测试里不指定 executablePath
       - name: 安装 Chromium
         run: npx playwright-core install chromium --with-deps

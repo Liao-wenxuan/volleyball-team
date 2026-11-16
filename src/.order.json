@@ -1,0 +1,35 @@
+{
+  "order": [
+    "core.js",
+    "theme.js",
+    "core-2.js",
+    "ui.js",
+    "players.js",
+    "attendance.js",
+    "skills.js",
+    "settings.js",
+    "cards.js",
+    "backup.js",
+    "formation.js",
+    "router.js",
+    "cloud.js",
+    "ai.js",
+    "boot.js"
+  ],
+  "prologue": [
+    "/* ═══════════════════════════════════════════════════════",
+    "   排球队管理系统 · 本地优先",
+    "   队员 / 训练 / 考勤 / 技能点 · 纯原生 JS",
+    "   ═══════════════════════════════════════════════════════ */",
+    "(function () {",
+    "  'use strict';",
+    "",
+    "  // 分享链接（#share=...）打开的是队员只读视图，share.js 已接管页面，主应用不启动",
+    "  if (window.__XGY_SHARE_MODE) return;",
+    ""
+  ],
+  "epilogue": [
+    "})();",
+    ""
+  ]
+}
