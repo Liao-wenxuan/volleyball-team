@@ -147,6 +147,12 @@ npm run dev            # http://localhost:8787
 npm run seed           # 可选：演示账号 demo / demo123456
 ```
 
+> **`JWT_SECRET` 在生产环境是强制的**：`NODE_ENV=production`（或显式 `JWT_REQUIRE_SECRET=1`）
+> 时，密钥缺失、仍是开发默认值、或短于 16 位，**服务会直接拒绝启动**（exit 1），
+> 而不是带着一个公开可伪造的默认密钥照常跑起来。生成一个：
+> `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`
+> 本地开发不受影响（`NODE_ENV` 非 production 时只警告）。
+
 局域网里其他设备（平板）直接访问 `http://<电脑IP>:8787` 也能用同一份云端数据。
 
 > 想部署到公网也可以：`server/` 里带了 Dockerfile（Node 22-slim 多阶段构建）、

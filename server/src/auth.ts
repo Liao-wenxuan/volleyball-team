@@ -12,11 +12,57 @@ import type { NextFunction, Request, Response } from 'express';
 import { HttpError } from './http';
 import { db, type Role } from './db';
 
-const SECRET = process.env.JWT_SECRET || 'dev-only-secret-change-me';
+/**
+ * 开发默认密钥。用它签发的 token 任何人都能伪造，所以**只允许出现在测试里**。
+ * 生产环境一旦用了它，等于把全站账号交出去 —— assertSecretConfigured() 会拦下。
+ */
+export const DEV_DEFAULT_SECRET = 'dev-only-secret-change-me';
+
+const SECRET = process.env.JWT_SECRET || DEV_DEFAULT_SECRET;
 const TTL = '7d';
 
 if (!process.env.JWT_SECRET) {
   console.warn('[auth] JWT_SECRET 未设置，正在用开发默认值；上线前务必配置');
+}
+
+/**
+ * 生产环境强制校验 JWT_SECRET，缺失或用了开发默认值就**拒绝启动**。
+ *
+ * 为什么之前只是 warn：服务能起来、接口全通，看起来没问题。但默认密钥是公开的
+ * （写在本仓库里），任何人都能拿它签一个 uid=admin 的 token 直接冒充管理员。
+ * 这种「配漏了但系统照常工作」的失败模式，比启动失败危险得多 ——
+ * 失败要发生在部署那一刻，而不是被用户发现的那一天。
+ *
+ * 什么时候必须配置：
+ *   - NODE_ENV=production（生产部署的标准姿势）
+ *   - 或显式 JWT_REQUIRE_SECRET=1（自建部署不设 NODE_ENV 时用）
+ * 测试环境（NODE_ENV=test）不受影响：tests/setup.ts 已固定注入测试密钥。
+ *
+ * 只在**启动入口**调用（index.ts）。库（auth.ts / repo.ts）被 import 时不抛，
+ * 否则 seed、cli/account、backup 这些不签发 token 的工具也会被牵连。
+ */
+export function assertSecretConfigured(): void {
+  const isProd = process.env.NODE_ENV === 'production';
+  const required = isProd || process.env.JWT_REQUIRE_SECRET === '1';
+  if (!required) return;
+
+  const secret = process.env.JWT_SECRET || '';
+  if (!secret) {
+    throw new Error(
+      '[auth] 生产环境必须配置 JWT_SECRET，缺少它已拒绝启动。' +
+        '生成方式：node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'base64url\'))"'
+    );
+  }
+  if (secret === DEV_DEFAULT_SECRET) {
+    throw new Error(
+      '[auth] JWT_SECRET 仍是开发默认值，这会让任何人都能伪造管理员 token，已拒绝启动。' +
+        '请设置一个足够长的随机值。'
+    );
+  }
+  // 太短的密钥挡不住暴力碰撞；16 字节熵起步。
+  if (secret.length < 16) {
+    throw new Error(`[auth] JWT_SECRET 太短（${secret.length} 位，至少 16 位），已拒绝启动。`);
+  }
 }
 
 export interface AuthedUser {
