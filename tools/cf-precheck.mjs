@@ -15,6 +15,8 @@
  */
 import { execFileSync } from 'node:child_process';
 import https from 'node:https';
+import http from 'node:http';
+import tls from 'node:tls';
 import net from 'node:net';
 
 /** 迁移前后的关键事实都写在这里，改域名时改这一处就够 */
@@ -95,8 +97,16 @@ function extractServerAddrs(out) {
   return [...new Set(addrs)];
 }
 
-/** HTTPS GET，返回状态码与响应头（只取需要的）。 */
-function httpsGet(host, path = '/') {
+/**
+ * HTTPS GET，返回状态码与响应头（只取需要的）。
+ *
+ * 关键：Node 的 https.request 不认 HTTPS_PROXY 环境变量，而某些跨境链路
+ * 【必须走系统代理】才能出网（curl 会自动认，Node 不会，于是 curl 200 / Node 超时）。
+ * 所以这里显式支持代理：有 HTTPS_PROXY 时先 CONNECT 隧道 + tls.connect，否则直连。
+ */
+const PROXY = process.env.HTTPS_PROXY || process.env.https_proxy || '';
+
+function httpsGetDirect(host, path) {
   return new Promise((resolve) => {
     const req = https.request(
       { host, port: 443, path, method: 'GET', servername: host, timeout: 12000 },
@@ -109,6 +119,51 @@ function httpsGet(host, path = '/') {
     req.on('error', (e) => resolve({ status: 0, headers: {}, error: e.message }));
     req.end();
   });
+}
+
+function httpsGetViaProxy(host, path) {
+  return new Promise((resolve) => {
+    const u = new URL(PROXY);
+    const fail = (e) => resolve({ status: 0, headers: {}, error: e.message });
+    const connectReq = http.request({
+      host: u.hostname,
+      port: Number(u.port) || 80,
+      method: 'CONNECT',
+      path: `${host}:443`,
+      timeout: 12000
+    });
+    connectReq.on('connect', (res, socket) => {
+      if (res.statusCode !== 200) { socket.destroy(); return fail(new Error('proxy CONNECT ' + res.statusCode)); }
+      const tlsSock = tls.connect({ socket, servername: host }, () => {
+        tlsSock.write(`GET ${path} HTTP/1.1\r\nHost: ${host}\r\nConnection: close\r\n\r\n`);
+      });
+      let buf = '';
+      tlsSock.on('data', (d) => {
+        buf += d.toString('utf8');
+        const end = buf.indexOf('\r\n\r\n');
+        if (end < 0) return;
+        const head = buf.slice(0, end);
+        const first = head.split('\r\n')[0] || '';
+        const m = first.match(/HTTP\/[\d.]+ (\d{3})/);
+        const headers = {};
+        head.split('\r\n').slice(1).forEach((l) => {
+          const i = l.indexOf(':');
+          if (i > 0) headers[l.slice(0, i).trim().toLowerCase()] = l.slice(i + 1).trim();
+        });
+        resolve({ status: m ? Number(m[1]) : 0, headers });
+        tlsSock.destroy();
+      });
+      tlsSock.on('error', fail);
+      tlsSock.setTimeout(12000, () => { tlsSock.destroy(); fail(new Error('timeout')); });
+    });
+    connectReq.on('timeout', () => { connectReq.destroy(); resolve({ status: 0, headers: {}, error: 'timeout' }); });
+    connectReq.on('error', fail);
+    connectReq.end();
+  });
+}
+
+function httpsGet(host, path = '/') {
+  return PROXY ? httpsGetViaProxy(host, path) : httpsGetDirect(host, path);
 }
 
 function line(s = '') { console.log(s); }
