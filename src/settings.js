@@ -58,7 +58,7 @@
         style="--p1:${t.p};--p2:${t.s};--base:${t.base};--ink:${t.ink}" aria-label="切换到${t.name}配色">
       <span class="jersey">
         <span class="jersey-num">${t.no}</span>
-        <span class="jersey-check">✓</span>
+        <span class="jersey-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M3.5 8.4l3 3 6-6.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </span>
       <span class="tc-meta">
         <span class="tc-name">${t.name}${t.mode === 'light' ? '<i class="tc-tag">浅</i>' : ''}</span>

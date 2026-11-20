@@ -2054,7 +2054,7 @@ body.fx-immersive .fx-fsexit:hover{background:rgba(255,107,138,.18);border-color
    设计取向：更衣室战术板，不是 SaaS 色板。每张卡是一枚球衣，
    斜切色块 = 主辅色，大号斜体号码 = 球衣号，下方是队名与球场语境。
    刻意不用：渐变色带、玻璃模糊、圆角堆叠、选中发光。 */
-.theme-hint{font-size:11.5px;line-height:1.7;color:var(--muted);margin-bottom:20px}
+.theme-hint{font-size:12px;line-height:1.7;color:var(--muted);margin-bottom:20px}
 .theme-featured{margin-bottom:18px}
 .theme-featured .theme-card{max-width:none}
 .theme-divider{
@@ -2088,23 +2088,26 @@ body.fx-immersive .fx-fsexit:hover{background:rgba(255,107,138,.18);border-color
   background:color-mix(in srgb,var(--p2) 82%,var(--base));transform:rotate(24deg);
 }
 .jersey-num{
-  position:absolute;left:13px;top:50%;transform:translateY(-50%);z-index:2;
-  font-family:Impact,"Arial Narrow",var(--font);
-  font-size:36px;font-weight:800;font-style:italic;letter-spacing:-.04em;
+  position:absolute;left:13px;top:50%;transform:translateY(-50%) scaleX(.86);z-index:2;
+  transform-origin:left center;
+  /* 用系统正文字体做球衣号变形，不引 Impact/Arial Black 当展示音：
+     超粗字重 + 横向压缩 + 负字距 + 斜体，得到号码牌的紧凑感 */
+  font-family:var(--font);
+  font-size:36px;font-weight:800;font-style:italic;letter-spacing:-.08em;
   line-height:1;color:var(--ink);
   -webkit-text-stroke:1px rgba(0,0,0,.18);text-shadow:0 1px 0 rgba(255,255,255,.12);
 }
 .jersey-check{
   display:none;position:absolute;right:8px;top:8px;z-index:3;
   width:19px;height:19px;border-radius:50%;background:#fff;
-  color:#141821;font-size:12px;font-weight:800;
-  align-items:center;justify-content:center;
+  color:#141821;align-items:center;justify-content:center;
 }
+.jersey-check svg{width:13px;height:13px;display:block}
 .theme-card.on .jersey-check{display:flex}
 /* 队名区：硬边分隔，不做卡片内卡片 */
 .tc-meta{display:block;padding:11px 12px 12px;border-top:1px solid var(--line)}
 .tc-name{display:block;font-size:13px;font-weight:650;color:var(--text);letter-spacing:.02em}
-.tc-sub{display:block;font-size:10.5px;color:var(--muted);margin-top:4px}
+.tc-sub{display:block;font-size:11px;color:var(--muted);margin-top:4px}
 /* 主场卡横向排布：一眼看出当前球队 */
 .theme-featured .theme-card{display:flex;align-items:stretch}
 .theme-featured .jersey{flex:0 0 190px;height:96px}
@@ -10838,7 +10841,7 @@ body{
         style="--p1:${t.p};--p2:${t.s};--base:${t.base};--ink:${t.ink}" aria-label="切换到${t.name}配色">
       <span class="jersey">
         <span class="jersey-num">${t.no}</span>
-        <span class="jersey-check">✓</span>
+        <span class="jersey-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M3.5 8.4l3 3 6-6.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </span>
       <span class="tc-meta">
         <span class="tc-name">${t.name}${t.mode === 'light' ? '<i class="tc-tag">浅</i>' : ''}</span>
