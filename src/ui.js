@@ -55,7 +55,7 @@
     const o = opts || {};
     $('#modalTitle').textContent = title;
     $('#modalBody').innerHTML = body;
-    $('#modal').className = `modal${o.wide ? ' wide' : o.mid ? ' mid' : ''}`;
+    $('#modal').className = `modal${o.wide ? ' wide' : o.mid ? ' mid' : ''}${o.cls ? ' ' + o.cls : ''}`;
     $('#modalScrim').classList.add('show');
     closePopovers();
     syncLock();

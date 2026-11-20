@@ -45,22 +45,35 @@
     if (CloudOn()) { themeLocalAt = Date.now(); cloudFire(window.XGYCloud.push.theme(id), null); }
     paintThemeCards();
     const t = THEMES.find((x) => x.id === id);
-    toast(`已切换到「${t.name}」`);
+    toast(`已换上「${t.name}」球衣`);
   }
 
   function paintThemeCards() {
     $$('.theme-card').forEach((c) => c.classList.toggle('on', c.dataset.themeId === db.settings.theme));
   }
 
+  /** 球衣卡：主场（court）单独置顶，其余九套 3×3，避免十张卡掉单 */
+  function themeCardHTML(t, featured = false) {
+    return `<button type="button" class="theme-card${featured ? ' featured' : ''}" data-theme-id="${t.id}" data-mode="${t.mode || 'dark'}"
+        style="--p1:${t.p};--p2:${t.s};--base:${t.base};--ink:${t.ink}" aria-label="切换到${t.name}配色">
+      <span class="jersey">
+        <span class="jersey-num">${t.no}</span>
+        <span class="jersey-check">✓</span>
+      </span>
+      <span class="tc-meta">
+        <span class="tc-name">${t.name}${t.mode === 'light' ? '<i class="tc-tag">浅</i>' : ''}</span>
+        <span class="tc-sub">${t.sub}</span>
+      </span>
+    </button>`;
+  }
+
   function openTheme() {
-    const body = `<p class="theme-hint">换的是界面的品牌色和背景。深色六套、浅色四套。出勤绿、缺席红、提醒琥珀这三个语义色都不跟着变 —— 不然颜色就不代表状态了。</p>
-      <div class="theme-grid">${THEMES.map((t) => `
-        <button type="button" class="theme-card" data-theme-id="${t.id}" data-mode="${t.mode || 'dark'}" style="--p1:${t.p};--p2:${t.s}">
-          <span class="tc-preview"></span>
-          <span class="tc-name">${t.name}${t.mode === 'light' ? '<i class="tc-tag">浅</i>' : ''}</span>
-          <span class="tc-sub">${t.sub}</span>
-        </button>`).join('')}</div>`;
-    openModal('主题色', body, { mid: true });
+    const featured = THEMES[0];
+    const body = `<p class="theme-hint">每套配色对应一个球场语境。切换只改界面颜色，出勤绿、缺席红、提醒琥珀三个状态色始终不变。</p>
+      <div class="theme-featured">${themeCardHTML(featured, true)}</div>
+      <p class="theme-divider"><span>其他球队</span></p>
+      <div class="theme-grid">${THEMES.slice(1).map((t) => themeCardHTML(t)).join('')}</div>`;
+    openModal('球队配色', body, { mid: true, cls: 'theme-modal' });
     $$('.theme-card').forEach((c) => { c.onclick = () => setTheme(c.dataset.themeId); });
     paintThemeCards();
   }

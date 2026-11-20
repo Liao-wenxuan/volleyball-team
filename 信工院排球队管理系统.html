@@ -1338,13 +1338,13 @@ body:not(.cloud-on) [data-cloud-only]{display:none!important}
 .dr-actions .btn{flex:1;height:38px;font-size:11.5px}
 
 /* ═══════════ 弹窗 ═══════════ */
-.modal-scrim{position:fixed;inset:0;z-index:170;display:grid;place-items:center;grid-template-columns:minmax(0,1fr);padding:20px;background:var(--scrim);backdrop-filter:blur(8px);opacity:0;visibility:hidden;transition:.35s}
+.modal-scrim{position:fixed;inset:0;z-index:170;display:grid;place-items:center;grid-template-columns:minmax(0,1fr);padding:20px;background:var(--scrim);opacity:0;visibility:hidden;transition:.25s}
 .modal-scrim.show{opacity:1;visibility:visible}
 .modal{
-  width:480px;max-width:100%;max-height:88vh;overflow-y:auto;border-radius:22px;
-  background:linear-gradient(165deg,var(--modal-a),var(--modal-b));border:1px solid var(--ov120);
-  box-shadow:0 50px 100px -40px #000,inset 0 1px 0 var(--ov140);
-  transform:translateY(18px) scale(.97);transition:.4s var(--ease);
+  width:480px;max-width:100%;max-height:88vh;overflow-y:auto;border-radius:4px;
+  background:var(--solid);border:1px solid var(--line-strong);
+  box-shadow:0 24px 64px -24px rgba(0,0,0,.8);
+  transform:translateY(10px);transition:.25s var(--ease);
 }
 .modal-scrim.show .modal{transform:none}
 .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--ov070)}
@@ -2050,37 +2050,87 @@ body.fx-immersive .fx-fsexit.idle{opacity:.16}
 body.fx-immersive .fx-fsexit:hover{background:rgba(255,107,138,.18);border-color:rgba(255,107,138,.4);color:#ffd7e0}
 .fx-fsexit svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
-/* ══════════ 主题色选择 ══════════ */
-.theme-hint{font-size:11.5px;line-height:1.7;color:var(--muted);margin-bottom:16px}
+/* ══════════ 球队配色选择 · 球衣号码牌 ══════════
+   设计取向：更衣室战术板，不是 SaaS 色板。每张卡是一枚球衣，
+   斜切色块 = 主辅色，大号斜体号码 = 球衣号，下方是队名与球场语境。
+   刻意不用：渐变色带、玻璃模糊、圆角堆叠、选中发光。 */
+.theme-hint{font-size:11.5px;line-height:1.7;color:var(--muted);margin-bottom:20px}
+.theme-featured{margin-bottom:18px}
+.theme-featured .theme-card{max-width:none}
+.theme-divider{
+  display:flex;align-items:center;gap:12px;margin:0 0 12px;
+  font-size:10px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;
+}
+.theme-divider::after{content:"";flex:1;height:1px;background:var(--line)}
 .theme-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .theme-card{
-  display:flex;flex-direction:column;gap:7px;padding:9px;border-radius:14px;
-  border:1px solid var(--line);background:var(--ov030);
+  display:block;position:relative;padding:0;border-radius:2px;
+  border:1px solid var(--line-strong);background:var(--solid);
   font-family:var(--font);text-align:left;cursor:pointer;
-  transition:transform .25s var(--ease),background .25s,border-color .25s,box-shadow .25s;
+  transition:border-color .18s ease,transform .18s ease;
 }
-.theme-card:hover{background:var(--ov070);transform:translateY(-2px)}
-.theme-card.on{
-  border-color:rgba(var(--violet-rgb),.55);
-  box-shadow:0 0 0 1px rgba(var(--violet-rgb),.3),0 18px 34px -24px rgba(var(--violet-rgb),.95);
+.theme-card:hover{border-color:var(--text-2);transform:translateY(-1px)}
+.theme-card.on{border-color:var(--p1)}
+.theme-card.on::after{content:"";position:absolute;inset:-1px;border:1px solid var(--p1);pointer-events:none}
+.theme-card:focus-visible{outline:2px solid var(--p1);outline-offset:2px}
+/* 球衣主体：底色 + 两道斜切主辅色，不是渐变 */
+.jersey{
+  display:block;position:relative;height:76px;overflow:hidden;
+  background:var(--base);
 }
-.tc-preview{
-  position:relative;display:block;height:46px;border-radius:10px;overflow:hidden;
-  background:linear-gradient(135deg,var(--p1),var(--p2));
+.jersey::before{
+  content:"";position:absolute;top:-32%;right:-16%;width:76%;height:160%;
+  /* 跟底色混 18%，压掉霓虹感，留下布料般的沉稳色块 */
+  background:color-mix(in srgb,var(--p1) 82%,var(--base));transform:rotate(24deg);
 }
-.tc-preview::after{
-  content:"";position:absolute;inset:0;
-  background:radial-gradient(90px 46px at 78% 8%,rgba(255,255,255,.42),transparent 70%);
+.jersey::after{
+  content:"";position:absolute;top:-32%;right:-5%;width:27%;height:160%;
+  background:color-mix(in srgb,var(--p2) 82%,var(--base));transform:rotate(24deg);
 }
-.theme-card.on .tc-preview::before{
-  content:"✓";position:absolute;right:6px;bottom:4px;z-index:2;
-  font-size:12px;font-weight:700;color:rgba(12,16,26,.72);
+.jersey-num{
+  position:absolute;left:13px;top:50%;transform:translateY(-50%);z-index:2;
+  font-family:Impact,"Arial Narrow",var(--font);
+  font-size:36px;font-weight:800;font-style:italic;letter-spacing:-.04em;
+  line-height:1;color:var(--ink);
+  -webkit-text-stroke:1px rgba(0,0,0,.18);text-shadow:0 1px 0 rgba(255,255,255,.12);
 }
-.tc-name{font-size:12.5px;font-weight:600;color:var(--text);letter-spacing:.01em}
-.tc-sub{font-size:10px;color:var(--muted)}
+.jersey-check{
+  display:none;position:absolute;right:8px;top:8px;z-index:3;
+  width:19px;height:19px;border-radius:50%;background:#fff;
+  color:#141821;font-size:12px;font-weight:800;
+  align-items:center;justify-content:center;
+}
+.theme-card.on .jersey-check{display:flex}
+/* 队名区：硬边分隔，不做卡片内卡片 */
+.tc-meta{display:block;padding:11px 12px 12px;border-top:1px solid var(--line)}
+.tc-name{display:block;font-size:13px;font-weight:650;color:var(--text);letter-spacing:.02em}
+.tc-sub{display:block;font-size:10.5px;color:var(--muted);margin-top:4px}
+/* 主场卡横向排布：一眼看出当前球队 */
+.theme-featured .theme-card{display:flex;align-items:stretch}
+.theme-featured .jersey{flex:0 0 190px;height:96px}
+.theme-featured .jersey-num{font-size:44px}
+.theme-featured .tc-meta{display:flex;flex-direction:column;justify-content:center;border-top:0;border-left:1px solid var(--line)}
+.theme-featured .tc-name{font-size:15px}
+.theme-featured .tc-sub{font-size:11px;margin-top:5px}
+
+/* 球衣选择器是深色展板，不跟浅色主题的底色走——否则浅色主题下整块变白纸 */
+.modal.theme-modal{background:#141821;border-color:rgba(255,255,255,.16);color:#eceef3}
+.modal.theme-modal .theme-hint{color:#9aa3b8}
+.modal.theme-modal .theme-divider{color:#9aa3b8}
+.modal.theme-modal .theme-divider::after{background:rgba(255,255,255,.14)}
+.modal.theme-modal .tc-meta{background:#1a1f2b;border-top-color:rgba(255,255,255,.1)}
+.modal.theme-modal .theme-featured .tc-meta{border-left-color:rgba(255,255,255,.1)}
+.modal.theme-modal .tc-name{color:#eceef3}
+.modal.theme-modal .tc-sub{color:#9aa3b8}
+.modal.theme-modal .tc-tag{color:#b6bfd2;background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.16)}
+.modal.theme-modal .theme-card{background:#1a1f2b;border-color:rgba(255,255,255,.14)}
+.modal.theme-modal .theme-card:hover{border-color:rgba(255,255,255,.4)}
+.modal.theme-modal .modal-head{border-bottom-color:rgba(255,255,255,.1)}
+.modal.theme-modal .modal-head h3{color:#eceef3}
 
 @media (max-width:560px){
   .theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .theme-featured .jersey{flex-basis:130px;height:82px}
   .top-actions #themeBtn{display:none}
 }
 
@@ -2196,8 +2246,6 @@ html[data-mode="light"] .sc-count.down{color:#c53052;background:rgba(255,107,138
   font-size:9px;line-height:15px;vertical-align:1px;
   color:var(--text-2);background:var(--ov070);border:1px solid var(--line);
 }
-.theme-card[data-mode="light"] .tc-preview{box-shadow:inset 0 0 0 1px rgba(15,23,42,.12)}
-.theme-card[data-mode="light"] .tc-preview::after{background:radial-gradient(90px 46px at 78% 8%,rgba(255,255,255,.7),transparent 70%)}
 
 /* 浅色：表单控件与下拉可读性 */
 html[data-mode="light"] .field input,
@@ -8360,18 +8408,21 @@ body{
   };
   const SOURCE_LABEL = { training: '训练', match: '比赛', manual: '手动' };
 
-  /* ══════════ 主题 ══════════ */
+  /* ══════════ 主题 ══════════
+   * 球衣色板：p/s 是主题主辅色（必须和 style.css 的 --violet/--cyan 对齐），
+   * base/ink 只用于选择器的号码牌预览，不参与界面渲染；no 是球衣号。
+   * name 改成球场语境（主场/夜场/客场…），id 一个不动——用户数据和切换逻辑都依赖它。 */
   const THEMES = [
-    { id: 'court', name: '排球', sub: '暖棕 + 球衣蓝', p: '#b4703f', s: '#3f7fd0', mode: 'light' },
-    { id: 'aurora', name: '极光', sub: '紫 + 青', p: '#7b6cff', s: '#46e0ff' },
-    { id: 'ocean', name: '深海', sub: '蓝 + 湖青', p: '#3f8cff', s: '#2fd4e8' },
-    { id: 'forest', name: '松林', sub: '翠绿 + 黄绿', p: '#2fbf8f', s: '#a8e05f' },
-    { id: 'sunset', name: '落日', sub: '橙 + 玫红', p: '#ff7a45', s: '#ff5d8f' },
-    { id: 'sakura', name: '樱粉', sub: '粉 + 紫', p: '#f06fb0', s: '#b18cff' },
-    { id: 'graphite', name: '石墨', sub: '雾蓝灰', p: '#8ba3c7', s: '#7fd4e8' },
-    { id: 'paper', name: '素纸', sub: '冷白 + 靛蓝', p: '#5a55e8', s: '#0a90bd', mode: 'light' },
-    { id: 'sand', name: '暖砂', sub: '米白 + 陶土', p: '#c2611f', s: '#a8345a', mode: 'light' },
-    { id: 'mint', name: '薄荷', sub: '浅绿 + 湖蓝', p: '#0d8f6f', s: '#0b7ea3', mode: 'light' }
+    { id: 'court', name: '主场', sub: '木地板 · 队服蓝', p: '#b4703f', s: '#3f7fd0', base: '#3a2b20', ink: '#f6e6d2', no: '01', mode: 'light' },
+    { id: 'aurora', name: '夜场', sub: '泛光灯 · 紫', p: '#7b6cff', s: '#46e0ff', base: '#16162b', ink: '#ece9ff', no: '02' },
+    { id: 'ocean', name: '客场', sub: '深海蓝', p: '#3f8cff', s: '#2fd4e8', base: '#0c1a30', ink: '#e6f1ff', no: '03' },
+    { id: 'forest', name: '草地', sub: '天然草皮绿', p: '#2fbf8f', s: '#a8e05f', base: '#0d221b', ink: '#e3ffef', no: '04' },
+    { id: 'sunset', name: '黄昏', sub: '落日橙 · 玫红', p: '#ff7a45', s: '#ff5d8f', base: '#2b140f', ink: '#fff0e6', no: '05' },
+    { id: 'sakura', name: '樱粉', sub: '春季邀请赛', p: '#f06fb0', s: '#b18cff', base: '#281424', ink: '#ffeaf5', no: '06' },
+    { id: 'graphite', name: '黑白', sub: '裁判条纹灰', p: '#8ba3c7', s: '#7fd4e8', base: '#151a22', ink: '#eef3fb', no: '07' },
+    { id: 'paper', name: '秩序册', sub: '印刷白 · 靛蓝', p: '#5a55e8', s: '#0a90bd', base: '#f2f3f8', ink: '#1b1c33', no: '08', mode: 'light' },
+    { id: 'sand', name: '沙滩', sub: '沙地 · 陶土', p: '#c2611f', s: '#a8345a', base: '#f7efe2', ink: '#3d2110', no: '09', mode: 'light' },
+    { id: 'mint', name: '训练日', sub: '薄荷 · 湖蓝', p: '#0d8f6f', s: '#0b7ea3', base: '#eaf6f1', ink: '#0b3b2f', no: '10', mode: 'light' }
   ];
   const THEME_IDS = THEMES.map((t) => t.id);
   const isTheme = (v) => THEME_IDS.includes(v);
@@ -8844,7 +8895,7 @@ body{
     const o = opts || {};
     $('#modalTitle').textContent = title;
     $('#modalBody').innerHTML = body;
-    $('#modal').className = `modal${o.wide ? ' wide' : o.mid ? ' mid' : ''}`;
+    $('#modal').className = `modal${o.wide ? ' wide' : o.mid ? ' mid' : ''}${o.cls ? ' ' + o.cls : ''}`;
     $('#modalScrim').classList.add('show');
     closePopovers();
     syncLock();
@@ -10774,22 +10825,35 @@ body{
     if (CloudOn()) { themeLocalAt = Date.now(); cloudFire(window.XGYCloud.push.theme(id), null); }
     paintThemeCards();
     const t = THEMES.find((x) => x.id === id);
-    toast(`已切换到「${t.name}」`);
+    toast(`已换上「${t.name}」球衣`);
   }
 
   function paintThemeCards() {
     $$('.theme-card').forEach((c) => c.classList.toggle('on', c.dataset.themeId === db.settings.theme));
   }
 
+  /** 球衣卡：主场（court）单独置顶，其余九套 3×3，避免十张卡掉单 */
+  function themeCardHTML(t, featured = false) {
+    return `<button type="button" class="theme-card${featured ? ' featured' : ''}" data-theme-id="${t.id}" data-mode="${t.mode || 'dark'}"
+        style="--p1:${t.p};--p2:${t.s};--base:${t.base};--ink:${t.ink}" aria-label="切换到${t.name}配色">
+      <span class="jersey">
+        <span class="jersey-num">${t.no}</span>
+        <span class="jersey-check">✓</span>
+      </span>
+      <span class="tc-meta">
+        <span class="tc-name">${t.name}${t.mode === 'light' ? '<i class="tc-tag">浅</i>' : ''}</span>
+        <span class="tc-sub">${t.sub}</span>
+      </span>
+    </button>`;
+  }
+
   function openTheme() {
-    const body = `<p class="theme-hint">换的是界面的品牌色和背景。深色六套、浅色四套。出勤绿、缺席红、提醒琥珀这三个语义色都不跟着变 —— 不然颜色就不代表状态了。</p>
-      <div class="theme-grid">${THEMES.map((t) => `
-        <button type="button" class="theme-card" data-theme-id="${t.id}" data-mode="${t.mode || 'dark'}" style="--p1:${t.p};--p2:${t.s}">
-          <span class="tc-preview"></span>
-          <span class="tc-name">${t.name}${t.mode === 'light' ? '<i class="tc-tag">浅</i>' : ''}</span>
-          <span class="tc-sub">${t.sub}</span>
-        </button>`).join('')}</div>`;
-    openModal('主题色', body, { mid: true });
+    const featured = THEMES[0];
+    const body = `<p class="theme-hint">每套配色对应一个球场语境。切换只改界面颜色，出勤绿、缺席红、提醒琥珀三个状态色始终不变。</p>
+      <div class="theme-featured">${themeCardHTML(featured, true)}</div>
+      <p class="theme-divider"><span>其他球队</span></p>
+      <div class="theme-grid">${THEMES.slice(1).map((t) => themeCardHTML(t)).join('')}</div>`;
+    openModal('球队配色', body, { mid: true, cls: 'theme-modal' });
     $$('.theme-card').forEach((c) => { c.onclick = () => setTheme(c.dataset.themeId); });
     paintThemeCards();
   }

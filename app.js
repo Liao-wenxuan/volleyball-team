@@ -113,18 +113,21 @@
   };
   const SOURCE_LABEL = { training: '训练', match: '比赛', manual: '手动' };
 
-  /* ══════════ 主题 ══════════ */
+  /* ══════════ 主题 ══════════
+   * 球衣色板：p/s 是主题主辅色（必须和 style.css 的 --violet/--cyan 对齐），
+   * base/ink 只用于选择器的号码牌预览，不参与界面渲染；no 是球衣号。
+   * name 改成球场语境（主场/夜场/客场…），id 一个不动——用户数据和切换逻辑都依赖它。 */
   const THEMES = [
-    { id: 'court', name: '排球', sub: '暖棕 + 球衣蓝', p: '#b4703f', s: '#3f7fd0', mode: 'light' },
-    { id: 'aurora', name: '极光', sub: '紫 + 青', p: '#7b6cff', s: '#46e0ff' },
-    { id: 'ocean', name: '深海', sub: '蓝 + 湖青', p: '#3f8cff', s: '#2fd4e8' },
-    { id: 'forest', name: '松林', sub: '翠绿 + 黄绿', p: '#2fbf8f', s: '#a8e05f' },
-    { id: 'sunset', name: '落日', sub: '橙 + 玫红', p: '#ff7a45', s: '#ff5d8f' },
-    { id: 'sakura', name: '樱粉', sub: '粉 + 紫', p: '#f06fb0', s: '#b18cff' },
-    { id: 'graphite', name: '石墨', sub: '雾蓝灰', p: '#8ba3c7', s: '#7fd4e8' },
-    { id: 'paper', name: '素纸', sub: '冷白 + 靛蓝', p: '#5a55e8', s: '#0a90bd', mode: 'light' },
-    { id: 'sand', name: '暖砂', sub: '米白 + 陶土', p: '#c2611f', s: '#a8345a', mode: 'light' },
-    { id: 'mint', name: '薄荷', sub: '浅绿 + 湖蓝', p: '#0d8f6f', s: '#0b7ea3', mode: 'light' }
+    { id: 'court', name: '主场', sub: '木地板 · 队服蓝', p: '#b4703f', s: '#3f7fd0', base: '#3a2b20', ink: '#f6e6d2', no: '01', mode: 'light' },
+    { id: 'aurora', name: '夜场', sub: '泛光灯 · 紫', p: '#7b6cff', s: '#46e0ff', base: '#16162b', ink: '#ece9ff', no: '02' },
+    { id: 'ocean', name: '客场', sub: '深海蓝', p: '#3f8cff', s: '#2fd4e8', base: '#0c1a30', ink: '#e6f1ff', no: '03' },
+    { id: 'forest', name: '草地', sub: '天然草皮绿', p: '#2fbf8f', s: '#a8e05f', base: '#0d221b', ink: '#e3ffef', no: '04' },
+    { id: 'sunset', name: '黄昏', sub: '落日橙 · 玫红', p: '#ff7a45', s: '#ff5d8f', base: '#2b140f', ink: '#fff0e6', no: '05' },
+    { id: 'sakura', name: '樱粉', sub: '春季邀请赛', p: '#f06fb0', s: '#b18cff', base: '#281424', ink: '#ffeaf5', no: '06' },
+    { id: 'graphite', name: '黑白', sub: '裁判条纹灰', p: '#8ba3c7', s: '#7fd4e8', base: '#151a22', ink: '#eef3fb', no: '07' },
+    { id: 'paper', name: '秩序册', sub: '印刷白 · 靛蓝', p: '#5a55e8', s: '#0a90bd', base: '#f2f3f8', ink: '#1b1c33', no: '08', mode: 'light' },
+    { id: 'sand', name: '沙滩', sub: '沙地 · 陶土', p: '#c2611f', s: '#a8345a', base: '#f7efe2', ink: '#3d2110', no: '09', mode: 'light' },
+    { id: 'mint', name: '训练日', sub: '薄荷 · 湖蓝', p: '#0d8f6f', s: '#0b7ea3', base: '#eaf6f1', ink: '#0b3b2f', no: '10', mode: 'light' }
   ];
   const THEME_IDS = THEMES.map((t) => t.id);
   const isTheme = (v) => THEME_IDS.includes(v);
@@ -597,7 +600,7 @@
     const o = opts || {};
     $('#modalTitle').textContent = title;
     $('#modalBody').innerHTML = body;
-    $('#modal').className = `modal${o.wide ? ' wide' : o.mid ? ' mid' : ''}`;
+    $('#modal').className = `modal${o.wide ? ' wide' : o.mid ? ' mid' : ''}${o.cls ? ' ' + o.cls : ''}`;
     $('#modalScrim').classList.add('show');
     closePopovers();
     syncLock();
@@ -2527,22 +2530,35 @@
     if (CloudOn()) { themeLocalAt = Date.now(); cloudFire(window.XGYCloud.push.theme(id), null); }
     paintThemeCards();
     const t = THEMES.find((x) => x.id === id);
-    toast(`已切换到「${t.name}」`);
+    toast(`已换上「${t.name}」球衣`);
   }
 
   function paintThemeCards() {
     $$('.theme-card').forEach((c) => c.classList.toggle('on', c.dataset.themeId === db.settings.theme));
   }
 
+  /** 球衣卡：主场（court）单独置顶，其余九套 3×3，避免十张卡掉单 */
+  function themeCardHTML(t, featured = false) {
+    return `<button type="button" class="theme-card${featured ? ' featured' : ''}" data-theme-id="${t.id}" data-mode="${t.mode || 'dark'}"
+        style="--p1:${t.p};--p2:${t.s};--base:${t.base};--ink:${t.ink}" aria-label="切换到${t.name}配色">
+      <span class="jersey">
+        <span class="jersey-num">${t.no}</span>
+        <span class="jersey-check">✓</span>
+      </span>
+      <span class="tc-meta">
+        <span class="tc-name">${t.name}${t.mode === 'light' ? '<i class="tc-tag">浅</i>' : ''}</span>
+        <span class="tc-sub">${t.sub}</span>
+      </span>
+    </button>`;
+  }
+
   function openTheme() {
-    const body = `<p class="theme-hint">换的是界面的品牌色和背景。深色六套、浅色四套。出勤绿、缺席红、提醒琥珀这三个语义色都不跟着变 —— 不然颜色就不代表状态了。</p>
-      <div class="theme-grid">${THEMES.map((t) => `
-        <button type="button" class="theme-card" data-theme-id="${t.id}" data-mode="${t.mode || 'dark'}" style="--p1:${t.p};--p2:${t.s}">
-          <span class="tc-preview"></span>
-          <span class="tc-name">${t.name}${t.mode === 'light' ? '<i class="tc-tag">浅</i>' : ''}</span>
-          <span class="tc-sub">${t.sub}</span>
-        </button>`).join('')}</div>`;
-    openModal('主题色', body, { mid: true });
+    const featured = THEMES[0];
+    const body = `<p class="theme-hint">每套配色对应一个球场语境。切换只改界面颜色，出勤绿、缺席红、提醒琥珀三个状态色始终不变。</p>
+      <div class="theme-featured">${themeCardHTML(featured, true)}</div>
+      <p class="theme-divider"><span>其他球队</span></p>
+      <div class="theme-grid">${THEMES.slice(1).map((t) => themeCardHTML(t)).join('')}</div>`;
+    openModal('球队配色', body, { mid: true, cls: 'theme-modal' });
     $$('.theme-card').forEach((c) => { c.onclick = () => setTheme(c.dataset.themeId); });
     paintThemeCards();
   }
