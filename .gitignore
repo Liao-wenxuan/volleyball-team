@@ -35,3 +35,5 @@ server/*.db*
 # 个人设计工具（impeccable CLI 安装产物，不入库）
 .github/agents/
 .github/skills/
+.impeccable/
+.github/hooks/
