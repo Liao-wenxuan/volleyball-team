@@ -18,7 +18,6 @@
 
   function init() {
     state.weekMonday = getMonday(new Date());
-    if (!CloudOn()) migrateThemeOnce();
     applyTheme(db.settings.theme);
     const fm = $('.footer-meta');
     if (fm) fm.textContent += ` · ${BUILD}`;

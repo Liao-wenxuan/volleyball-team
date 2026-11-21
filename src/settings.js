@@ -14,28 +14,11 @@
   let templateLocalAt = 0;
 
   function applyTheme(id) {
-    const t = isTheme(id) ? id : 'court';
+    const t = isTheme(id) ? id : 'graphite';
     const meta = THEMES.find((x) => x.id === t) || THEMES[0];
     document.documentElement.dataset.theme = t;
     document.documentElement.dataset.mode = meta.mode || 'dark';
     if (db.settings) db.settings.theme = t;
-  }
-
-  /** v55 一次性迁移：历史默认主题「极光」（紫）和登录门禁的奶油暖棕撞脸。
-      只跑一次（本地标记），且仅当库仍停在历史默认时迁到「排球」；
-      用户之后手动选回极光不会再被动。云端模式下必须在 applyServerState
-      之后调用——否则刚改完就被 pullCore 拉回来的旧值盖回去。 */
-  function migrateThemeOnce() {
-    try {
-      if (localStorage.getItem(THEME_MIGRATION_KEY)) return;
-      // 没迁就不置位：登录前本地还是新库默认（court），这时候判定没有意义，
-      // 置了标记反而让服务器真正数据（aurora）合并回来时再也没机会迁。
-      if (db.settings.theme !== 'aurora') return;
-      applyTheme('court');
-      save();
-      localStorage.setItem(THEME_MIGRATION_KEY, '1');
-      if (CloudOn()) { themeLocalAt = Date.now(); cloudFire(window.XGYCloud.push.theme('court'), null); }
-    } catch (e) { /* 隐私模式 localStorage 会抛：当作已迁移，不折腾 */ }
   }
 
   function setTheme(id) {
@@ -53,27 +36,28 @@
   }
 
   /** 球衣卡：主场（court）单独置顶，其余九套 3×3，避免十张卡掉单 */
-  function themeCardHTML(t, featured = false) {
-    return `<button type="button" class="theme-card${featured ? ' featured' : ''}" data-theme-id="${t.id}" data-mode="${t.mode || 'dark'}"
-        style="--p1:${t.p};--p2:${t.s};--base:${t.base};--ink:${t.ink}" aria-label="切换到${t.name}配色">
-      <span class="jersey">
-        <span class="jersey-num">${t.no}</span>
+  /** 风格卡：上半部是迷你界面预览（CSS 画出该风格的圆角/字体/密度），下半部是名称与风格描述 */
+  function themeCardHTML(t) {
+    return `<button type="button" class="theme-card style-card" data-theme-id="${t.id}" data-mode="${t.mode || 'dark'}"
+        style="--p1:${t.p};--p2:${t.s};--base:${t.base};--ink:${t.ink}" aria-label="切换到${t.name}风格">
+      <span class="style-preview style-${t.id}">
+        <span class="sp-bar"><i></i><i></i><i></i></span>
+        <span class="sp-title">${t.no}</span>
+        <span class="sp-row"><i></i><i></i></span>
+        <span class="sp-btn"></span>
         <span class="jersey-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M3.5 8.4l3 3 6-6.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </span>
       <span class="tc-meta">
         <span class="tc-name">${t.name}${t.mode === 'light' ? '<i class="tc-tag">浅</i>' : ''}</span>
-        <span class="tc-sub">${t.sub}</span>
+        <span class="tc-sub">${t.style}</span>
       </span>
     </button>`;
   }
 
   function openTheme() {
-    const featured = THEMES[0];
-    const body = `<p class="theme-hint">每套配色对应一个球场语境。切换只改界面颜色，出勤绿、缺席红、提醒琥珀三个状态色始终不变。</p>
-      <div class="theme-featured">${themeCardHTML(featured, true)}</div>
-      <p class="theme-divider"><span>其他球队</span></p>
-      <div class="theme-grid">${THEMES.slice(1).map((t) => themeCardHTML(t)).join('')}</div>`;
-    openModal('球队配色', body, { mid: true, cls: 'theme-modal' });
+    const body = `<p class="theme-hint">每套是一套完整界面风格——不只是颜色，连字体、圆角和排版节奏都会一起换。切换只影响外观，数据和状态色都不变。</p>
+      <div class="theme-grid style-grid">${THEMES.map((t) => themeCardHTML(t)).join('')}</div>`;
+    openModal('界面风格', body, { mid: true, cls: 'theme-modal' });
     $$('.theme-card').forEach((c) => { c.onclick = () => setTheme(c.dataset.themeId); });
     paintThemeCards();
   }

@@ -70,6 +70,20 @@
 - 对照实验：临时从 `lazyMods` 摘掉 `courtcard`，只有「同一批模块」这一条精确变红（14 过 1 挂），随后恢复，恢复后 15/15 全绿。
 - 纯函数 48 → 54，CI 单测 247 → 253。**均为工具 / 测试改动，不进 SW 预缓存**，前端资源零改动，`sw.js` 保持 `v70`。
 
+## v72 · 2026-11-21
+
+**主题升级为四套完整设计语言 —— 换主题 = 换整套界面风格**
+
+- **起因**：用户指出 v71 只是「换颜色」，要求真正的风格切换；圈定保留 paper / mint / graphite / sakura 四套，删掉其余 6 套配色变体。参考了用户给的设计系统截图（Meridian / Reverie / Orbit Index / Meadowlark / Emberspire / Aether 等）与 uiverse.io。
+- **四套设计语言**（每套有独立的圆角、面板材质、字体、边框、密度、光晕）：
+  - `graphite` 黑白战术板：方角 2/4/6px、无模糊无光晕、深黑底、紧凑（默认）
+  - `paper` 秩序册：衬线标题（Georgia/Songti）、纸白底、细线、4px 圆角、高留白
+  - `sakura` 樱粉：深粉紫底、14/20px 圆角、渐变玻璃、柔和辉光
+  - `mint` 训练日：12/18/28px 大圆角、浅绿底、半透明面板、轻盈透气
+- **实现**：新增形态 token（`--radius-sm/md/lg`、`--panel-bg/blur/shadow`、`--edge`、`--font-display`、`--pad-panel`、`--glow-*`），106 处硬编码圆角改为 token；hero 背景、面板、标题、按钮阴影全部接入。选择器从球衣卡改为迷你界面预览卡，2×2 平铺，点之前就看得见风格差异。
+- **清理**：删除 v55 主题迁移（aurora→court，两套都已不存在）；默认主题 court→graphite；E2E-4 的主题引用从 sand/court 改成 mint/graphite；去掉 hero 渐变文字（impeccable craft-floor 拒绝项）。
+- **验证**：真 Edge 四套截图 + 形态数据（paper 衬线生效、graphite 4px vs mint 18px 圆角、sakura 渐变面板）；4 张风格卡、零 JS 异常；全套 207 后端 + 54 纯函数 + 5 e2e 全绿（E2E-4 修完）；impeccable detect 139 条与改前持平（无新增告警）。
+
 ## v71 · 2026-11-20
 
 **主题切换 UI 重做：从「SaaS 色板」改为「球队球衣」**

@@ -4,26 +4,19 @@
  * 本文件是 app.js 的源码分片，由 build.mjs 拼接成单个 app.js。
  * 直接改 app.js 会在下次构建时被覆盖 —— 要改这里。
  * ============================================================ */
-  /* ══════════ 主题 ══════════
-   * 球衣色板：p/s 是主题主辅色（必须和 style.css 的 --violet/--cyan 对齐），
-   * base/ink 只用于选择器的号码牌预览，不参与界面渲染；no 是球衣号。
-   * name 改成球场语境（主场/夜场/客场…），id 一个不动——用户数据和切换逻辑都依赖它。 */
+  /* ══════════ 主题 = 完整设计语言 ══════════
+   * v72 起主题不只是配色：每套有自己的圆角、面板材质、字体、密度，
+   * 形态 token 在 style.css 的 [data-theme] 块里覆盖。
+   * p/s/base/ink/no 只用于选择器的球衣卡预览，不参与界面渲染。
+   * 只保留 4 套精品；默认 graphite（黑白战术板）。 */
   const THEMES = [
-    { id: 'court', name: '主场', sub: '木地板 · 队服蓝', p: '#b4703f', s: '#3f7fd0', base: '#3a2b20', ink: '#f6e6d2', no: '01', mode: 'light' },
-    { id: 'aurora', name: '夜场', sub: '泛光灯 · 紫', p: '#7b6cff', s: '#46e0ff', base: '#16162b', ink: '#ece9ff', no: '02' },
-    { id: 'ocean', name: '客场', sub: '深海蓝', p: '#3f8cff', s: '#2fd4e8', base: '#0c1a30', ink: '#e6f1ff', no: '03' },
-    { id: 'forest', name: '草地', sub: '天然草皮绿', p: '#2fbf8f', s: '#a8e05f', base: '#0d221b', ink: '#e3ffef', no: '04' },
-    { id: 'sunset', name: '黄昏', sub: '落日橙 · 玫红', p: '#ff7a45', s: '#ff5d8f', base: '#2b140f', ink: '#fff0e6', no: '05' },
-    { id: 'sakura', name: '樱粉', sub: '春季邀请赛', p: '#f06fb0', s: '#b18cff', base: '#281424', ink: '#ffeaf5', no: '06' },
-    { id: 'graphite', name: '黑白', sub: '裁判条纹灰', p: '#8ba3c7', s: '#7fd4e8', base: '#151a22', ink: '#eef3fb', no: '07' },
-    { id: 'paper', name: '秩序册', sub: '印刷白 · 靛蓝', p: '#5a55e8', s: '#0a90bd', base: '#f2f3f8', ink: '#1b1c33', no: '08', mode: 'light' },
-    { id: 'sand', name: '沙滩', sub: '沙地 · 陶土', p: '#c2611f', s: '#a8345a', base: '#f7efe2', ink: '#3d2110', no: '09', mode: 'light' },
-    { id: 'mint', name: '训练日', sub: '薄荷 · 湖蓝', p: '#0d8f6f', s: '#0b7ea3', base: '#eaf6f1', ink: '#0b3b2f', no: '10', mode: 'light' }
+    { id: 'graphite', name: '黑白', sub: '裁判条纹 · 战术板', p: '#8ba3c7', s: '#7fd4e8', base: '#151a22', ink: '#eef3fb', no: '07', style: '硬边 · 网格 · 等宽' },
+    { id: 'paper', name: '秩序册', sub: '印刷白 · 靛蓝', p: '#5a55e8', s: '#0a90bd', base: '#f2f3f8', ink: '#1b1c33', no: '08', mode: 'light', style: '衬线 · 细线 · 高留白' },
+    { id: 'sakura', name: '樱粉', sub: '春季邀请赛', p: '#f06fb0', s: '#b18cff', base: '#281424', ink: '#ffeaf5', no: '06', style: '柔和 · 辉光 · 精致' },
+    { id: 'mint', name: '训练日', sub: '薄荷 · 湖蓝', p: '#0d8f6f', s: '#0b7ea3', base: '#eaf6f1', ink: '#0b3b2f', no: '10', mode: 'light', style: '圆润 · 透气 · 轻盈' }
   ];
   const THEME_IDS = THEMES.map((t) => t.id);
   const isTheme = (v) => THEME_IDS.includes(v);
-  /** v55 一次迁移的本地标记：置位后永不再跑，用户手动选回紫色也不会被改 */
-  const THEME_MIGRATION_KEY = 'xgy-theme-migrated-v55';
 
   /* ══════════ 阵型板常量 ══════════ */
   const FX_SIZE = 9;      // 半场 9 × 9 米

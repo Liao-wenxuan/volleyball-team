@@ -26,7 +26,7 @@
 
   /* ══════════ 数据 ══════════ */
   function blankDB() {
-    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'court' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [], aiChat: [], shareNotes: {} };
+    return { version: SCHEMA, settings: { template: clone(DEFAULT_TEMPLATE), theme: 'graphite' }, players: [], weeks: {}, skillLogs: [], formation: blankFormation(), formations: [], aiChat: [], shareNotes: {} };
   }
 
   function normalizeSkills(raw) {
@@ -124,7 +124,7 @@
       });
     }
     base.formation = normalizeFormation(raw.formation);
-    base.settings.theme = raw.settings && isTheme(raw.settings.theme) ? raw.settings.theme : 'court';
+    base.settings.theme = raw.settings && isTheme(raw.settings.theme) ? raw.settings.theme : 'graphite';
     // AI 配置（BYOK）必须原样带回，否则每次刷新 Key 都会丢
     if (raw.settings && raw.settings.ai && typeof raw.settings.ai === 'object') {
       const a = raw.settings.ai;

@@ -74,7 +74,6 @@
       });
     }
     save();
-    migrateThemeOnce(); // v55：服务器数据合并完再判主题迁移
   }
 
   function applyWeek(key, sessions) {
