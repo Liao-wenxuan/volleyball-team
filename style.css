@@ -163,8 +163,37 @@
   --font-display:var(--font);--tracking-display:-.01em;
   --pad-panel:24px;--cell-gap:14px;
 }
+[data-theme="collegiate"]{
+  /* 学院荣誉墙：藏青+象牙白+绯红、双线边框、衬线标题、仪式感留白 */
+  --violet:#14284a;--violet-rgb:20,40,74;
+  --violet-2:#a62e38;--violet-2-rgb:166,46,56;
+  --violet-deep:#0c1b33;--violet-deep-rgb:12,27,51;
+  --cyan:#b8964a;--cyan-rgb:184,150,74;
+  --bg:#f4f1e8;--bg-2:#ebe6d7;
+  --glow-1:0;--glow-2:0;
+  --hero-bg:linear-gradient(180deg,#14284a,#1b3560);
+  --text:#1b2433;--text-2:#4a5364;--muted:#7d8494;
+  --radius-sm:0px;--radius-md:2px;--radius-lg:3px;
+  --panel-bg:#fdfbf5;--panel-blur:0px;
+  --panel-shadow:0 1px 3px rgba(30,40,70,.08);
+  --edge:rgba(20,40,74,.24);--edge-strong:rgba(20,40,74,.48);
+  --font-display:Georgia,"Songti SC","Times New Roman",serif;
+  --tracking-display:.01em;
+  --pad-panel:24px;--cell-gap:14px;
+}
+/* 学院风：强调区用双线（hero / 面板标题），呼应运动队的秩序感 */
+[data-theme="collegiate"] .hero{border:1px solid var(--violet);box-shadow:inset 0 0 0 3px var(--bg),inset 0 0 0 4px rgba(255,255,255,.5)}
+[data-theme="collegiate"] .hero-copy h2,[data-theme="collegiate"] .hero-copy h2 em,
+[data-theme="collegiate"] .hero-copy > p,[data-theme="collegiate"] .hero-copy .eyebrow,
+[data-theme="collegiate"] .hero-copy .eyebrow span{color:#f4f1e8}
+[data-theme="collegiate"] .hero-copy > p{opacity:.72}
+[data-theme="collegiate"] .hero-meta b{color:#f4f1e8}
+[data-theme="collegiate"] .hero-meta span{color:rgba(244,241,232,.65)}
+[data-theme="collegiate"] .hero-copy .btn-ghost{color:#f4f1e8;border-color:rgba(244,241,232,.5)}
+[data-theme="collegiate"] .panel-head h3,[data-theme="collegiate"] .card-head h2{border-bottom:2px solid var(--violet);display:inline-block;padding-bottom:5px}
 html[data-mode="light"][data-theme="paper"]{--bg:#f7f5f0;--bg-2:#efebe1}
 html[data-mode="light"][data-theme="mint"]{--bg:#f2f8f5;--bg-2:#e6f2ec}
+html[data-mode="light"][data-theme="collegiate"]{--bg:#f4f1e8;--bg-2:#ebe6d7}
 
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -2062,7 +2091,7 @@ body.fx-immersive .fx-fsexit:hover{background:rgba(255,107,138,.18);border-color
 }
 .theme-card:hover{border-color:rgba(255,255,255,.4);transform:translateY(-1px)}
 .theme-card.on{border-color:var(--p1)}
-.theme-card.on::after{content://;position:absolute;inset:-1px;border:1px solid var(--p1);pointer-events:none}
+.theme-card.on::after{content:"";position:absolute;inset:-1px;border:1px solid var(--p1);pointer-events:none}
 .theme-card:focus-visible{outline:2px solid var(--p1);outline-offset:2px}
 .style-preview{
   position:relative;display:block;height:104px;overflow:hidden;
@@ -2099,6 +2128,13 @@ body.fx-immersive .fx-fsexit:hover{background:rgba(255,107,138,.18);border-color
 .style-mint .sp-title{font-weight:650;letter-spacing:-.01em}
 .style-mint .sp-row i{border:0;background:rgba(44,138,112,.12);height:16px}
 .style-mint .sp-btn{border-radius:8px}
+/* 学院：象牙底、衬线数字、双线边框、绯红徽记 */
+.style-collegiate{border-radius:2px;font-family:Georgia,"Songti SC",serif}
+.style-collegiate .sp-bar i,.style-collegiate .sp-row i,.style-collegiate .sp-btn{border-radius:0}
+.style-collegiate .sp-bar i:first-child{background:#14284a}
+.style-collegiate .sp-title{font-weight:700;letter-spacing:.04em;color:#14284a}
+.style-collegiate .sp-row i{border:1px solid rgba(20,40,74,.45);height:14px}
+.style-collegiate .sp-btn{background:#a62e38;box-shadow:inset 0 0 0 1px #f4f1e8,inset 0 0 0 2px #14284a}
 .tc-meta{display:block;padding:11px 12px 12px;border-top:1px solid rgba(255,255,255,.1)}
 .tc-name{display:block;font-size:13px;font-weight:650;color:#eceef3;letter-spacing:.02em}
 .tc-sub{display:block;font-size:11px;color:#9aa3b8;margin-top:4px}

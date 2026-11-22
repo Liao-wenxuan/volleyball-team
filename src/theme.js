@@ -13,7 +13,8 @@
     { id: 'graphite', name: '黑白', sub: '裁判条纹 · 战术板', p: '#8ba3c7', s: '#7fd4e8', base: '#151a22', ink: '#eef3fb', no: '07', style: '硬边 · 网格 · 等宽' },
     { id: 'paper', name: '秩序册', sub: '印刷白 · 靛蓝', p: '#5a55e8', s: '#0a90bd', base: '#f2f3f8', ink: '#1b1c33', no: '08', mode: 'light', style: '衬线 · 细线 · 高留白' },
     { id: 'sakura', name: '樱粉', sub: '春季邀请赛', p: '#f06fb0', s: '#b18cff', base: '#281424', ink: '#ffeaf5', no: '06', style: '柔和 · 辉光 · 精致' },
-    { id: 'mint', name: '训练日', sub: '薄荷 · 湖蓝', p: '#0d8f6f', s: '#0b7ea3', base: '#eaf6f1', ink: '#0b3b2f', no: '10', mode: 'light', style: '圆润 · 透气 · 轻盈' }
+    { id: 'mint', name: '训练日', sub: '薄荷 · 湖蓝', p: '#0d8f6f', s: '#0b7ea3', base: '#eaf6f1', ink: '#0b3b2f', no: '10', mode: 'light', style: '圆润 · 透气 · 轻盈' },
+    { id: 'collegiate', name: '学院', sub: '藏青 · 绯红', p: '#14284a', s: '#a62e38', base: '#f4f1e8', ink: '#1b2433', no: '11', mode: 'light', style: '衬线 · 队徽 · 荣誉感' }
   ];
   const THEME_IDS = THEMES.map((t) => t.id);
   const isTheme = (v) => THEME_IDS.includes(v);
