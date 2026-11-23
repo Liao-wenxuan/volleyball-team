@@ -14,6 +14,7 @@
  *
  * 发新版：把 VERSION 加一，跑 node build.mjs（会同步刷新 HTML 引用和 SHELL 的 ?v=N）。
  * ═══════════════════════════════════════════════════════════════ */
+// v74: 学院风队员卡去彩虹——位置色收成五级藏青梯度，技能条随卡片深浅；hover 扫光换绯红绶带+双线抬升
 // v63: 精简预缓存——3 个大图标 + 重复的 './' 移出 SHELL，首次安装少下约 286KB raw
 // v62: 进站转场——登录成功后用系统配色的刷子把黑白门禁刷走，消掉「进门风格突变」
 // v61: 门禁排球猫改整体扁平（修头身断裂 / 夜景黑身子）；v58-v60 猫保持原色 + 去猴化 + 按参考贴纸重绘
@@ -49,7 +50,7 @@
 // v73: 新增第五套「学院」主题（藏青+象牙白+绯红、衬线、双线边框）；前端源码变动故 bump
 // v72: 主题从配色变体升级为 4 套完整设计语言（删 6 套旧主题）；前端源码变动故 bump
 // v71: 主题切换 UI 重做——球衣号码牌取代模板化渐变色带，弹窗去玻璃/发光；前端源码变动故 bump
-const VERSION = 'v73';
+const VERSION = 'v74';
 const CACHE = `xgy-pwa-${VERSION}`;
 // 预缓存只放「首屏一定会用到」的东西。下面两类刻意不放：
 // 1) qr / xlsx / card / courtcard / share / playercard：分享、导出、表格导入才用，白下 37KB 抢跨境带宽；
@@ -60,14 +61,14 @@ const CACHE = `xgy-pwa-${VERSION}`;
 // 所以离线能力不受影响，只是不再在首次安装时抢带宽。
 const SHELL = [
   './index.html',
-  './style.css?v=v73',
-  './app.js?v=v73',
-  './cloud.js?v=v73',
-  './manifest.webmanifest?v=v73',
+  './style.css?v=v74',
+  './app.js?v=v74',
+  './cloud.js?v=v74',
+  './manifest.webmanifest?v=v74',
   // 只预缓存 WebP；PNG 是 onerror 回退源，老设备第一次用到时由 fetch 处理器按需缓存
-  './assets/loader-pose1.webp?v=v73',
-  './assets/loader-pose2.webp?v=v73',
-  './assets/loader-pose3.webp?v=v73'
+  './assets/loader-pose1.webp?v=v74',
+  './assets/loader-pose2.webp?v=v74',
+  './assets/loader-pose3.webp?v=v74'
 ];
 
 self.addEventListener('install', (e) => {
