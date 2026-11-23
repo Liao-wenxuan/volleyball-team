@@ -1106,7 +1106,7 @@
       const v = Number(p.skills[s.key] || 0);
       return `<i style="background:${a};opacity:${(0.15 + (v / 10) * 0.85).toFixed(2)}" title="${s.label} ${v.toFixed(1)}"></i>`;
     }).join('');
-    return `<article class="player-card card-spot" data-id="${p.id}" style="--a:${a};--b:${b};--i:${i}">
+    return `<article class="player-card card-spot" data-id="${p.id}" style="--a:${a};--b:${b};--i:${i};--ov:${ov}">
       <div class="pc-top"><div class="pc-avatar">${esc(p.name[0] || '?')}</div><div class="pc-num">${pad2(p.number)}</div></div>
       <div class="pc-info"><h3 class="pc-name">${esc(p.name)}${p.gender ? `<i class="pc-g g${p.gender === "男" ? "m" : "f"}">${p.gender === "男" ? "♂" : "♀"}</i>` : ""}</h3><div class="pc-meta">${p.position} · ${p.grade} · ${p.height ? p.height + "cm" : "身高—"}</div></div>
       <div class="pc-score-row">
