@@ -45,7 +45,7 @@ const MAX_FORMATIONS = 30;
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const STATES = ['present', 'late', 'leave', 'absent'] as const;
-const THEMES = ['court', 'aurora', 'ocean', 'forest', 'sunset', 'sakura', 'graphite', 'paper', 'sand', 'mint'];
+const THEMES = ['court', 'aurora', 'ocean', 'forest', 'sunset', 'sakura', 'graphite', 'paper', 'sand', 'mint', 'collegiate'];
 const ROLES6 = ['oh1', 'oh2', 'mb', 'opp', 's', 'lib'];
 
 /** 只校验外层结构与规模，内层交给下面的清洗函数逐字段兜底 */

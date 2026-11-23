@@ -70,6 +70,14 @@
 - 对照实验：临时从 `lazyMods` 摘掉 `courtcard`，只有「同一批模块」这一条精确变红（14 过 1 挂），随后恢复，恢复后 15/15 全绿。
 - 纯函数 48 → 54，CI 单测 247 → 253。**均为工具 / 测试改动，不进 SW 预缓存**，前端资源零改动，`sw.js` 保持 `v70`。
 
+## 后端主题白名单补漏 · 2026-11-23（不 bump vN）
+
+**修复：学院风主题云端同步 400**
+
+- 用户报「云端同步失败：theme: Invalid enum value … received 'collegiate'」。v73 加学院风主题时只改了前端，`server/src/routes/settings.ts` 的 zod 枚举和 `import.ts` 的 THEMES 白名单没同步，换到学院风的队伍每次同步都被服务器拒绝。
+- 两处补上 `collegiate`；新增回归测试：前端在用的每个主题 id（graphite/paper/sakura/mint/collegiate）逐个过 `PUT /api/settings/theme` 必须 200。以后加主题前后端要一起改，这条测试会当场变红。
+- 单测 207 → 208 全绿。前端资源零改动，`sw.js` 保持 v75。
+
 ## v75 · 2026-11-23
 
 **学院风头像色改按综合分映射**

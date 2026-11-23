@@ -28,7 +28,7 @@ const templateSchema = z.object({
 const themeSchema = z.object({
   theme: z.enum([
     'court', 'aurora', 'ocean', 'forest', 'sunset', 'sakura', 'graphite',
-    'paper', 'sand', 'mint'
+    'paper', 'sand', 'mint', 'collegiate'
   ])
 });
 
