@@ -3176,6 +3176,277 @@ html[data-daynight="night"] .gate-shell .gate-err{
   .dn-toggle::before{animation:none!important}
 }
 
+/* ═══════════════════════════════════════════════════════════
+   第 6 / 7 套主题：暴风玻璃 · 云境
+   与 v72 的五套一样，完整设计语言 = token 覆盖 + 少量选择器。
+   语义色（--green 出勤 / --red 缺席 / --amber 提醒）保持不变。
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─────────────── 6. 暴风玻璃 / storm-glass ─────────────── */
+[data-theme="storm-glass"]{
+  --violet:#8fd8e8;--violet-rgb:143,216,232;
+  --violet-2:#d6f4fa;--violet-2-rgb:214,244,250;
+  --violet-deep:#3b8fa8;--violet-deep-rgb:59,143,168;
+  --cyan:#a8ecf5;--cyan-rgb:168,236,245;
+  --bg:#04121b;--bg-2:#071c27;
+  --glow-1:.12;--glow-2:.10;
+  --orb-1:#1c6f86;--orb-2:#2a8ba0;--orb-3:#12566b;
+  --radius-sm:12px;--radius-md:18px;--radius-lg:26px;
+  --panel-blur:26px;
+  --panel-bg:linear-gradient(180deg,
+    rgba(255,255,255,.20) 0%,
+    rgba(255,255,255,.258) 24%,
+    rgba(255,255,255,.252) 78%,
+    rgba(255,255,255,.232) 100%);
+  --panel-shadow:0 18px 48px -34px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.34);
+  --edge:rgba(255,255,255,.20);--edge-strong:rgba(255,255,255,.26);
+  --font-display:"Inter Tight","Inter",var(--font);--tracking-display:-.03em;
+  --pad-panel:22px;--cell-gap:14px;
+  --chrome-a:rgba(8,26,36,.62);--chrome-b:rgba(4,18,27,.48);
+  --chrome-top-a:rgba(4,18,27,.52);--chrome-top-b:rgba(4,18,27,.18);
+  --solid:#0b2330;--solid-hover:#103040;--solid-elev:#153c4d;
+  --sheet-a:rgba(10,34,45,.94);--sheet-b:rgba(6,24,34,.92);
+  --scrim:rgba(2,12,18,.58);--scrim-soft:rgba(4,20,30,.44);
+  --hero-bg:linear-gradient(105deg,rgba(255,255,255,.135),rgba(255,255,255,.055));
+}
+html[data-theme="storm-glass"] body{
+  background-image:
+    linear-gradient(105deg,rgba(3,14,22,.34) 0%,rgba(3,14,22,.18) 42%,rgba(3,14,22,.05) 78%,transparent 100%),
+    linear-gradient(180deg,rgba(3,14,22,.12) 0%,transparent 22%),
+    linear-gradient(0deg,rgba(3,14,22,.08),rgba(3,14,22,.08)),
+    url("./assets/court-night.jpg");
+  background-size:cover,cover,cover,cover;
+  background-position:center,center,center,center 32%;
+  background-attachment:fixed,fixed,fixed,fixed;
+  background-repeat:no-repeat;
+}
+html[data-theme="storm-glass"] .orb{opacity:.28;filter:blur(110px);mix-blend-mode:screen}
+html[data-theme="storm-glass"] .grain{opacity:.02}
+html[data-theme="storm-glass"] .sidebar{
+  background:linear-gradient(180deg,
+    rgba(255,255,255,.125) 0%,rgba(255,255,255,.135) 13%,
+    rgba(255,255,255,.098) 34%,rgba(255,255,255,.092) 100%);
+  backdrop-filter:blur(18px) saturate(115%);
+  -webkit-backdrop-filter:blur(18px) saturate(115%);
+  border-right:1px solid rgba(255,255,255,.20);
+}
+html[data-theme="storm-glass"] .topbar{
+  background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.035));
+  backdrop-filter:blur(22px) saturate(118%);
+  -webkit-backdrop-filter:blur(22px) saturate(118%);
+  border-bottom:1px solid rgba(255,255,255,.16);
+}
+html[data-theme="storm-glass"] .kpi{
+  background:linear-gradient(180deg,
+    rgba(255,255,255,.20) 0%,rgba(255,255,255,.258) 24%,
+    rgba(255,255,255,.252) 78%,rgba(255,255,255,.232) 100%);
+  backdrop-filter:blur(26px) saturate(118%);
+  -webkit-backdrop-filter:blur(26px) saturate(118%);
+  border:1px solid rgba(255,255,255,.20);
+  box-shadow:0 18px 48px -34px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.34);
+}
+/* 不集体扫光：几十张卡一起扫像闪光灯。沿用自带的鼠标跟随聚光，静态安静。 */
+html[data-theme="storm-glass"] .card-spot::before{
+  background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),
+    rgba(255,255,255,.13),transparent 62%);
+}
+html[data-theme="storm-glass"] .hero{
+  backdrop-filter:blur(22px) saturate(118%);
+  -webkit-backdrop-filter:blur(22px) saturate(118%);
+  box-shadow:0 24px 60px -40px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.28);
+}
+html[data-theme="storm-glass"] .hero-copy h2,
+html[data-theme="storm-glass"] .page-head h2{
+  font-family:"Inter Tight","Inter",var(--font);font-weight:500;letter-spacing:-.03em;
+}
+html[data-theme="storm-glass"] .float-chip{
+  background:linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.10));
+  border:1px solid rgba(255,255,255,.30);
+  box-shadow:0 18px 34px -18px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.42);
+  backdrop-filter:blur(18px) saturate(120%);
+  -webkit-backdrop-filter:blur(18px) saturate(120%);
+}
+html[data-theme="storm-glass"] .fx-board{
+  background:rgba(4,20,30,.42);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 30px 80px -40px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.2);
+}
+/* 木地板是硬编码色，不在 token 里 —— 显式覆盖成冷青球场 */
+html[data-theme="storm-glass"] .fx-court{
+  background:linear-gradient(178deg,#1d7e93,#0c3d52);
+  border-color:rgba(214,244,250,.85);
+  box-shadow:0 34px 60px -34px rgba(0,0,0,.95),inset 0 0 110px rgba(0,20,30,.45);
+}
+html[data-theme="storm-glass"] .fx-court::after{
+  background:
+    repeating-linear-gradient(to right,rgba(214,244,250,.10) 0 1px,transparent 1px calc(100% / 9)),
+    repeating-linear-gradient(to bottom,rgba(214,244,250,.10) 0 1px,transparent 1px calc(100% / 9));
+}
+html[data-theme="storm-glass"] .fx-fsbar,
+html[data-theme="storm-glass"] .fx-fsexit{
+  background:rgba(255,255,255,.16) !important;
+  backdrop-filter:blur(18px) saturate(118%);
+  -webkit-backdrop-filter:blur(18px) saturate(118%);
+  border:1px solid rgba(255,255,255,.22) !important;
+}
+html[data-theme="storm-glass"] .player-card,
+html[data-theme="storm-glass"] .pcard,
+html[data-theme="storm-glass"] .att-cell,
+html[data-theme="storm-glass"] .skill-card{
+  background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.07));
+  border:1px solid rgba(255,255,255,.18);
+  backdrop-filter:blur(18px) saturate(115%);
+  -webkit-backdrop-filter:blur(18px) saturate(115%);
+}
+
+/* ─────────────── 7. 云境 / cirrus-sky ───────────────
+   落地页语言翻译成管理系统：天空渐变底 + 纯白卡 + 发丝边 +
+   超软阴影 + 24px 圆角 + 黑胶囊主按钮。数据蓝只用在强调与图表。
+   注意：本套带 mode:'light'，因此所有 token 必须写成
+   html[data-mode="light"][data-theme="cirrus-sky"] 才能盖过浅色底座。 ── */
+html[data-mode="light"][data-theme="cirrus-sky"]{
+  --violet:#111111;--violet-rgb:17,17,17;
+  --violet-2:#333333;--violet-2-rgb:51,51,51;
+  --violet-deep:#000000;--violet-deep-rgb:0,0,0;
+  --cyan:#3b82f6;--cyan-rgb:59,130,246;
+  --bg:#eaf3ff;--bg-2:#ffffff;
+  --glow-1:0;--glow-2:0;
+  --text:#111111;--text-2:#555555;--muted:#888888;
+  --radius-sm:12px;--radius-md:18px;--radius-lg:24px;
+  --panel:linear-gradient(180deg,#ffffff,rgba(255,255,255,.92));
+  --panel-bg:#ffffff;--panel-blur:20px;
+  --panel-shadow:0 12px 32px -8px rgba(0,20,40,.08),0 4px 12px -4px rgba(0,0,0,.04);
+  --edge:rgba(0,0,0,.08);--edge-strong:rgba(0,0,0,.16);
+  --font-display:var(--font);--tracking-display:-.03em;
+  --pad-panel:24px;--cell-gap:14px;
+  --solid:#ffffff;--solid-hover:#f3f7ff;--solid-elev:#ffffff;
+  --modal-a:#ffffff;--modal-b:#f8fbff;
+  --chrome-a:rgba(255,255,255,.94);--chrome-b:rgba(248,252,255,.88);
+  --chrome-top-a:rgba(255,255,255,.96);--chrome-top-b:rgba(248,252,255,.86);
+  --sheet-a:#ffffff;--sheet-b:#f8fbff;
+  --scrim:rgba(15,40,70,.32);--scrim-soft:rgba(15,40,70,.18);
+  --hero-bg:linear-gradient(140deg,rgba(255,255,255,.94),rgba(230,243,255,.70));
+}
+html[data-theme="cirrus-sky"] body{
+  background-image:
+    radial-gradient(680px 420px at 8% -6%,rgba(142,197,252,.55),transparent 68%),
+    radial-gradient(620px 400px at 96% -2%,rgba(224,240,255,.85),transparent 64%),
+    linear-gradient(180deg,#a7d4f5 0%,#eaf3ff 32%,#ffffff 78%);
+  background-attachment:fixed;
+}
+html[data-mode="light"][data-theme="cirrus-sky"] .panel,
+html[data-mode="light"][data-theme="cirrus-sky"] .kpi,
+html[data-mode="light"][data-theme="cirrus-sky"] .as-card{
+  box-shadow:0 12px 32px -8px rgba(0,20,40,.08),0 4px 12px -4px rgba(0,0,0,.04),inset 0 1px 0 #fff;
+}
+html[data-mode="light"][data-theme="cirrus-sky"] .panel,
+html[data-mode="light"][data-theme="cirrus-sky"] .kpi,
+html[data-mode="light"][data-theme="cirrus-sky"] .as-card,
+html[data-mode="light"][data-theme="cirrus-sky"] .player-card,
+html[data-mode="light"][data-theme="cirrus-sky"] .att-cell{
+  background:#ffffff;
+  border:1px solid rgba(0,0,0,.08);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+html[data-theme="cirrus-sky"] .orb{mix-blend-mode:normal;opacity:.14;filter:blur(90px)}
+html[data-theme="cirrus-sky"] .grain{opacity:.015}
+html[data-theme="cirrus-sky"] .sidebar{
+  background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(248,252,255,.90));
+  backdrop-filter:blur(18px) saturate(105%);
+  -webkit-backdrop-filter:blur(18px) saturate(105%);
+  border-right:1px solid rgba(0,0,0,.08);
+}
+html[data-theme="cirrus-sky"] .topbar{
+  background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(248,252,255,.86));
+  backdrop-filter:blur(20px) saturate(105%);
+  -webkit-backdrop-filter:blur(20px) saturate(105%);
+  border-bottom:1px solid rgba(0,0,0,.08);
+}
+html[data-theme="cirrus-sky"] .hero{
+  background:var(--hero-bg);
+  border:1px solid rgba(0,0,0,.08);
+  box-shadow:0 12px 32px -8px rgba(0,20,40,.08);
+}
+html[data-theme="cirrus-sky"] .hero-copy h2,
+html[data-theme="cirrus-sky"] .page-head h2{
+  font-family:var(--font);font-weight:600;letter-spacing:-.04em;
+}
+html[data-theme="cirrus-sky"] .float-chip{
+  background:rgba(255,255,255,.92);
+  border:1px solid rgba(0,0,0,.08);
+  box-shadow:0 8px 24px -6px rgba(0,20,40,.10);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+}
+html[data-theme="cirrus-sky"] .card-spot::before{
+  background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%),
+    rgba(59,130,246,.10),transparent 62%);
+}
+/* 主色是黑（做胶囊按钮），但侧栏高亮不能跟着变黑圆——单独拆出蓝色强调 */
+html[data-theme="cirrus-sky"] .nav-item.active{
+  color:#111;
+  background:linear-gradient(90deg,rgba(59,130,246,.14),rgba(59,130,246,.02));
+  box-shadow:inset 0 0 0 1px rgba(59,130,246,.18),0 10px 30px -20px rgba(59,130,246,.5);
+}
+html[data-theme="cirrus-sky"] .nav-item.active .nav-ico{
+  background:linear-gradient(150deg,rgba(59,130,246,.92),rgba(37,99,235,.78));
+  border-color:rgba(59,130,246,.30);
+  box-shadow:0 6px 18px -8px rgba(59,130,246,.8);
+}
+/* .chip.active 原配方第二色硬编码成紫色，浅色/青色主题下会透出紫汤 */
+html[data-theme="cirrus-sky"] .chip.active{
+  color:#fff;background:linear-gradient(140deg,#111111,#3a3a3a);
+  box-shadow:0 6px 16px -8px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.22);
+}
+html[data-theme="storm-glass"] .chip.active{
+  color:#04121b;background:linear-gradient(140deg,rgba(168,236,245,.95),rgba(59,143,168,.85));
+  box-shadow:0 6px 16px -8px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.55);
+}
+/* 球场换成白底淡蓝网格：轻盈，不再是橙棕木地板 */
+html[data-theme="cirrus-sky"] .fx-board{
+  background:#ffffff;
+  border:1px solid rgba(0,0,0,.08);
+  box-shadow:0 20px 48px -28px rgba(0,20,40,.22);
+}
+html[data-theme="cirrus-sky"] .fx-court{
+  background:linear-gradient(178deg,#f4faff,#e3f0ff);
+  border-color:rgba(59,130,246,.42);
+  box-shadow:0 20px 40px -30px rgba(0,20,40,.35),inset 0 0 80px rgba(167,212,245,.28);
+}
+html[data-theme="cirrus-sky"] .fx-court::after{
+  background:
+    repeating-linear-gradient(to right,rgba(59,130,246,.13) 0 1px,transparent 1px calc(100% / 9)),
+    repeating-linear-gradient(to bottom,rgba(59,130,246,.13) 0 1px,transparent 1px calc(100% / 9));
+}
+html[data-theme="cirrus-sky"] .fx-fsbar,
+html[data-theme="cirrus-sky"] .fx-fsexit{
+  background:rgba(255,255,255,.92) !important;
+  border:1px solid rgba(0,0,0,.08) !important;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+}
+
+/* ── 主题选择器里的迷你预览：两套新风格各画一张缩略图 ── */
+.style-storm-glass{
+  border-radius:18px;
+  background:linear-gradient(150deg,rgba(150,220,235,.42),rgba(6,28,40,.92));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
+}
+.style-storm-glass .sp-bar i,.style-storm-glass .sp-row i,.style-storm-glass .sp-btn{border-radius:10px}
+.style-storm-glass .sp-row i{border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.10)}
+.style-storm-glass .sp-title{font-weight:500;letter-spacing:-.03em;color:#eafaff}
+.style-storm-glass .sp-btn{background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(255,255,255,.14));box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.style-cirrus-sky{
+  border-radius:24px;
+  background:linear-gradient(180deg,#a7d4f5 0%,#eaf3ff 48%,#ffffff 100%);
+  color:#111111;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
+}
+.style-cirrus-sky .sp-bar i,.style-cirrus-sky .sp-row i,.style-cirrus-sky .sp-btn{border-radius:999px}
+.style-cirrus-sky .sp-bar i:first-child{background:#111111}
+.style-cirrus-sky .sp-title{font-weight:600;letter-spacing:-.04em;color:#111111}
+.style-cirrus-sky .sp-row i{border:1px solid rgba(0,0,0,.10);background:rgba(255,255,255,.9)}
+.style-cirrus-sky .sp-btn{background:#111111;opacity:1}
+
 </style>
 <!-- 两个启动脚本在 body 末尾，慢链路下要白等整个 HTML 传完才发请求；
      preload 让它们跟 CSS 并行下载。URL 上的 ?v=N 由 build.mjs 统一注入，必须和实际 script 一致。 -->
@@ -8459,13 +8730,15 @@ body{
    * v72 起主题不只是配色：每套有自己的圆角、面板材质、字体、密度，
    * 形态 token 在 style.css 的 [data-theme] 块里覆盖。
    * p/s/base/ink/no 只用于选择器的球衣卡预览，不参与界面渲染。
-   * 只保留 4 套精品；默认 graphite（黑白战术板）。 */
+   * 默认 graphite（黑白战术板）。v76 新增暴风玻璃 / 云境两套。 */
   const THEMES = [
     { id: 'graphite', name: '黑白', sub: '裁判条纹 · 战术板', p: '#8ba3c7', s: '#7fd4e8', base: '#151a22', ink: '#eef3fb', no: '07', style: '硬边 · 网格 · 等宽' },
     { id: 'paper', name: '秩序册', sub: '印刷白 · 靛蓝', p: '#5a55e8', s: '#0a90bd', base: '#f2f3f8', ink: '#1b1c33', no: '08', mode: 'light', style: '衬线 · 细线 · 高留白' },
     { id: 'sakura', name: '樱粉', sub: '春季邀请赛', p: '#f06fb0', s: '#b18cff', base: '#281424', ink: '#ffeaf5', no: '06', style: '柔和 · 辉光 · 精致' },
     { id: 'mint', name: '训练日', sub: '薄荷 · 湖蓝', p: '#0d8f6f', s: '#0b7ea3', base: '#eaf6f1', ink: '#0b3b2f', no: '10', mode: 'light', style: '圆润 · 透气 · 轻盈' },
-    { id: 'collegiate', name: '学院', sub: '藏青 · 绯红', p: '#14284a', s: '#a62e38', base: '#f4f1e8', ink: '#1b2433', no: '11', mode: 'light', style: '衬线 · 队徽 · 荣誉感' }
+    { id: 'collegiate', name: '学院', sub: '藏青 · 绯红', p: '#14284a', s: '#a62e38', base: '#f4f1e8', ink: '#1b2433', no: '11', mode: 'light', style: '衬线 · 队徽 · 荣誉感' },
+    { id: 'storm-glass', name: '暴风玻璃', sub: '球场夜 · 液态玻璃', p: '#8fd8e8', s: '#d6f4fa', base: '#04121b', ink: '#eafaff', no: '12', style: '冷青 · 玻璃 · 聚光' },
+    { id: 'cirrus-sky', name: '云境', sub: '晴空 · 轻盈白卡', p: '#3b82f6', s: '#111111', base: '#eaf3ff', ink: '#111111', no: '13', mode: 'light', style: '天空 · 白卡 · 黑胶囊' }
   ];
   const THEME_IDS = THEMES.map((t) => t.id);
   const isTheme = (v) => THEME_IDS.includes(v);

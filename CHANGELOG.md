@@ -14,6 +14,18 @@
 
 **发版流程**：改 `sw.js` 的 `VERSION` 并在头部注释加一行 → `node build.mjs`（刷新 HTML 引用与单文件内联）→ `npm run test:all` → commit / push → CI 绿了才由 `deploy.yml` 部署 → 线上核实 `?v=N` 与 `sw.js` 版本一致。
 
+## v76 · 2026-11-24 —— 新增两套完整主题：暴风玻璃 / 云境
+
+主题从 5 套扩到 **7 套**，编号 12「暴风玻璃」（夜场照片 + 液态玻璃毛玻璃）、
+编号 13「云境」（晴空白卡 + 发丝边框 + 黑胶囊，Cirrus 设计语言）。两套都含
+`[data-theme]` token、六页选择器覆盖和主题选择器预览卡，切换只换外观不动数据。
+
+- **后端白名单同步**：上次 v73 漏 `collegiate` 导致云端同步 400，这次新增两套时提前补上——
+  `server/src/routes/settings.ts`、`server/src/routes/import.ts` 两处白名单 + 前端主题一致性测试
+  （`server/tests/formation-settings.test.ts`）都已纳入新 id，避免重蹈覆辙。
+- **依赖资源**：暴风玻璃读取 `assets/court-night.jpg`（单文件 HTML 已 base64 内联该图）。
+- **验证**：`npm run test:all` 全绿（后端 208/208、前端纯函数 54/54、e2e 5/5）。
+
 后端 / 文档 / CI 的改动不 bump `vN`：它们不进 SW 预缓存，版本号变了反而会白清一次用户缓存。这类变更在下面按日期记，不打版本标签。
 
 ## 前端源码分片 · 2026-11-16（不 bump vN）

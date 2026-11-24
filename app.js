@@ -117,13 +117,15 @@
    * v72 起主题不只是配色：每套有自己的圆角、面板材质、字体、密度，
    * 形态 token 在 style.css 的 [data-theme] 块里覆盖。
    * p/s/base/ink/no 只用于选择器的球衣卡预览，不参与界面渲染。
-   * 只保留 4 套精品；默认 graphite（黑白战术板）。 */
+   * 默认 graphite（黑白战术板）。v76 新增暴风玻璃 / 云境两套。 */
   const THEMES = [
     { id: 'graphite', name: '黑白', sub: '裁判条纹 · 战术板', p: '#8ba3c7', s: '#7fd4e8', base: '#151a22', ink: '#eef3fb', no: '07', style: '硬边 · 网格 · 等宽' },
     { id: 'paper', name: '秩序册', sub: '印刷白 · 靛蓝', p: '#5a55e8', s: '#0a90bd', base: '#f2f3f8', ink: '#1b1c33', no: '08', mode: 'light', style: '衬线 · 细线 · 高留白' },
     { id: 'sakura', name: '樱粉', sub: '春季邀请赛', p: '#f06fb0', s: '#b18cff', base: '#281424', ink: '#ffeaf5', no: '06', style: '柔和 · 辉光 · 精致' },
     { id: 'mint', name: '训练日', sub: '薄荷 · 湖蓝', p: '#0d8f6f', s: '#0b7ea3', base: '#eaf6f1', ink: '#0b3b2f', no: '10', mode: 'light', style: '圆润 · 透气 · 轻盈' },
-    { id: 'collegiate', name: '学院', sub: '藏青 · 绯红', p: '#14284a', s: '#a62e38', base: '#f4f1e8', ink: '#1b2433', no: '11', mode: 'light', style: '衬线 · 队徽 · 荣誉感' }
+    { id: 'collegiate', name: '学院', sub: '藏青 · 绯红', p: '#14284a', s: '#a62e38', base: '#f4f1e8', ink: '#1b2433', no: '11', mode: 'light', style: '衬线 · 队徽 · 荣誉感' },
+    { id: 'storm-glass', name: '暴风玻璃', sub: '球场夜 · 液态玻璃', p: '#8fd8e8', s: '#d6f4fa', base: '#04121b', ink: '#eafaff', no: '12', style: '冷青 · 玻璃 · 聚光' },
+    { id: 'cirrus-sky', name: '云境', sub: '晴空 · 轻盈白卡', p: '#3b82f6', s: '#111111', base: '#eaf3ff', ink: '#111111', no: '13', mode: 'light', style: '天空 · 白卡 · 黑胶囊' }
   ];
   const THEME_IDS = THEMES.map((t) => t.id);
   const isTheme = (v) => THEME_IDS.includes(v);

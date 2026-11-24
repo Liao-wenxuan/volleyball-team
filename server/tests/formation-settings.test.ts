@@ -160,9 +160,9 @@ describe('设置 /api/settings', () => {
     expect(res.body.settings.theme).toBe('sakura');
   });
 
-  it('前端 THEMES 的每个 id 服务端都接受（v73 曾漏 collegiate 导致云端同步 400）', async () => {
+  it('前端 THEMES 的每个 id 服务端都接受（v73 曾漏 collegiate、v76 曾漏 storm-glass/cirrus-sky 导致云端同步 400）', async () => {
     // 前端真源在 src/theme.js 的 THEMES；这里硬编码同名单，新增主题时两边要一起改
-    const frontendThemes = ['graphite', 'paper', 'sakura', 'mint', 'collegiate'];
+    const frontendThemes = ['graphite', 'paper', 'sakura', 'mint', 'collegiate', 'storm-glass', 'cirrus-sky'];
     for (const theme of frontendThemes) {
       const res = await request(app).put('/api/settings/theme').set(auth(s.coachToken)).send({ theme });
       expect(res.status).toBe(200);
