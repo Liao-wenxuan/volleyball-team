@@ -3424,6 +3424,15 @@ html[data-theme="cirrus-sky"] .fx-fsexit{
   border:1px solid rgba(0,0,0,.08) !important;
   backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
 }
+/* 云境：队员卡同样按综合分映射藏青深浅（3 分最浅 / 9 分最深），白卡底上更显秩序；hover/圆角保留云境自己的语言 */
+html[data-theme="cirrus-sky"] .player-card{
+  --a:color-mix(in srgb,#3f6096,#0b1a33 calc((var(--ov,6) - 3) * 16%))!important;
+  --b:color-mix(in srgb,#7894c4,#274479 calc((var(--ov,6) - 3) * 16%))!important;
+}
+html[data-theme="cirrus-sky"] .pc-avatar{color:#fff}
+html[data-theme="cirrus-sky"] .pc-strip i{background:var(--a)!important}
+html[data-theme="cirrus-sky"] .u-avatar,
+html[data-theme="cirrus-sky"] .m-avatar{--a:#233f6b!important;--b:#3c5f96!important;color:#fff}
 
 /* ── 主题选择器里的迷你预览：两套新风格各画一张缩略图 ── */
 .style-storm-glass{
