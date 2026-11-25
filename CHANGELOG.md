@@ -14,6 +14,11 @@
 
 **发版流程**：改 `sw.js` 的 `VERSION` 并在头部注释加一行 → `node build.mjs`（刷新 HTML 引用与单文件内联）→ `npm run test:all` → commit / push → CI 绿了才由 `deploy.yml` 部署 → 线上核实 `?v=N` 与 `sw.js` 版本一致。
 
+## v78 · 2026-11-25 —— 暴风玻璃次要文字提亮
+
+- 夜场照片背景 + 毛玻璃面板会冲淡 `--muted` 次要文字（说明/坐标/空态），把暴风玻璃主题的 `--muted` 从 `#7f89a3` 提到 `#a8b8cc`；一处 token 覆盖全部相关文字，结构不动。graphite / collegiate 等其他主题的 muted 保持原值，不受影响。
+- 真 Edge 对照三主题 `--muted`：storm-glass `#a8b8cc`、graphite `#7f89a3`、collegiate `#6b7891`，隔离正确；坐标数字肉眼明显更清楚，零 JS 异常。
+
 ## v77 · 2026-11-25 —— 云境队员卡收敛为按综合分映射藏青
 
 - 云境（cirrus-sky）此前队员卡是位置彩虹色；本次与学院风统一：头像/技能条按综合分在 3～9 分之间映射藏青深浅，小头像收成同色系。hover 与圆角保留云境自己的白卡+黑胶囊语言，不动。

@@ -48,12 +48,13 @@
 // v68: 修跨队/换号登录后主题串色——DOM 配色始终跟随 db，换队时清掉设置保护期
 // v69: 修跨队/换号后历史周、AI 会话、AI 配置残留——切队时重建内存 db 骨架，周数据整份重建
 // v70: SW 装好新版本后页面弹「立即重载」提示（不再需要手动注销 SW）；前端源码变动故 bump
+// v78: 暴风玻璃主题 muted 提亮一档，夜场照片+毛玻璃上次要文字可读
 // v77: 云境队员卡按综合分映射藏青（与学院风一致）
 // v76: 新增两套主题「暴风玻璃」（夜场照片 + 液态玻璃）与「云境」（天空白卡 + 黑胶囊）；前端源码变动故 bump
 // v73: 新增第五套「学院」主题（藏青+象牙白+绯红、衬线、双线边框）；前端源码变动故 bump
 // v72: 主题从配色变体升级为 4 套完整设计语言（删 6 套旧主题）；前端源码变动故 bump
 // v71: 主题切换 UI 重做——球衣号码牌取代模板化渐变色带，弹窗去玻璃/发光；前端源码变动故 bump
-const VERSION = 'v77';
+const VERSION = 'v78';
 const CACHE = `xgy-pwa-${VERSION}`;
 // 预缓存只放「首屏一定会用到」的东西。下面两类刻意不放：
 // 1) qr / xlsx / card / courtcard / share / playercard：分享、导出、表格导入才用，白下 37KB 抢跨境带宽；
@@ -64,14 +65,14 @@ const CACHE = `xgy-pwa-${VERSION}`;
 // 所以离线能力不受影响，只是不再在首次安装时抢带宽。
 const SHELL = [
   './index.html',
-  './style.css?v=v77',
-  './app.js?v=v77',
-  './cloud.js?v=v77',
-  './manifest.webmanifest?v=v77',
+  './style.css?v=v78',
+  './app.js?v=v78',
+  './cloud.js?v=v78',
+  './manifest.webmanifest?v=v78',
   // 只预缓存 WebP；PNG 是 onerror 回退源，老设备第一次用到时由 fetch 处理器按需缓存
-  './assets/loader-pose1.webp?v=v77',
-  './assets/loader-pose2.webp?v=v77',
-  './assets/loader-pose3.webp?v=v77'
+  './assets/loader-pose1.webp?v=v78',
+  './assets/loader-pose2.webp?v=v78',
+  './assets/loader-pose3.webp?v=v78'
 ];
 
 self.addEventListener('install', (e) => {

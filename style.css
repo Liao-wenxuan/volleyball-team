@@ -3194,6 +3194,8 @@ html[data-daynight="night"] .gate-shell .gate-err{
   --sheet-a:rgba(10,34,45,.94);--sheet-b:rgba(6,24,34,.92);
   --scrim:rgba(2,12,18,.58);--scrim-soft:rgba(4,20,30,.44);
   --hero-bg:linear-gradient(105deg,rgba(255,255,255,.135),rgba(255,255,255,.055));
+  /* 夜场照片会冲淡次要文字：全局 muted 提亮一档，说明/坐标/空态在毛玻璃上才读得清 */
+  --muted:#a8b8cc;
 }
 html[data-theme="storm-glass"] body{
   background-image:
